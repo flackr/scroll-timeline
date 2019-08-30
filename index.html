@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<style>
+body {
+  height: 2000px;
+  padding-top: 200px;
+}
+#test {
+  display: block;
+  width: 100px;
+  height: 100px;
+  background: green;
+  position: fixed;
+  top: 0;
+}
+</style>
+<body>
+  <h1>ScrollTimeline polyfill</h1>
+  <div id="test"></div>
+<script src="scroll-timeline.js"></script>
+<script>
+var st = new ScrollTimeline();
+var a = document.querySelector('#test').animate([
+  {transform: 'translateY(0)'},
+  {transform: 'translateY(' + (window.innerHeight - 100) + 'px)'},
+], {
+  duration: 1000,
+  timeline: st,
+});
+</script>
+</body>
