@@ -12,12 +12,22 @@ body {
   position: fixed;
   top: 0;
 }
+#container {
+  position: absolute;
+  top: 400px;
+  height: 200px;
+  width: 200px;
+  background: blue;
+}
 </style>
 <body>
   <h1>ScrollTimeline polyfill</h1>
   <div id="test"></div>
-<script src="scroll-timeline.js"></script>
-<script>
+  <div id="container"></div>
+<script type="module">
+import ScrollTimeline from './scroll-timeline.js';
+
+var elem = document.getElementById('container');
 var st = new ScrollTimeline();
 var a = document.querySelector('#test').animate([
   {transform: 'translateY(0)'},

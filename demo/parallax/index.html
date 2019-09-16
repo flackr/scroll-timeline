@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    html, body {
+      margin: 0;
+    }
+
+    .header {
+      position: relative;
+      overflow: hidden;
+      height: 25vh;
+    }
+
+    .header h1 {
+      color: white;
+      position: absolute;
+      bottom: 0.5rem;
+      left: 1rem;
+    }
+
+    .header > .background {
+      width: 100%;
+      height: 130%;
+      background-size: cover;
+      background-image: url('images/winter.jpg');
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: -1;
+    }
+
+    .container {
+      margin: 1rem 2rem;
+      overflow: hidden;
+      position: relative; /* Allow sizing descendants easily */
+      border: 1px solid gray;
+      height: 30vh;
+    }
+
+    .container.wide {
+      margin: 1rem;
+    }
+
+    .container > .image {
+      background-size: cover;
+    }
+
+    #zoom > .image {
+      width: 100%;
+      height: 100%;
+      background-image: url('images/cat.jpg');
+      background-position: center center;
+    }
+
+    #pan {
+      background-image: url('images/boulder.jpg');
+    }
+    #wipe {
+      height: 20vh;
+    }
+    #wipe > div {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background-position: left center;
+    }
+
+    #wipe > .top {
+      background-image: url('images/wipe1.jpg');
+      z-index: 1;
+    }
+
+    #wipe > .bottom {
+      background-image: url('images/wipe2.jpg');
+    }
+
+    .content {
+      margin: 1rem;
+    }
+  </style>
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.10/styles/default.min.css">
+  <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.10/highlight.min.js"></script>
+  <title>Parallax using ScrollTimeline</title>
+</head>
+<body>
+  <div class="header">
+    <h1>Parallax using ScrollTimeline</h1>
+    <div class="background"></div>
+  </div>
+
+  <div class="content">
+
+    <h2>Introduction</h2>
+
+    <p>Flat static webpages are not very exciting. Users expect content to come
+    alive when scrolling. Explore some examples of how ScrollTimeline can make
+    this happen</p>
+
+    <pre id="demo1"><code class="javascript"></code></pre>
+
+    <p>It's simple to write a header parallax and let the element based start
+    and end constraints determine when the effect should start / end. This makes
+    it easier to embed within complex sites without needing to track resizes.</p>
+
+    <h3>Zoom out for context!</h3>
+
+    <p>This next effect shows a zoom out as the image crosses the viewport,
+    revealing more content as the user continues to scroll.</p>
+
+    <pre id="demo2"><code class="javascript"></code></pre>
+
+    <p>And the effect can be seen below:</p>
+
+    <div class="container" id="zoom">
+      <div class="image"></div>
+    </div>
+
+    <h3>Panaramas</h3>
+
+    <p>Similarly scroll linked effects are often used to reveal wide panorama
+    shots that would otherwise require manual panning or otherwise be too
+    small to show in context.</p>
+
+    <div class="wide container" id="pan">
+      <div class="image"></div>
+    </div>
+
+    <p>Simply include the large image in the content and animate from one
+    background position to the other.</p>
+
+    <pre id="demo3"><code class="javascript"></code></pre>
+
+    <h3>Before and after</h3>
+
+    <p>Sometimes you want to show how something has changed. In these cases
+    a wipe during the scroll can illustrate a transformation.</p>
+
+    <pre id="demo4"><code class="javascript"></code></pre>
+
+    <div class="container" id="wipe">
+      <div class="top"></div>
+      <div class="bottom"></div>
+    </div>
+
+    <h3>Conclusions</h3>
+
+    <p>Hopefully all of these demos help to illustrate the power of
+    ScrollTimeline animations on the web. The specification is under active
+    development and this polyfill serves to help show what makes sense and
+    doesn't.</p>
+
+  </div>
+
+</body>
+</script>
+<script type="module">
+import ScrollTimeline from '../../scroll-timeline.js';
+import '../../intersection-based-offset.js';
+
+function $(query) {
+  return document.querySelector(query);
+}
+
+function animateParallax() {
+  let header = $('.header');
+  $('.header > .background').animate({
+      transform: ['none', 'translateY(30%)']}, {
+      duration: 10000, // Arbitrary duration...
+      fill: 'both',
+      timeline: new ScrollTimeline({
+          startScrollOffset: {target: header},
+          endScrollOffset: {target: header, edge: 'end'}
+      })
+    });
+}
+
+function animateZoom() {
+  let container = $('#zoom');
+  $('#zoom > div').animate({
+      transform: ['scale(3) translateX(10%)', 'scale(1)']}, {
+      duration: 10000,
+      fill: 'both',
+      timeline: new ScrollTimeline({
+          startScrollOffset: {target: container, threshold: 100},
+          endScrollOffset: {target: container, edge: 'end', threshold: 100}
+      })
+  });
+}
+
+function animatePan() {
+  let container = $('#pan');
+  $('#pan').animate({
+      backgroundPosition: ['left center', 'right center']}, {
+      duration: 10000,
+      fill: 'both',
+      timeline: new ScrollTimeline({
+          startScrollOffset: {target: container},
+          endScrollOffset: {target: container, edge: 'end'}
+      })
+  });
+}
+
+function animateWipe() {
+  let container = $('#wipe');
+  $('#wipe > .top').animate({
+      width: ['100%', '0']}, {
+      duration: 10000,
+      fill: 'both',
+      timeline: new ScrollTimeline({
+          startScrollOffset: {target: container},
+          endScrollOffset: {target: container, edge: 'end'}
+      })
+  });
+}
+
+function initCode(functions) {
+  for (let i = 0; i < functions.length; i++) {
+    $('#demo' + (i + 1) + ' > code').textContent = functions[i].toString();
+  }
+  // Invoke all functions.
+  for (let i = 0; i < functions.length; i++) {
+    functions[i]();
+  }
+  hljs.initHighlightingOnLoad();
+}
+
+function init() {
+  initCode([
+    animateParallax,
+    animateZoom,
+    animatePan,
+    animateWipe,
+  ]);
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</html>
