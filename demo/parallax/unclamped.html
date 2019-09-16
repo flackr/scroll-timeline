@@ -105,12 +105,16 @@
     and end constraints determine when the effect should start / end. This makes
     it easier to embed within complex sites without needing to track resizes.</p>
 
+    <h3>Reveal animations</h3>
+
+    <pre id="demo2"><code class="javascript"></code></pre>
+
     <h3>Zoom out for context!</h3>
 
     <p>This next effect shows a zoom out as the image crosses the viewport,
     revealing more content as the user continues to scroll.</p>
 
-    <pre id="demo2"><code class="javascript"></code></pre>
+    <pre id="demo3"><code class="javascript"></code></pre>
 
     <p>And the effect can be seen below:</p>
 
@@ -131,14 +135,14 @@
     <p>Simply include the large image in the content and animate from one
     background position to the other.</p>
 
-    <pre id="demo3"><code class="javascript"></code></pre>
+    <pre id="demo4"><code class="javascript"></code></pre>
 
     <h3>Before and after</h3>
 
     <p>Sometimes you want to show how something has changed. In these cases
     a wipe during the scroll can illustrate a transformation.</p>
 
-    <pre id="demo4"><code class="javascript"></code></pre>
+    <pre id="demo5"><code class="javascript"></code></pre>
 
     <div class="container" id="wipe">
       <div class="top"></div>
@@ -216,6 +220,24 @@ function animateWipe() {
   });
 }
 
+function animateHeaders() {
+  let headers = document.querySelectorAll('h2, h3');
+  for (let i = 0; i < headers.length; i++) {
+    headers[i].animate([
+        {transform: 'translateY(10px)',
+         opacity: 0},
+        {transform: 'none',
+         opacity: 1}], {
+        duration: 10000,
+        fill: 'both',
+        timeline: new ScrollTimeline({
+            startScrollOffset: {target: headers[i]},
+            endScrollOffset: {target: headers[i], threshold: 100},
+        })
+    });
+  }
+}
+
 function initCode(functions) {
   for (let i = 0; i < functions.length; i++) {
     $('#demo' + (i + 1) + ' > code').textContent = functions[i].toString();
@@ -230,6 +252,7 @@ function initCode(functions) {
 function init() {
   initCode([
     animateParallax,
+    animateHeaders,
     animateZoom,
     animatePan,
     animateWipe,
