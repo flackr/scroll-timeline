@@ -89,13 +89,13 @@ function calculateOffset(scrollSource, orientation, offset, startOrEnd) {
   if (orientation == 'vertical') {
     let point = target.top + target.height * threshold / 100 - viewport.top + scrollSource.scrollTop;
     if (offset.edge == 'start')
-      return point - viewport.height;
-    return point;
+      return Math.max(0, point - viewport.height);
+    return Math.min(point, scrollSource.scrollHeight - viewport.height);
   } else { // orientation == 'horizontal'
     let point = target.left + target.width * threshold / 100 - viewport.left + scrollSource.scrollLeft;
     if (offset.edge == 'start')
-      return point - viewport.width;
-    return point;
+      return Math.max(0, point - viewport.width);
+    return Math.min(point, scrollSource.scrollWidth - viewport.width);
   }
 }
 
