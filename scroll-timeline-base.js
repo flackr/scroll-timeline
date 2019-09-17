@@ -233,7 +233,7 @@ export class ScrollTimeline {
 
     // Step 4
     if (currentScrollOffset >= endOffset) {
-      if (endOffset < calculateMaxScrollOffset(this.scrollSource) &&
+      if (endOffset < calculateMaxScrollOffset(this.scrollSource, this.orientation) &&
           (this.fill == 'none' || this.fill == 'backwards')) {
         return unresolved;
       }
