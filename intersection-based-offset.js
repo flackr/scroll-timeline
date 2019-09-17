@@ -82,18 +82,18 @@ function calculateOffset(scrollSource, orientation, offset, startOrEnd) {
       scrollSource.getBoundingClientRect();
   let target = offset.target.getBoundingClientRect();
   let threshold = offset.threshold;
-  // Invert threshold for end position.
-  if (offset.edge == 'end')
+  // Invert threshold for start position.
+  if (offset.edge == 'start')
     threshold = 100 - threshold;
   // Projected point into the scroller scroll range.
   if (orientation == 'vertical') {
     let point = target.top + target.height * threshold / 100 - viewport.top + scrollSource.scrollTop;
-    if (offset.edge == 'start')
+    if (offset.edge == 'end')
       return point - viewport.height;
     return point;
   } else { // orientation == 'horizontal'
     let point = target.left + target.width * threshold / 100 - viewport.left + scrollSource.scrollLeft;
-    if (offset.edge == 'start')
+    if (offset.edge == 'end')
       return point - viewport.width;
     return point;
   }

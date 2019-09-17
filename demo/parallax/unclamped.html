@@ -175,8 +175,8 @@ function animateParallax() {
       duration: 10000, // Arbitrary duration...
       fill: 'both',
       timeline: new ScrollTimeline({
-          startScrollOffset: {target: header},
-          endScrollOffset: {target: header, edge: 'end'},
+          startScrollOffset: {target: header, edge: 'end'},
+          endScrollOffset: {target: header},
           fill: 'both',
       })
     });
@@ -189,8 +189,8 @@ function animateZoom() {
       duration: 10000,
       fill: 'both',
       timeline: new ScrollTimeline({
-          startScrollOffset: {target: container, threshold: 100},
-          endScrollOffset: {target: container, edge: 'end', threshold: 100},
+          startScrollOffset: {target: container, edge: 'end', threshold: 100},
+          endScrollOffset: {target: container, threshold: 100},
           fill: 'both',
       })
   });
@@ -203,8 +203,8 @@ function animatePan() {
       duration: 10000,
       fill: 'both',
       timeline: new ScrollTimeline({
-          startScrollOffset: {target: container},
-          endScrollOffset: {target: container, edge: 'end'},
+          startScrollOffset: {target: container, edge: 'end'},
+          endScrollOffset: {target: container},
           fill: 'both',
       })
   });
@@ -217,8 +217,8 @@ function animateWipe() {
       duration: 10000,
       fill: 'both',
       timeline: new ScrollTimeline({
-          startScrollOffset: {target: container},
-          endScrollOffset: {target: container, edge: 'end'},
+          startScrollOffset: {target: container, edge: 'end'},
+          endScrollOffset: {target: container},
           fill: 'both',
       })
   });
@@ -235,8 +235,8 @@ function animateHeaders() {
         duration: 10000,
         fill: 'both',
         timeline: new ScrollTimeline({
-            startScrollOffset: {target: headers[i]},
-            endScrollOffset: {target: headers[i], threshold: 100},
+            startScrollOffset: {target: headers[i], edge: 'end'},
+            endScrollOffset: {target: headers[i], edge: 'end', threshold: 100},
             fill: 'both',
         })
     });
