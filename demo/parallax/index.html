@@ -176,7 +176,8 @@ function animateParallax() {
       fill: 'both',
       timeline: new ScrollTimeline({
           startScrollOffset: {target: header},
-          endScrollOffset: {target: header, edge: 'end'}
+          endScrollOffset: {target: header, edge: 'end'},
+          fill: 'both',
       })
     });
 }
@@ -189,7 +190,8 @@ function animateZoom() {
       fill: 'both',
       timeline: new ScrollTimeline({
           startScrollOffset: {target: container, threshold: 100},
-          endScrollOffset: {target: container, edge: 'end', threshold: 100}
+          endScrollOffset: {target: container, edge: 'end', threshold: 100},
+          fill: 'both',
       })
   });
 }
@@ -202,7 +204,8 @@ function animatePan() {
       fill: 'both',
       timeline: new ScrollTimeline({
           startScrollOffset: {target: container},
-          endScrollOffset: {target: container, edge: 'end'}
+          endScrollOffset: {target: container, edge: 'end'},
+          fill: 'both',
       })
   });
 }
@@ -215,7 +218,8 @@ function animateWipe() {
       fill: 'both',
       timeline: new ScrollTimeline({
           startScrollOffset: {target: container},
-          endScrollOffset: {target: container, edge: 'end'}
+          endScrollOffset: {target: container, edge: 'end'},
+          fill: 'both',
       })
   });
 }
@@ -233,6 +237,7 @@ function animateHeaders() {
         timeline: new ScrollTimeline({
             startScrollOffset: {target: headers[i]},
             endScrollOffset: {target: headers[i], threshold: 100},
+            fill: 'both',
         })
     });
   }

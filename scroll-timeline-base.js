@@ -35,6 +35,19 @@ export function installScrollOffsetExtension(parseFunction, evaluateFunction) {
   extensionScrollOffsetFunctions.push([parseFunction, evaluateFunction]);
 }
 
+function calculateMaxScrollOffset(scrollSource, orientation) {
+  // TODO: Support other writing directions.
+  if (orientation == 'block')
+    orientation = 'vertical';
+  else if (orientation == 'inline')
+    orientation = 'horizontal';
+  if (orientation == 'vertical')
+    return scrollSource.scrollHeight - scrollSource.clientHeight;
+  else if (orientation == 'horizontal')
+    return scrollSource.scrollWidth - scrollSource.clientWidth;
+
+}
+
 function calculateScrollOffset(autoValue, scrollSource, orientation, offset, fn) {
   if (fn)
     return fn(scrollSource, orientation, offset, autoValue == '0%' ? 'start' : 'end');
@@ -73,7 +86,15 @@ function updateInternal() {
     return;
   let currentTime = this.currentTime;
   for (let i = 0; i < animations.length; i++) {
-    animations[i].currentTime = currentTime;
+    // The web-animations spec says to throw a TypeError if you try to seek to
+    // an unresolved time value from a resolved time value, so to polyfill the
+    // expected behavior we cancel the underlying animation.
+    if (currentTime == null) {
+      if (animations[i].playState == 'paused')
+        animations[i].cancel();
+    } else {
+      animations[i].currentTime = currentTime;
+    }
   }
 }
 
@@ -191,13 +212,36 @@ export class ScrollTimeline {
   }
 
   get currentTime() {
+    // Per https://wicg.github.io/scroll-animations/#current-time-algorithm
+    // Step 1
+    let unresolved = null;
+    if (!this.scrollSource)
+      return unresolved;
     let startOffset = calculateScrollOffset('0%', this.scrollSource, this.orientation, this.startScrollOffset, scrollTimelineOptions.get(this).startScrollOffsetFunction);
     let endOffset = calculateScrollOffset('100%', this.scrollSource, this.orientation, this.endScrollOffset, scrollTimelineOptions.get(this).endScrollOffsetFunction);
-    if (startOffset == endOffset)
-      return 0;
-    let position = this.scrollSource.scrollTop;
     let timeRange = calculateTimeRange(this);
-    return (position - startOffset) / (endOffset - startOffset) * timeRange;
+
+    // Step 2
+    let currentScrollOffset = this.scrollSource.scrollTop;
+
+    // Step 3
+    if (currentScrollOffset < startOffset) {
+      if (this.fill == 'none' || this.fill == 'forwards')
+        return unresolved;
+      return 0;
+    }
+
+    // Step 4
+    if (currentScrollOffset >= endOffset) {
+      if (endOffset < calculateMaxScrollOffset(this.scrollSource) &&
+          (this.fill == 'none' || this.fill == 'backwards')) {
+        return unresolved;
+      }
+      return timeRange;
+    }
+
+    // Step 5
+    return (currentScrollOffset - startOffset) / (endOffset - startOffset) * timeRange;
   }
 };
 
