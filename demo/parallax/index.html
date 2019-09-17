@@ -57,6 +57,7 @@
 
     #pan {
       background-image: url('images/boulder.jpg');
+      background-size: cover;
     }
     #wipe {
       height: 20vh;
@@ -122,14 +123,13 @@
       <div class="image"></div>
     </div>
 
-    <h3>Panaramas</h3>
+    <h3>Panoramas</h3>
 
     <p>Similarly scroll linked effects are often used to reveal wide panorama
     shots that would otherwise require manual panning or otherwise be too
     small to show in context.</p>
 
     <div class="wide container" id="pan">
-      <div class="image"></div>
     </div>
 
     <p>Simply include the large image in the content and animate from one
@@ -161,7 +161,7 @@
 </body>
 </script>
 <script type="module">
-import ScrollTimeline from '../../scroll-timeline.js';
+import '../../scroll-timeline.js';
 import '../../intersection-based-offset-clamped.js';
 
 function $(query) {
