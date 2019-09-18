@@ -16,13 +16,36 @@ import * as scrolltimeline from './scroll-timeline-base.js';
 
 let IntersectionOptions = new WeakMap();
 
+// Margin is stored as a 4 element array [top, right, bottom, left] but can be
+// specified using anywhere from 1 - 4 elements. This map defines how to convert
+// various length inputs to their components.
+const TOP = 0;
+const RIGHT = 1;
+const BOTTOM = 2;
+const LEFT = 3;
+const MARGIN_MAP = [
+    // 1 length maps to all positions.
+    [[TOP, RIGHT, BOTTOM, LEFT]],
+    // 2 lengths maps to vertical and horizontal margins.
+    [[TOP, BOTTOM], [RIGHT, LEFT]],
+    // 3 lengths maps to top, horizontal, bottom margins.
+    [[TOP], [RIGHT, LEFT], [BOTTOM]],
+    // 4 lengths maps to each component.
+    [[TOP], [RIGHT], [BOTTOM], [LEFT]]];
+
 class IntersectionBasedOffset {
   constructor(value) {
-    IntersectionOptions.set(this, {});
+    IntersectionOptions.set(this, {
+      target: null,
+      edge: 'start',
+      threshold: 0,
+      rootMargin: [[0, 'px'], [0, 'px'], [0, 'px'], [0, 'px']],
+    });
     this.target = value.target;
     this.edge = value.edge || 'start';
     this.threshold = value.threshold || 0;
-    this.rootMargin = value.rootMargin || 'auto';
+    this.rootMargin = value.rootMargin || '0px 0px 0px 0px';
+    this.clamp = value.clamp || false;
   }
 
   set target(element) {
@@ -46,18 +69,42 @@ class IntersectionBasedOffset {
   }
 
   set threshold(value) {
-    IntersectionOptions.get(this).threshold = parseFloat(value);
+    let threshold = parseFloat(value);
+    // Throw a RangeError for out of range threshold:
+    // https://w3c.github.io/IntersectionObserver/#intersection-observer-interface
+    if (threshold < 0 || threshold > 1)
+      throw RangeError('threshold must be in the range [0, 1]');
+    IntersectionOptions.get(this).threshold = threshold;
   }
   get threshold() {
     return IntersectionOptions.get(this).threshold;
   }
 
   set rootMargin(value) {
-    // TODO: Restrict to supported value.
-    IntersectionOptions.get(this).rootMargin = value;
+    let margins = value.split(/ +/)
+    if (margins.length < 1 || margins.length > 4)
+      throw TypeError('rootMargin must contain between 1 and 4 length components');
+    let parsedMargins = [[], [], [], []];
+    for (let i = 0; i < margins.length; i++) {
+      let parsedValue = scrolltimeline.parseLength(margins[i]);
+      if (!parsedValue)
+        throw TypeError('Unrecognized rootMargin length');
+      let positions = MARGIN_MAP[margins.length - 1][i];
+      for (let j = 0; j < positions.length; j++) {
+        parsedMargins[positions[j]] = [parseFloat(parsedValue[1]), parsedValue[2]];
+      }
+    }
+    IntersectionOptions.get(this).rootMargin = parsedMargins;
   }
   get rootMargin() {
-    return IntersectionOptions.get(this).rootMargin;
+    // TODO: Simplify to the shortest matching specification for the given margins.
+    return IntersectionOptions.get(this).rootMargin.map(
+        (margin) => { return margin.join(''); }).join(' ');
+  }
+  set clamp(value) {
+    // This is just for testing alternative proposals - not intended to be part
+    // of the specification.
+    IntersectionOptions.get(this).clamp = !!value;
   }
 };
 
@@ -66,36 +113,70 @@ function parseOffset(value) {
     return new IntersectionBasedOffset(value);
 }
 
+function resolveLength(length, containerSize) {
+  if (length[1] == '%')
+    return length[0] * containerSize / 100;
+  // Assumption is only px or % will be passed in.
+  // TODO: Support other length types (e.g. em, vh, etc).
+  return length[0];
+}
+
 function calculateOffset(scrollSource, orientation, offset, startOrEnd) {
   // TODO: Support other writing directions.
   if (orientation == 'block')
     orientation = 'vertical';
   else if (orientation == 'inline')
     orientation = 'horizontal';
-  let viewport = scrollSource == document.scrollingElement ?
-      { left: 0,
-        right: scrollSource.clientWidth,
-        top: 0,
-        bottom: scrollSource.clientHeight,
-        width: scrollSource.clientWidth,
-        height: scrollSource.clientHeight } :
+  let originalViewport = scrollSource == document.scrollingElement ?
+      { left: 0, right: scrollSource.clientWidth,
+        top: 0, bottom: scrollSource.clientHeight,
+        width: scrollSource.clientWidth, height: scrollSource.clientHeight } :
       scrollSource.getBoundingClientRect();
+
+  // Resolve margins and offset viewport.
+  let parsedMargins = IntersectionOptions.get(offset).rootMargin;
+  let computedMargins = [];
+  for (let i = 0; i < 4; i++) {
+    computedMargins.push(resolveLength(parsedMargins[i], (i % 2 == 0 ? originalViewport.height : originalViewport.width)));
+  }
+  let viewport = {
+    left: originalViewport.left - computedMargins[LEFT],
+    right: originalViewport.right + computedMargins[RIGHT],
+    width: originalViewport.right - originalViewport.left + computedMargins[LEFT] + computedMargins[RIGHT],
+    top: originalViewport.top - computedMargins[TOP],
+    bottom: originalViewport.bottom + computedMargins[BOTTOM],
+    height: originalViewport.bottom - originalViewport.top + computedMargins[TOP] + computedMargins[BOTTOM],
+  }
+
+  let clamped = IntersectionOptions.get(offset).clamp;
   let target = offset.target.getBoundingClientRect();
   let threshold = offset.threshold;
   // Invert threshold for start position.
   if (offset.edge == 'start')
-    threshold = 100 - threshold;
+    threshold = 1 - threshold;
   // Projected point into the scroller scroll range.
   if (orientation == 'vertical') {
-    let point = target.top + target.height * threshold / 100 - viewport.top + scrollSource.scrollTop;
-    if (offset.edge == 'end')
-      return point - viewport.height;
-    return point;
+    let point = target.top + target.height * threshold - viewport.top + scrollSource.scrollTop;
+    if (clamped) {
+      if (offset.edge == 'end')
+        return Math.max(0, point - viewport.height);
+      return Math.min(point, scrollSource.scrollHeight - viewport.height);
+    } else {
+      if (offset.edge == 'end')
+        return point - viewport.height;
+      return point;
+    }
   } else { // orientation == 'horizontal'
-    let point = target.left + target.width * threshold / 100 - viewport.left + scrollSource.scrollLeft;
-    if (offset.edge == 'end')
-      return point - viewport.width;
-    return point;
+    let point = target.left + target.width * threshold - viewport.left + scrollSource.scrollLeft;
+    if (clamped) {
+      if (offset.edge == 'end')
+        return Math.max(0, point - viewport.width);
+      return Math.min(point, scrollSource.scrollWidth - viewport.width);
+    } else {
+      if (offset.edge == 'end')
+        return point - viewport.width;
+      return point;
+    }
   }
 }
 

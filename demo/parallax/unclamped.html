@@ -57,6 +57,7 @@
 
     #pan {
       background-image: url('images/boulder.jpg');
+      background-size: cover;
     }
     #wipe {
       height: 20vh;
@@ -189,8 +190,8 @@ function animateZoom() {
       duration: 10000,
       fill: 'both',
       timeline: new ScrollTimeline({
-          startScrollOffset: {target: container, edge: 'end', threshold: 100},
-          endScrollOffset: {target: container, threshold: 100},
+          startScrollOffset: {target: container, edge: 'end', threshold: 1},
+          endScrollOffset: {target: container, threshold: 1},
           fill: 'both',
       })
   });
@@ -228,15 +229,15 @@ function animateHeaders() {
   let headers = document.querySelectorAll('h2, h3');
   for (let i = 0; i < headers.length; i++) {
     headers[i].animate([
-        {transform: 'translateY(10px)',
+        {transform: 'translateX(-10px)',
          opacity: 0.2}, /* Intentionally not 0 to showcase bug. */
         {transform: 'none',
          opacity: 1}], {
         duration: 10000,
         fill: 'both',
         timeline: new ScrollTimeline({
-            startScrollOffset: {target: headers[i], edge: 'end'},
-            endScrollOffset: {target: headers[i], edge: 'end', threshold: 100},
+            startScrollOffset: {target: headers[i], edge: 'end', rootMargin: '-20px'},
+            endScrollOffset: {target: headers[i], edge: 'end', threshold: 1, rootMargin: '-20px'},
             fill: 'both',
         })
     });

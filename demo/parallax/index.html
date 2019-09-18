@@ -162,7 +162,7 @@
 </script>
 <script type="module">
 import '../../scroll-timeline.js';
-import '../../intersection-based-offset-clamped.js';
+import '../../intersection-based-offset.js';
 
 function $(query) {
   return document.querySelector(query);
@@ -175,8 +175,8 @@ function animateParallax() {
       duration: 10000, // Arbitrary duration...
       fill: 'both',
       timeline: new ScrollTimeline({
-          startScrollOffset: {target: header, edge: 'end'},
-          endScrollOffset: {target: header},
+          startScrollOffset: {target: header, edge: 'end', clamp: true},
+          endScrollOffset: {target: header, clamp: true},
           fill: 'both',
       })
     });
@@ -189,8 +189,8 @@ function animateZoom() {
       duration: 10000,
       fill: 'both',
       timeline: new ScrollTimeline({
-          startScrollOffset: {target: container, edge: 'end', threshold: 100},
-          endScrollOffset: {target: container, threshold: 100},
+          startScrollOffset: {target: container, edge: 'end', threshold: 1, clamp: true},
+          endScrollOffset: {target: container, threshold: 1, clamp: true},
           fill: 'both',
       })
   });
@@ -203,8 +203,8 @@ function animatePan() {
       duration: 10000,
       fill: 'both',
       timeline: new ScrollTimeline({
-          startScrollOffset: {target: container, edge: 'end'},
-          endScrollOffset: {target: container},
+          startScrollOffset: {target: container, edge: 'end', clamp: true},
+          endScrollOffset: {target: container, clamp: true},
           fill: 'both',
       })
   });
@@ -217,8 +217,8 @@ function animateWipe() {
       duration: 10000,
       fill: 'both',
       timeline: new ScrollTimeline({
-          startScrollOffset: {target: container, edge: 'end'},
-          endScrollOffset: {target: container},
+          startScrollOffset: {target: container, edge: 'end', clamp: true},
+          endScrollOffset: {target: container, clamp: true},
           fill: 'both',
       })
   });
@@ -228,15 +228,15 @@ function animateHeaders() {
   let headers = document.querySelectorAll('h2, h3');
   for (let i = 0; i < headers.length; i++) {
     headers[i].animate([
-        {transform: 'translateY(10px)',
-         opacity: 0.2}, /* Intentionally not 0 to showcase bug. */
+        {transform: 'translateX(-10px)',
+         opacity: 0},
         {transform: 'none',
          opacity: 1}], {
         duration: 10000,
         fill: 'both',
         timeline: new ScrollTimeline({
-            startScrollOffset: {target: headers[i], edge: 'end'},
-            endScrollOffset: {target: headers[i], edge: 'end', threshold: 100},
+            startScrollOffset: {target: headers[i], edge: 'end', rootMargin: '-20px', clamp: true},
+            endScrollOffset: {target: headers[i], edge: 'end', threshold: 1, rootMargin: '-20px', clamp: true},
             fill: 'both',
         })
     });
