@@ -123,7 +123,6 @@ export class ScrollTimeline {
       startScrollOffset: 'auto',
       endScrollOffset: 'auto',
       timeRange: 'auto',
-      fill: 'none',
 
       // Internal members
       animations: [],
@@ -135,7 +134,6 @@ export class ScrollTimeline {
     this.startScrollOffset = options && options.startScrollOffset || 'auto';
     this.endScrollOffset = options && options.endScrollOffset || 'auto';
     this.timeRange = options && options.timeRange || 'auto';
-    this.fill = options && options.fill || 'none';
   }
 
   set scrollSource(element) {
@@ -226,17 +224,11 @@ export class ScrollTimeline {
 
     // Step 3
     if (currentScrollOffset < startOffset) {
-      if (this.fill == 'none' || this.fill == 'forwards')
-        return unresolved;
       return 0;
     }
 
     // Step 4
     if (currentScrollOffset >= endOffset) {
-      if (endOffset < calculateMaxScrollOffset(this.scrollSource, this.orientation) &&
-          (this.fill == 'none' || this.fill == 'backwards')) {
-        return unresolved;
-      }
       return timeRange;
     }
 
