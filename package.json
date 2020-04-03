@@ -8,6 +8,7 @@
     "build": "microbundle -f iife",
     "watch": "microbundle watch -f iife",
     "dev": "run-all \"serve\" \" npm run watch \" ",
+    "deploy": "npm run build && ./deploy.sh",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
