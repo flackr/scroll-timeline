@@ -13,3 +13,5 @@ yarn-error.log*
 *.tgz
 
 .idea
+
+node_modules

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import * as scrolltimeline from './scroll-timeline-base.js';
+import { parseLength } from './utils';
 
 let IntersectionOptions = new WeakMap();
 
@@ -86,7 +86,7 @@ class IntersectionBasedOffset {
       throw TypeError('rootMargin must contain between 1 and 4 length components');
     let parsedMargins = [[], [], [], []];
     for (let i = 0; i < margins.length; i++) {
-      let parsedValue = scrolltimeline.parseLength(margins[i]);
+      let parsedValue = parseLength(margins[i]);
       if (!parsedValue)
         throw TypeError('Unrecognized rootMargin length');
       let positions = MARGIN_MAP[margins.length - 1][i];
@@ -108,7 +108,7 @@ class IntersectionBasedOffset {
   }
 };
 
-function parseOffset(value) {
+export function parseOffset(value) {
   if (value.target)
     return new IntersectionBasedOffset(value);
 }
@@ -121,7 +121,7 @@ function resolveLength(length, containerSize) {
   return length[0];
 }
 
-function calculateOffset(scrollSource, orientation, offset, startOrEnd) {
+export function calculateOffset(scrollSource, orientation, offset, startOrEnd) {
   // TODO: Support other writing directions.
   if (orientation == 'block')
     orientation = 'vertical';
@@ -179,5 +179,3 @@ function calculateOffset(scrollSource, orientation, offset, startOrEnd) {
     }
   }
 }
-
-scrolltimeline.installScrollOffsetExtension(parseOffset, calculateOffset);

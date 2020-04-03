@@ -1,41 +1,23 @@
-<!DOCTYPE html>
-<style>
-body {
-  height: 2000px;
-  padding-top: 200px;
-}
-#test {
-  display: block;
-  width: 100px;
-  height: 100px;
-  background: green;
-  position: fixed;
-  top: 0;
-}
-#container {
-  position: absolute;
-  top: 400px;
-  height: 200px;
-  width: 200px;
-  background: blue;
-}
-</style>
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Local Dev Demos</title>
+</head>
 <body>
-  <h1>ScrollTimeline polyfill</h1>
-  <p>A <a href="demo/parallax/">more advanced demo based on element intersection</a>.</p>
-  <div id="test"></div>
-  <div id="container"></div>
-<script type="module">
-import ScrollTimeline from './scroll-timeline.js';
-
-var elem = document.getElementById('container');
-var st = new ScrollTimeline();
-var a = document.querySelector('#test').animate([
-  {transform: 'translateY(0)'},
-  {transform: 'translateY(' + (window.innerHeight - 100) + 'px)'},
-], {
-  duration: 1000,
-  timeline: st,
-});
-</script>
+<ul>
+    <li>
+        <a href="/demo/basic">demo/basic</a>
+    </li>
+    <li>
+        <a href="/demo/parallax/index.html">demo/parallax</a>
+    </li>
+    <li>
+        <a href="/demo/parallax/unclamped.html">demo/parallax/unclamped</a>
+    </li>
+</ul>
 </body>
+</html>

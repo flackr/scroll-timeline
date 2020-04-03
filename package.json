@@ -1,0 +1,40 @@
+{
+  "name": "scroll-timeline-polyfill",
+  "version": "1.0.0",
+  "description": "A polyfill for scroll-driven animations on the web via ScrollTimeline",
+  "source": "src/scroll-timeline.js",
+  "main": "dist/scroll-timeline.js",
+  "scripts": {
+    "build": "microbundle -f iife",
+    "watch": "microbundle watch -f iife",
+    "dev": "run-all \"serve\" \" npm run watch \" ",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/flackr/scroll-timeline.git"
+  },
+  "files": [
+    "src",
+    "dist"
+  ],
+  "keywords": [
+    "waapi",
+    "scrolltimeline",
+    "parallax",
+    "animations",
+    "web",
+    "animations"
+  ],
+  "author": "",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/flackr/scroll-timeline/issues"
+  },
+  "homepage": "https://github.com/flackr/scroll-timeline#readme",
+  "devDependencies": {
+    "microbundle": "^0.12.0-next.8",
+    "run-all": "^1.0.1",
+    "serve": "^11.3.0"
+  }
+}

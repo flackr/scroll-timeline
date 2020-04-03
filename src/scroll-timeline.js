@@ -13,9 +13,13 @@
 // limitations under the License.
 
 import * as scrolltimeline from './scroll-timeline-base.js';
+import {calculateOffset, parseOffset} from "./intersection-based-offset";
 
-export { ScrollTimeline as default } from './scroll-timeline-base.js';
+// TODO: explore other options or name, when we install our `ScrollTimeline` on `Window` object
+//  this module import will shadow that already existing window object
+//  if we decided to continue to offer module async version, we can expose it as `ScrollTimelinePolyfill` or somthing
+// export { ScrollTimeline as default } from './scroll-timeline-base.js';
 
-(function(scope) {
-  scrolltimeline.installPolyfill(scope);
-})(window);
+scrolltimeline.installScrollOffsetExtension(parseOffset, calculateOffset);
+scrolltimeline.installPolyfill(window);
+

@@ -19,3 +19,13 @@ document.getElementById('parallax').animate(
           endScrollOffset: '200px'})
     });
 ```
+
+# Contributing
+
+Running a dev environment
+
+```shell script
+npm i
+npm run dev
+# go to localhost:5000 
+```
