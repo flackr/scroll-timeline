@@ -9,9 +9,14 @@ yarn-error.log*
 # Optional npm cache directory
 .npm
 
+node_modules
+
 # Output of 'npm pack'
 *.tgz
 
+# webstorm or intellij configs
 .idea
 
-node_modules
+# demos deployment directory
+build
+
