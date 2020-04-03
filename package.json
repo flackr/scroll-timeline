@@ -34,6 +34,7 @@
   },
   "homepage": "https://github.com/flackr/scroll-timeline#readme",
   "devDependencies": {
+    "gh-pages": "^2.2.0",
     "microbundle": "^0.12.0-next.8",
     "run-all": "^1.0.1",
     "serve": "^11.3.0"

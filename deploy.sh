@@ -18,7 +18,7 @@ cp -rf dist build/
 # production env: demos point to ../dist
 
 # sed behaviour differs a bit between unix variants
-# this should work well in linux-based CI or perosnal Macs
+# this works well in linux-based OS (e.g. GitHub CI) or perosnal Macs
 if [ "$(uname)" == "Darwin" ]; then
   find build -name '*.html' -exec sed -i '' -e 's/..\/..\/dist/..\/dist/g' {} +
 elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
