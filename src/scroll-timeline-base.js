@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { parseLength } from './utils';
+import {parseLength} from './utils';
 
 let scrollTimelineOptions = new WeakMap();
 
@@ -29,6 +29,7 @@ function calculateTargetEffectEnd(options) {
 }
 
 let extensionScrollOffsetFunctions = [];
+
 export function installScrollOffsetExtension(parseFunction, evaluateFunction) {
   extensionScrollOffsetFunctions.push([parseFunction, evaluateFunction]);
 }
@@ -56,8 +57,8 @@ function calculateScrollOffset(autoValue, scrollSource, orientation, offset, fn)
     orientation = 'horizontal';
 
   let maxValue = orientation == 'vertical' ?
-      scrollSource.scrollHeight - scrollSource.clientHeight :
-      scrollSource.scrollWidth - scrollSource.clientWidth;
+    scrollSource.scrollHeight - scrollSource.clientHeight :
+    scrollSource.scrollWidth - scrollSource.clientWidth;
   let parsed = parseLength(offset == 'auto' ? autoValue : offset);
   if (parsed[2] == '%')
     return parseFloat(parsed[1]) * maxValue / 100;
@@ -232,7 +233,7 @@ export class ScrollTimeline {
     // Step 4
     if (currentScrollOffset >= endOffset) {
       if (endOffset < calculateMaxScrollOffset(this.scrollSource, this.orientation) &&
-          (this.fill == 'none' || this.fill == 'backwards')) {
+        (this.fill == 'none' || this.fill == 'backwards')) {
         return unresolved;
       }
       return timeRange;
@@ -246,7 +247,7 @@ export class ScrollTimeline {
 export function installPolyfill(scope) {
   scope.ScrollTimeline = ScrollTimeline;
   let nativeAnimate = scope.Element.prototype.animate;
-  scope.Element.prototype.animate = function(keyframes, options) {
+  scope.Element.prototype.animate = function (keyframes, options) {
     let timeline = options.timeline;
     if (!timeline || !(timeline instanceof ScrollTimeline)) {
       return nativeAnimate.apply(this, arguments);

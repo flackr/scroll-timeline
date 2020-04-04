@@ -8,8 +8,8 @@
     "build": "microbundle -f iife",
     "watch": "microbundle watch -f iife",
     "dev": "run-all \"serve\" \" npm run watch \" ",
-    "deploy": "npm run build && ./deploy.sh",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "deploy": "npm run build && ./deploy.sh && gh-pages build",
+    "test:unit": "jest"
   },
   "repository": {
     "type": "git",
@@ -32,9 +32,16 @@
   "bugs": {
     "url": "https://github.com/flackr/scroll-timeline/issues"
   },
+  "babel": {
+    "plugins": [
+      "@babel/plugin-transform-modules-commonjs"
+    ]
+  },
   "homepage": "https://github.com/flackr/scroll-timeline#readme",
   "devDependencies": {
+    "@babel/plugin-transform-modules-commonjs": "^7.9.0",
     "gh-pages": "^2.2.0",
+    "jest": "^25.2.7",
     "microbundle": "^0.12.0-next.8",
     "run-all": "^1.0.1",
     "serve": "^11.3.0"

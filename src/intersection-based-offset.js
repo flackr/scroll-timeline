@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { parseLength } from './utils';
+import {parseLength} from './utils';
 
 let IntersectionOptions = new WeakMap();
 
@@ -24,14 +24,14 @@ const RIGHT = 1;
 const BOTTOM = 2;
 const LEFT = 3;
 const MARGIN_MAP = [
-    // 1 length maps to all positions.
-    [[TOP, RIGHT, BOTTOM, LEFT]],
-    // 2 lengths maps to vertical and horizontal margins.
-    [[TOP, BOTTOM], [RIGHT, LEFT]],
-    // 3 lengths maps to top, horizontal, bottom margins.
-    [[TOP], [RIGHT, LEFT], [BOTTOM]],
-    // 4 lengths maps to each component.
-    [[TOP], [RIGHT], [BOTTOM], [LEFT]]];
+  // 1 length maps to all positions.
+  [[TOP, RIGHT, BOTTOM, LEFT]],
+  // 2 lengths maps to vertical and horizontal margins.
+  [[TOP, BOTTOM], [RIGHT, LEFT]],
+  // 3 lengths maps to top, horizontal, bottom margins.
+  [[TOP], [RIGHT, LEFT], [BOTTOM]],
+  // 4 lengths maps to each component.
+  [[TOP], [RIGHT], [BOTTOM], [LEFT]]];
 
 class IntersectionBasedOffset {
   constructor(value) {
@@ -55,6 +55,7 @@ class IntersectionBasedOffset {
     }
     IntersectionOptions.get(this).target = element;
   }
+
   get target() {
     return IntersectionOptions.get(this).target;
   }
@@ -64,6 +65,7 @@ class IntersectionBasedOffset {
       return;
     IntersectionOptions.get(this).edge = value;
   }
+
   get edge() {
     return IntersectionOptions.get(this).edge;
   }
@@ -76,6 +78,7 @@ class IntersectionBasedOffset {
       throw RangeError('threshold must be in the range [0, 1]');
     IntersectionOptions.get(this).threshold = threshold;
   }
+
   get threshold() {
     return IntersectionOptions.get(this).threshold;
   }
@@ -96,11 +99,15 @@ class IntersectionBasedOffset {
     }
     IntersectionOptions.get(this).rootMargin = parsedMargins;
   }
+
   get rootMargin() {
     // TODO: Simplify to the shortest matching specification for the given margins.
     return IntersectionOptions.get(this).rootMargin.map(
-        (margin) => { return margin.join(''); }).join(' ');
+      (margin) => {
+        return margin.join('');
+      }).join(' ');
   }
+
   set clamp(value) {
     // This is just for testing alternative proposals - not intended to be part
     // of the specification.
@@ -128,10 +135,12 @@ export function calculateOffset(scrollSource, orientation, offset, startOrEnd) {
   else if (orientation == 'inline')
     orientation = 'horizontal';
   let originalViewport = scrollSource == document.scrollingElement ?
-      { left: 0, right: scrollSource.clientWidth,
-        top: 0, bottom: scrollSource.clientHeight,
-        width: scrollSource.clientWidth, height: scrollSource.clientHeight } :
-      scrollSource.getBoundingClientRect();
+    {
+      left: 0, right: scrollSource.clientWidth,
+      top: 0, bottom: scrollSource.clientHeight,
+      width: scrollSource.clientWidth, height: scrollSource.clientHeight
+    } :
+    scrollSource.getBoundingClientRect();
 
   // Resolve margins and offset viewport.
   let parsedMargins = IntersectionOptions.get(offset).rootMargin;
