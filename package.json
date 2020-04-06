@@ -9,7 +9,8 @@
     "watch": "microbundle watch -f iife",
     "dev": "run-all \"serve\" \" npm run watch \" ",
     "deploy": "npm run build && ./deploy.sh && gh-pages build",
-    "test:unit": "jest"
+    "test:unit": "jest",
+    "test:watch": "jest --watchAll"
   },
   "repository": {
     "type": "git",

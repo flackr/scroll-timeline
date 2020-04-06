@@ -14,6 +14,8 @@
 
 import {parseLength} from './utils';
 
+const ORIENTATIONS = new Set()
+
 let scrollTimelineOptions = new WeakMap();
 
 function scrollEventSource(scrollSource) {
@@ -22,8 +24,8 @@ function scrollEventSource(scrollSource) {
   return scrollSource;
 }
 
-function calculateTargetEffectEnd(options) {
-  if (options.iterationCount == Infinity)
+export function calculateTargetEffectEnd(options) {
+  if (options.iterationCount === Infinity)
     return Infinity;
   return Math.max((options.startDelay || 0) + (options.duration || 0) * (options.iterationCount || 1) + (options.endDelay || 0), 0);
 }
@@ -34,46 +36,46 @@ export function installScrollOffsetExtension(parseFunction, evaluateFunction) {
   extensionScrollOffsetFunctions.push([parseFunction, evaluateFunction]);
 }
 
-function calculateMaxScrollOffset(scrollSource, orientation) {
+export function calculateMaxScrollOffset(scrollSource, orientation) {
   // TODO: Support other writing directions.
-  if (orientation == 'block')
+  if (orientation === 'block')
     orientation = 'vertical';
-  else if (orientation == 'inline')
+  else if (orientation === 'inline')
     orientation = 'horizontal';
-  if (orientation == 'vertical')
+  if (orientation === 'vertical')
     return scrollSource.scrollHeight - scrollSource.clientHeight;
-  else if (orientation == 'horizontal')
+  else if (orientation === 'horizontal')
     return scrollSource.scrollWidth - scrollSource.clientWidth;
 
 }
 
 function calculateScrollOffset(autoValue, scrollSource, orientation, offset, fn) {
   if (fn)
-    return fn(scrollSource, orientation, offset, autoValue == '0%' ? 'start' : 'end');
+    return fn(scrollSource, orientation, offset, autoValue === '0%' ? 'start' : 'end');
   // TODO: Support other writing directions.
-  if (orientation == 'block')
+  if (orientation === 'block')
     orientation = 'vertical';
-  else if (orientation == 'inline')
+  else if (orientation === 'inline')
     orientation = 'horizontal';
 
-  let maxValue = orientation == 'vertical' ?
+  let maxValue = orientation === 'vertical' ?
     scrollSource.scrollHeight - scrollSource.clientHeight :
     scrollSource.scrollWidth - scrollSource.clientWidth;
-  let parsed = parseLength(offset == 'auto' ? autoValue : offset);
-  if (parsed[2] == '%')
+  let parsed = parseLength(offset === 'auto' ? autoValue : offset);
+  if (parsed[2] === '%')
     return parseFloat(parsed[1]) * maxValue / 100;
   return parseFloat(parsed[1]);
 }
 
 function calculateTimeRange(scrollTimeline) {
   let timeRange = scrollTimeline.timeRange;
-  if (timeRange == 'auto') {
+  if (timeRange === 'auto') {
     timeRange = 0;
     let options = scrollTimelineOptions.get(scrollTimeline).animationOptions;
     for (let i = 0; i < options.length; i++) {
       timeRange = Math.max(timeRange, calculateTargetEffectEnd(options[i]));
     }
-    if (timeRange == Infinity)
+    if (timeRange === Infinity)
       timeRange = 0;
   }
   return timeRange;
@@ -81,7 +83,7 @@ function calculateTimeRange(scrollTimeline) {
 
 function updateInternal() {
   let animations = scrollTimelineOptions.get(this).animations;
-  if (animations.length == 0)
+  if (animations.length === 0)
     return;
   let currentTime = this.currentTime;
   for (let i = 0; i < animations.length; i++) {
@@ -89,7 +91,7 @@ function updateInternal() {
     // an unresolved time value from a resolved time value, so to polyfill the
     // expected behavior we cancel the underlying animation.
     if (currentTime == null) {
-      if (animations[i].playState == 'paused')
+      if (animations[i].playState === 'paused')
         animations[i].cancel();
     } else {
       animations[i].currentTime = currentTime;
@@ -108,7 +110,7 @@ function addAnimation(scrollTimeline, animation, options) {
 function removeAnimation(scrollTimeline, animation) {
   let animations = scrollTimelineOptions.get(scrollTimeline).animations;
   let index = animations.indexOf(animation);
-  if (index == -1)
+  if (index === -1)
     return;
   animations.splice(index, 1);
   scrollTimelineOptions.get(scrollTimeline).animationOptions.splice(index, 1);

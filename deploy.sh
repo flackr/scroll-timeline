@@ -4,7 +4,7 @@
 rm -rf build
 mkdir build
 
-# recursively copy demo/ dir to www/
+# recursively copy demo/ dir to build/
 cp -rf demo/ build/
 
 # copy demos root page that lists all demos
