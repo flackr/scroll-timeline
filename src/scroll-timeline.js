@@ -12,14 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import * as scrolltimeline from './scroll-timeline-base.js';
+import { ScrollTimeline, installScrollOffsetExtension, addAnimation } from "./scroll-timeline-base";
 import {calculateOffset, parseOffset} from "./intersection-based-offset";
 
-// TODO: explore other options or name, when we install our `ScrollTimeline` on `Window` object
-//  this module import will shadow that already existing window object
-//  if we decided to continue to offer module async version, we can expose it as `ScrollTimelinePolyfill` or somthing
-// export { ScrollTimeline as default } from './scroll-timeline-base.js';
+const nativeElementAnimate = window.Element.prototype.animate;
 
-scrolltimeline.installScrollOffsetExtension(parseOffset, calculateOffset);
-scrolltimeline.installPolyfill(window);
+const animate = function (keyframes, options) {
+  let timeline = options.timeline;
+  if (!timeline || !(timeline instanceof ScrollTimeline)) {
+    return nativeElementAnimate.apply(this, arguments);
+  }
+  delete options.timeline;
+  let animation = nativeElementAnimate.apply(this, arguments);
+  // TODO: Create a proxy for the animation to control and fake the animation
+  // play state.
+  animation.pause();
+  addAnimation(timeline, animation, options);
+  return animation;
+};
 
+installScrollOffsetExtension(parseOffset, calculateOffset);
+
+if (!Reflect.defineProperty(window, 'ScrollTimeline', {value: ScrollTimeline})) {
+  throw Error("Error installing ScrollTimeline polyfill: could not attach ScrollTimeline to window")
+}
+
+if (!Reflect.defineProperty(Element.prototype, 'animate', {value: animate})) {
+  throw Error("Error installing ScrollTimeline polyfill: could not attach WAAPI's animate to DOM Element")
+}

@@ -14,7 +14,7 @@
 
 import {parseLength} from './utils';
 
-const ORIENTATIONS = new Set()
+const ORIENTATIONS = new Set();
 
 let scrollTimelineOptions = new WeakMap();
 
@@ -99,7 +99,7 @@ function updateInternal() {
   }
 }
 
-function addAnimation(scrollTimeline, animation, options) {
+export function addAnimation(scrollTimeline, animation, options) {
   let animations = scrollTimelineOptions.get(scrollTimeline).animations;
   let animationOptions = scrollTimelineOptions.get(scrollTimeline).animationOptions;
   animations.push(animation);
@@ -227,7 +227,7 @@ export class ScrollTimeline {
 
     // Step 3
     if (currentScrollOffset < startOffset) {
-      if (this.fill == 'none' || this.fill == 'forwards')
+      if (this.fill === 'none' || this.fill === 'forwards')
         return unresolved;
       return 0;
     }
@@ -235,7 +235,7 @@ export class ScrollTimeline {
     // Step 4
     if (currentScrollOffset >= endOffset) {
       if (endOffset < calculateMaxScrollOffset(this.scrollSource, this.orientation) &&
-        (this.fill == 'none' || this.fill == 'backwards')) {
+        (this.fill === 'none' || this.fill === 'backwards')) {
         return unresolved;
       }
       return timeRange;
@@ -244,22 +244,4 @@ export class ScrollTimeline {
     // Step 5
     return (currentScrollOffset - startOffset) / (endOffset - startOffset) * timeRange;
   }
-};
-
-export function installPolyfill(scope) {
-  scope.ScrollTimeline = ScrollTimeline;
-  let nativeAnimate = scope.Element.prototype.animate;
-  scope.Element.prototype.animate = function (keyframes, options) {
-    let timeline = options.timeline;
-    if (!timeline || !(timeline instanceof ScrollTimeline)) {
-      return nativeAnimate.apply(this, arguments);
-    }
-    delete options.timeline;
-    let animation = nativeAnimate.apply(this, arguments);
-    // TODO: Create a proxy for the animation to control and fake the animation
-    // play state.
-    animation.pause();
-    addAnimation(timeline, animation, options);
-    return animation;
-  };
 }

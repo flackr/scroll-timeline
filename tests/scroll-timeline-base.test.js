@@ -18,7 +18,7 @@ describe("calculateTargetEffectEnd", function () {
       iterationCount: 1,
       duration: 200
     };
-    expect(calculateTargetEffectEnd(opts)).toBe(200)
+    expect(calculateTargetEffectEnd(opts)).toBe(200);
   });
 
   test("should respect startDelay if it was > 0", function () {
@@ -29,7 +29,7 @@ describe("calculateTargetEffectEnd", function () {
       duration,
       startDelay
     };
-    expect(calculateTargetEffectEnd(opts)).toBe(duration + startDelay)
+    expect(calculateTargetEffectEnd(opts)).toBe(duration + startDelay);
   });
 
   test("should respect startDelay if it was > 0", function () {
@@ -70,7 +70,7 @@ describe("calculateMaxScrollOffset", function () {
       scrollHeight
     };
 
-    expect(calculateMaxScrollOffset( scrollSource, orientation )).toBe(0)
+    expect(calculateMaxScrollOffset( scrollSource, orientation )).toBe(0);
 
   });
 
@@ -84,7 +84,7 @@ describe("calculateMaxScrollOffset", function () {
       scrollHeight
     };
 
-    expect(calculateMaxScrollOffset( scrollSource, orientation )).toBe(0)
+    expect(calculateMaxScrollOffset( scrollSource, orientation )).toBe(0);
 
   });
 
@@ -98,7 +98,7 @@ describe("calculateMaxScrollOffset", function () {
       scrollWidth
     };
 
-    expect(calculateMaxScrollOffset( scrollSource, orientation )).toBe(0)
+    expect(calculateMaxScrollOffset( scrollSource, orientation )).toBe(0);
 
   });
 
@@ -112,8 +112,14 @@ describe("calculateMaxScrollOffset", function () {
       scrollWidth
     };
 
-    expect(calculateMaxScrollOffset( scrollSource, orientation )).toBe(0)
+    expect(calculateMaxScrollOffset( scrollSource, orientation )).toBe(0);
 
-  })
+  });
 
+});
+
+describe("calculateScrollOffset", function () {
+  it("", function () {
+
+  });
 });
