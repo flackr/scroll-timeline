@@ -1,4 +1,4 @@
-import { calculateTargetEffectEnd, calculateMaxScrollOffset } from "../src/scroll-timeline-base";
+import { calculateTargetEffectEnd, calculateMaxScrollOffset, calculateScrollOffset, installScrollOffsetExtension } from "../src/scroll-timeline-base";
 
 describe("calculateTargetEffectEnd", function () {
   test("returns Infinity when iterationCount is Infinity", function () {
@@ -119,7 +119,84 @@ describe("calculateMaxScrollOffset", function () {
 });
 
 describe("calculateScrollOffset", function () {
-  it("", function () {
+  function scrollOffsetFunction (scrollSource, orientation, offset, autoValue) {
+    return true;
+  }
+  it("should call and return the scrollOffsetFunction if it was passed as an argument", function () {
+    expect( calculateScrollOffset(true, true, true, true, scrollOffsetFunction) ).toBe(true);
+  });
 
+  it("should utilise orientation information correctly and use scrollHeight / clientHeight for vertical and block orientations ", function () {
+    let orientationV = 'vertical';
+    let orientationH = 'horizontal';
+    let clientHeight = 1000;
+    let scrollHeight = 1000;
+
+    let clientWidth = 1000;
+    let scrollWidth = 1000;
+
+    let offset = '100px';
+
+    let scrollSourceV = {
+      clientHeight,
+      scrollHeight
+    };
+
+    let scrollSourceH = {
+      clientWidth,
+      scrollWidth
+    };
+
+    expect(calculateScrollOffset('0%', scrollSourceV, orientationV, offset, null)).toBe(100);
+    expect(calculateScrollOffset('0%', scrollSourceH, orientationH, offset, null)).toBe(100);
+  });
+
+  it("percentage values must be converted based on scrollSource deltas", function () {
+    let orientationV = 'block';
+    let orientationH = 'inline';
+    let clientHeight = 900;
+    let scrollHeight = 1000;
+
+    let clientWidth = 1000;
+    let scrollWidth = 1000;
+
+    let offset = '90%';
+
+    let scrollSourceV = {
+      clientHeight,
+      scrollHeight
+    };
+
+    let scrollSourceH = {
+      clientWidth,
+      scrollWidth
+    };
+
+    expect(calculateScrollOffset('0%', scrollSourceV, orientationV, offset, null)).toBe(90);
+  });
+
+});
+
+
+describe('installScrollOffsetExtension', function () {
+
+  let parse = function () {
+    return "parse";
+  };
+  let evaluate = function () {
+    return "evaluate";
+  };
+
+  let installedExtensions = installScrollOffsetExtension(parse, evaluate);
+
+  let currentFns = installedExtensions[installedExtensions.length - 1];
+
+  it("should push extensions and return the array of installed extensions", function () {
+    expect(installedExtensions.length).toBeGreaterThan(0);
+  });
+
+  it("successfuly maps the parse and evaluate function", function () {
+    expect(currentFns.parse()).toBe("parse");
+    expect(currentFns.evaluate()).toBe("evaluate");
   });
 });

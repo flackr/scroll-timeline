@@ -33,7 +33,11 @@ export function calculateTargetEffectEnd(options) {
 let extensionScrollOffsetFunctions = [];
 
 export function installScrollOffsetExtension(parseFunction, evaluateFunction) {
-  extensionScrollOffsetFunctions.push([parseFunction, evaluateFunction]);
+  extensionScrollOffsetFunctions.push({
+    parse: parseFunction,
+    evaluate: evaluateFunction
+  });
+  return extensionScrollOffsetFunctions
 }
 
 export function calculateMaxScrollOffset(scrollSource, orientation) {
@@ -49,7 +53,7 @@ export function calculateMaxScrollOffset(scrollSource, orientation) {
 
 }
 
-function calculateScrollOffset(autoValue, scrollSource, orientation, offset, fn) {
+export function calculateScrollOffset(autoValue, scrollSource, orientation, offset, fn) {
   if (fn)
     return fn(scrollSource, orientation, offset, autoValue === '0%' ? 'start' : 'end');
   // TODO: Support other writing directions.
@@ -62,9 +66,9 @@ function calculateScrollOffset(autoValue, scrollSource, orientation, offset, fn)
     scrollSource.scrollHeight - scrollSource.clientHeight :
     scrollSource.scrollWidth - scrollSource.clientWidth;
   let parsed = parseLength(offset === 'auto' ? autoValue : offset);
-  if (parsed[2] === '%')
-    return parseFloat(parsed[1]) * maxValue / 100;
-  return parseFloat(parsed[1]);
+  if (parsed.unit === '%')
+    return parseFloat(parsed.value) * maxValue / 100;
+  return parseFloat(parsed.value);
 }
 
 function calculateTimeRange(scrollTimeline) {
@@ -169,10 +173,10 @@ export class ScrollTimeline {
     // Allow extensions to override scroll offset calculation.
     scrollTimelineOptions.get(this).startScrollOffsetFunction = null;
     for (let i = 0; i < extensionScrollOffsetFunctions.length; i++) {
-      let result = extensionScrollOffsetFunctions[i][0](offset);
+      let result = extensionScrollOffsetFunctions[i].parse(offset);
       if (result !== undefined) {
         offset = result;
-        scrollTimelineOptions.get(this).startScrollOffsetFunction = extensionScrollOffsetFunctions[i][1];
+        scrollTimelineOptions.get(this).startScrollOffsetFunction = extensionScrollOffsetFunctions[i].evaluate;
         break;
       }
     }
@@ -188,10 +192,10 @@ export class ScrollTimeline {
     // Allow extensions to override scroll offset calculation.
     scrollTimelineOptions.get(this).endScrollOffsetFunction = null;
     for (let i = 0; i < extensionScrollOffsetFunctions.length; i++) {
-      let result = extensionScrollOffsetFunctions[i][0](offset);
+      let result = extensionScrollOffsetFunctions[i].parse(offset);
       if (result !== undefined) {
         offset = result;
-        scrollTimelineOptions.get(this).endScrollOffsetFunction = extensionScrollOffsetFunctions[i][1];
+        scrollTimelineOptions.get(this).endScrollOffsetFunction = extensionScrollOffsetFunctions[i].evaluate;
         break;
       }
     }

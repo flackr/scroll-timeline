@@ -94,7 +94,7 @@ class IntersectionBasedOffset {
         throw TypeError('Unrecognized rootMargin length');
       let positions = MARGIN_MAP[margins.length - 1][i];
       for (let j = 0; j < positions.length; j++) {
-        parsedMargins[positions[j]] = [parseFloat(parsedValue[1]), parsedValue[2]];
+        parsedMargins[positions[j]] = [parseFloat(parsedValue.value), parsedValue.unit];
       }
     }
     IntersectionOptions.get(this).rootMargin = parsedMargins;
