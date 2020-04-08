@@ -83,11 +83,11 @@ function calculateTimeRange(scrollTimeline) {
   return timeRange;
 }
 
-function updateInternal() {
-  let animations = scrollTimelineOptions.get(this).animations;
+function updateInternal(scrollTimelineInstance) {
+  let animations = scrollTimelineOptions.get(scrollTimelineInstance).animations;
   if (animations.length === 0)
     return;
-  let currentTime = this.currentTime;
+  let currentTime = scrollTimelineInstance.currentTime;
   for (let i = 0; i < animations.length; i++) {
     // The web-animations spec says to throw a TypeError if you try to seek to
     // an unresolved time value from a resolved time value, so to polyfill the
@@ -106,18 +106,22 @@ export function addAnimation(scrollTimeline, animation, options) {
   let animationOptions = scrollTimelineOptions.get(scrollTimeline).animationOptions;
   animations.push(animation);
   animationOptions.push(options);
-  updateInternal.apply(scrollTimeline);
+  updateInternal(scrollTimeline);
 }
 
-//unused
-// function removeAnimation(scrollTimeline, animation) {
-//   let animations = scrollTimelineOptions.get(scrollTimeline).animations;
-//   let index = animations.indexOf(animation);
-//   if (index === -1)
-//     return;
-//   animations.splice(index, 1);
-//   scrollTimelineOptions.get(scrollTimeline).animationOptions.splice(index, 1);
-// }
+// TODO: this is a private function used for unit testing add function
+export function _getStlOptions(scrollTimeline) {
+  return scrollTimelineOptions.get(scrollTimeline);
+}
+
+function removeAnimation(scrollTimeline, animation) {
+  let animations = scrollTimelineOptions.get(scrollTimeline).animations;
+  let index = animations.indexOf(animation);
+  if (index === -1)
+    return;
+  animations.splice(index, 1);
+  scrollTimelineOptions.get(scrollTimeline).animationOptions.splice(index, 1);
+}
 
 export class ScrollTimeline {
   constructor(options) {
@@ -132,7 +136,6 @@ export class ScrollTimeline {
       // Internal members
       animations: [],
       animationOptions: [],
-      updateFunction: updateInternal.bind(this),
     });
     this.scrollSource = options && options.scrollSource || document.scrollingElement;
     this.orientation = options && options.orientation || 'block';
@@ -140,18 +143,16 @@ export class ScrollTimeline {
     this.endScrollOffset = options && options.endScrollOffset || 'auto';
     this.timeRange = options && options.timeRange || 'auto';
     this.fill = options && options.fill || 'none';
-    this.__polyfill = true;
   }
 
   set scrollSource(element) {
-    let internal = scrollTimelineOptions.get(this);
     if (this.scrollSource)
-      scrollEventSource(this.scrollSource).removeEventListener('scroll', internal.updateFunction);
+      scrollEventSource(this.scrollSource).removeEventListener('scroll', () => updateInternal(this));
     if (!(element instanceof Element))
       element = document.scrollingElement;
     scrollTimelineOptions.get(this).scrollSource = element;
-    scrollEventSource(element).addEventListener('scroll', internal.updateFunction);
-    updateInternal.apply(this);
+    scrollEventSource(element).addEventListener('scroll', () => updateInternal(this));
+    updateInternal(this)
   }
 
   get scrollSource() {
@@ -162,7 +163,7 @@ export class ScrollTimeline {
     if (['block', 'inline', 'horizontal', 'vertical'].indexOf(orientation) === -1)
       orientation = 'block';
     scrollTimelineOptions.get(this).orientation = orientation;
-    updateInternal.apply(this);
+    updateInternal(this);
   }
 
   get orientation() {
@@ -170,18 +171,19 @@ export class ScrollTimeline {
   }
 
   set startScrollOffset(offset) {
+    let currentStlOptions =  scrollTimelineOptions.get(this);
     // Allow extensions to override scroll offset calculation.
-    scrollTimelineOptions.get(this).startScrollOffsetFunction = null;
+    currentStlOptions.startScrollOffsetFunction = null;
     for (let i = 0; i < extensionScrollOffsetFunctions.length; i++) {
       let result = extensionScrollOffsetFunctions[i].parse(offset);
       if (result !== undefined) {
         offset = result;
-        scrollTimelineOptions.get(this).startScrollOffsetFunction = extensionScrollOffsetFunctions[i].evaluate;
+        currentStlOptions.startScrollOffsetFunction = extensionScrollOffsetFunctions[i].evaluate;
         break;
       }
     }
-    scrollTimelineOptions.get(this).startScrollOffset = offset;
-    updateInternal.apply(this);
+    currentStlOptions.startScrollOffset = offset;
+    updateInternal(this);
   }
 
   get startScrollOffset() {
@@ -200,7 +202,7 @@ export class ScrollTimeline {
       }
     }
     scrollTimelineOptions.get(this).endScrollOffset = offset;
-    updateInternal.apply(this);
+    updateInternal(this);
   }
 
   get endScrollOffset() {
@@ -209,7 +211,7 @@ export class ScrollTimeline {
 
   set timeRange(offset) {
     scrollTimelineOptions.get(this).timeRange = offset;
-    updateInternal.apply(this);
+    updateInternal(this);
   }
 
   get timeRange() {
@@ -247,5 +249,9 @@ export class ScrollTimeline {
 
     // Step 5
     return (currentScrollOffset - startOffset) / (endOffset - startOffset) * timeRange;
+  }
+
+  get __polyfill() {
+    return true;
   }
 }

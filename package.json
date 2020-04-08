@@ -10,7 +10,8 @@
     "dev": "run-all \"serve\" \" npm run watch \" ",
     "deploy": "npm run build && ./deploy.sh && gh-pages build",
     "test:unit": "jest",
-    "test:watch": "jest --watchAll"
+    "test:watch": "jest --watchAll",
+    "test:coverage": "jest --collect-coverage"
   },
   "repository": {
     "type": "git",

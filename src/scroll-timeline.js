@@ -20,10 +20,10 @@ const nativeElementAnimate = window.Element.prototype.animate;
 const animate = function (keyframes, options) {
   let timeline = options.timeline;
   if (!timeline || !(timeline instanceof ScrollTimeline)) {
-    return nativeElementAnimate.apply(this, arguments);
+    return nativeElementAnimate.apply(this, [keyframes, options]);
   }
   delete options.timeline;
-  let animation = nativeElementAnimate.apply(this, arguments);
+  let animation = nativeElementAnimate.apply(this, [keyframes, options]);
   // TODO: Create a proxy for the animation to control and fake the animation
   // play state.
   animation.pause();

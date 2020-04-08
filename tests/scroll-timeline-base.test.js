@@ -1,4 +1,4 @@
-import { calculateTargetEffectEnd, calculateMaxScrollOffset, calculateScrollOffset, installScrollOffsetExtension } from "../src/scroll-timeline-base";
+import { calculateTargetEffectEnd, calculateMaxScrollOffset, calculateScrollOffset, installScrollOffsetExtension, ScrollTimeline, _getStlOptions, addAnimation } from "../src/scroll-timeline-base";
 
 describe("calculateTargetEffectEnd", function () {
   test("returns Infinity when iterationCount is Infinity", function () {
@@ -198,5 +198,32 @@ describe('installScrollOffsetExtension', function () {
   it("successfuly maps the parse and evaluate function", function () {
     expect(currentFns.parse()).toBe("parse");
     expect(currentFns.evaluate()).toBe("evaluate");
+  });
+});
+
+describe("ScrollTimeline", function () {
+  it("Should have readonly __polyfill flag to differentiate it from native implementation if existed and make testing & debugging easier", function () {
+    let stl = new ScrollTimeline();
+    expect(typeof stl.__polyfill).toBeDefined();
+  });
+});
+
+describe("addAnimation", function () {
+  it("should be able to retreive animations and animationOptions attached to a scroll timeline", function () {
+    let stl = new ScrollTimeline();
+
+    let animation1 = { test: 1 }
+    let animation2 = { test: 1 }
+    let opts1 = { test: 1 }
+    let opts2 = { test: 2 }
+    addAnimation(stl, animation1, opts1);
+    addAnimation(stl, animation2, opts2);
+
+    let stlOptions = _getStlOptions(stl)
+    expect( stlOptions.animations.length ).toBe(2)
+
+    expect( stlOptions.animations[0].test ).toBe(1)
+    expect( stlOptions.animationOptions[1].test ).toBe(2)
+
   });
 });
