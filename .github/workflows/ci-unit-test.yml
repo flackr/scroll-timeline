@@ -1,0 +1,24 @@
+name: Unit Tests CI
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    name: Node.js v12
+    runs-on: ubuntu-latest
+    test:
+      - uses: actions/checkout@master
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 12
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run Unit Tests
+        run: npm run test:unit
+
+      - name: Report Coverage
+        run: npm run test:coverage
