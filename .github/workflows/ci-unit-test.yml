@@ -6,7 +6,7 @@ jobs:
   test:
     name: Node.js v12
     runs-on: ubuntu-latest
-    test:
+    steps:
       - uses: actions/checkout@master
         with:
           fetch-depth: 1
