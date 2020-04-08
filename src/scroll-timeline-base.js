@@ -14,8 +14,6 @@
 
 import {parseLength} from './utils';
 
-const ORIENTATIONS = new Set();
-
 let scrollTimelineOptions = new WeakMap();
 
 function scrollEventSource(scrollSource) {
@@ -111,14 +109,15 @@ export function addAnimation(scrollTimeline, animation, options) {
   updateInternal.apply(scrollTimeline);
 }
 
-function removeAnimation(scrollTimeline, animation) {
-  let animations = scrollTimelineOptions.get(scrollTimeline).animations;
-  let index = animations.indexOf(animation);
-  if (index === -1)
-    return;
-  animations.splice(index, 1);
-  scrollTimelineOptions.get(scrollTimeline).animationOptions.splice(index, 1);
-}
+//unused
+// function removeAnimation(scrollTimeline, animation) {
+//   let animations = scrollTimelineOptions.get(scrollTimeline).animations;
+//   let index = animations.indexOf(animation);
+//   if (index === -1)
+//     return;
+//   animations.splice(index, 1);
+//   scrollTimelineOptions.get(scrollTimeline).animationOptions.splice(index, 1);
+// }
 
 export class ScrollTimeline {
   constructor(options) {
@@ -141,6 +140,7 @@ export class ScrollTimeline {
     this.endScrollOffset = options && options.endScrollOffset || 'auto';
     this.timeRange = options && options.timeRange || 'auto';
     this.fill = options && options.fill || 'none';
+    this.__polyfill = true;
   }
 
   set scrollSource(element) {
@@ -159,7 +159,7 @@ export class ScrollTimeline {
   }
 
   set orientation(orientation) {
-    if (['block', 'inline', 'horizontal', 'vertical'].indexOf(orientation) == -1)
+    if (['block', 'inline', 'horizontal', 'vertical'].indexOf(orientation) === -1)
       orientation = 'block';
     scrollTimelineOptions.get(this).orientation = orientation;
     updateInternal.apply(this);
