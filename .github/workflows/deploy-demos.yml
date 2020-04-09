@@ -1,0 +1,23 @@
+name: Deploy to Master
+
+on:
+  push:
+    branches:
+      - master
+jobs:
+  test:
+    name: Node.js v12
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 12
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run Deploy Command
+        run: npm run deploy
