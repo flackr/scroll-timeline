@@ -20,3 +20,5 @@ node_modules
 # demos deployment directory
 build
 
+# jest coverage folder
+coverage
