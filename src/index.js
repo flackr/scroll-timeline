@@ -12,11 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { ScrollTimeline, installScrollOffsetExtension, addAnimation } from "./scroll-timeline-base";
-import {calculateOffset, parseOffset} from "./intersection-based-offset";
+import {
+  ScrollTimeline,
+  installScrollOffsetExtension,
+  addAnimation,
+} from "./scroll-timeline-base";
+import { calculateOffset, parseOffset } from "./intersection-based-offset";
 
 const nativeElementAnimate = window.Element.prototype.animate;
 
+/**
+ * Decides whether to use native Element.prototype.animate function in regular fashion or pass it to our polyfill
+ *  so its current time is driven by scroll event
+ * @param keyframes {Object} array of keyframe objects
+ * @param options {Object} WAAPI options object
+ * @returns {Function}
+ */
 const animate = function (keyframes, options) {
   let timeline = options.timeline;
   if (!timeline || !(timeline instanceof ScrollTimeline)) {
@@ -33,10 +44,16 @@ const animate = function (keyframes, options) {
 
 installScrollOffsetExtension(parseOffset, calculateOffset);
 
-if (!Reflect.defineProperty(window, 'ScrollTimeline', {value: ScrollTimeline})) {
-  throw Error("Error installing ScrollTimeline polyfill: could not attach ScrollTimeline to window")
+if (
+  !Reflect.defineProperty(window, "ScrollTimeline", { value: ScrollTimeline })
+) {
+  throw Error(
+    "Error installing ScrollTimeline polyfill: could not attach ScrollTimeline to window"
+  );
 }
 
-if (!Reflect.defineProperty(Element.prototype, 'animate', {value: animate})) {
-  throw Error("Error installing ScrollTimeline polyfill: could not attach WAAPI's animate to DOM Element")
+if (!Reflect.defineProperty(Element.prototype, "animate", { value: animate })) {
+  throw Error(
+    "Error installing ScrollTimeline polyfill: could not attach WAAPI's animate to DOM Element"
+  );
 }

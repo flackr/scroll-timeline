@@ -2,7 +2,7 @@
   "name": "scroll-timeline-polyfill",
   "version": "1.0.0",
   "description": "A polyfill for scroll-driven animations on the web via ScrollTimeline",
-  "source": "src/scroll-timeline.js",
+  "source": "src/index.js",
   "main": "dist/scroll-timeline.js",
   "scripts": {
     "build": "microbundle -f iife",
@@ -11,7 +11,8 @@
     "deploy": "npm run build && ./deploy.sh && gh-pages build",
     "test:unit": "jest",
     "test:watch": "jest --watchAll",
-    "test:coverage": "jest --collect-coverage"
+    "test:coverage": "jest --collect-coverage",
+    "format": "prettier --write \"src/**/*.js\""
   },
   "repository": {
     "type": "git",
