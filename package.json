@@ -9,9 +9,6 @@
     "watch": "microbundle watch -f iife",
     "dev": "run-all \"serve\" \" npm run watch \" ",
     "deploy": "npm run build && ./deploy.sh && gh-pages build",
-    "test:unit": "jest",
-    "test:watch": "jest --watchAll",
-    "test:coverage": "jest --collect-coverage",
     "format": "prettier --write \"src/**/*.js\""
   },
   "repository": {
@@ -48,7 +45,10 @@
   "devDependencies": {
     "@babel/plugin-transform-modules-commonjs": "^7.9.0",
     "gh-pages": "^2.2.0",
-    "jest": "^25.2.7",
+    "karma": "^5.0.0",
+    "karma-chai": "^0.1.0",
+    "karma-chrome-launcher": "^3.1.0",
+    "karma-mocha": "^1.3.0",
     "microbundle": "^0.12.0-next.8",
     "prettier": "^2.0.4",
     "run-all": "^1.0.1",
