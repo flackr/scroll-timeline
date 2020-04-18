@@ -22,3 +22,7 @@ build
 
 # jest coverage folder
 coverage
+
+test/wpt
+
+.DS_Store

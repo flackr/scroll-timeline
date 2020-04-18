@@ -1,0 +1,34 @@
+{
+  "polyfillFiles": [
+    "/polyfills/scroll-timeline.js"
+  ],
+  "baseTestsPath": "test/wpt",
+  "harnessTests": [
+    "/scroll-animations/current-time-nan.html",
+    "/scroll-animations/current-time-root-scroller.html",
+    "/scroll-animations/current-time-writing-modes.html",
+    "/scroll-animations/current-time.html",
+    "/scroll-animations/scroll-animation.html",
+    "/scroll-animations/scroll-timeline-invalidation.html",
+    "/scroll-animations/scroll-timeline-phases.tentative.html",
+    "/scroll-animations/setting-current-time.html",
+    "/scroll-animations/setting-playback-rate.html"
+  ],
+  "browsers" : [
+    {
+      "browserName": 'MicrosoftEdge',
+      "browserVersion": 'latest',
+      "platformName": 'Windows 10'
+    },
+    {
+      "browserName": "chrome",
+      "browserVersion": "latest",
+      "platformName": "Windows 10"
+    },
+    {
+      "browserName": "firefox",
+      "platformName": "Windows 10",
+      "browserVersion": "latest"
+    }
+  ]
+}

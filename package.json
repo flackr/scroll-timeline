@@ -10,7 +10,10 @@
     "dev": "run-all \"serve\" \" npm run watch \" ",
     "deploy": "npm run build && ./deploy.sh && gh-pages build",
     "format": "prettier --write \"src/**/*.js\"",
-    "test": "karma start --single-run karma.conf.js"
+    "test:setup": "wpt-setup.sh",
+    "serve:wpt": "sirv start test/wpt/ --port 8081",
+    "serve:demo": "sirv start demo",
+    "test:ci": "start-test serve:wpt :8081/scroll-animations/animation-with-root-scroller.html 'mocha'"
   },
   "repository": {
     "type": "git",
@@ -33,31 +36,17 @@
   "bugs": {
     "url": "https://github.com/flackr/scroll-timeline/issues"
   },
-  "babel": {
-    "env": {
-      "test": {
-        "plugins": [
-          "@babel/plugin-transform-modules-commonjs"
-        ]
-      }
-    }
-  },
   "homepage": "https://github.com/flackr/scroll-timeline#readme",
   "devDependencies": {
-    "@babel/plugin-transform-modules-commonjs": "^7.9.0",
     "chai": "^4.2.0",
     "gh-pages": "^2.2.0",
-    "karma": "^5.0.1",
-    "karma-chai": "^0.1.0",
-    "karma-chrome-launcher": "^3.1.0",
-    "karma-edgium-launcher": "^4.0.0-0",
-    "karma-firefox-launcher": "^1.3.0",
-    "karma-mocha": "^1.3.0",
-    "karma-safari-launcher": "^1.0.0",
     "microbundle": "^0.12.0-next.8",
     "mocha": "^7.1.1",
     "prettier": "^2.0.4",
     "run-all": "^1.0.1",
-    "serve": "^11.3.0"
-  }
+    "selenium-webdriver": "^4.0.0-alpha.7",
+    "sirv-cli": "^0.4.5",
+    "start-server-and-test": "^1.11.0"
+  },
+  "dependencies": {}
 }
