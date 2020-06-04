@@ -1,21 +1,28 @@
 name: Unit Tests CI
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
 
 jobs:
   test:
     name: Node.js v12
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
-        with:
-          fetch-depth: 1
+      - uses: actions/checkout@v2
       - uses: actions/setup-node@v1
         with:
           node-version: 12
-
       - name: Install Dependencies
         run: npm install
-
+      - name: Build polyfill
+        run: npm build
       - name: Run Tests
-        run: echo TODO implement karma tests..
+        run: npm run test:setup:ci ${{SAUCE_NAME}} ${{SAUCE_KEY}}
+        env:
+          SAUCE_NAME: ${{secrets.sauce_name}}
+          SAUCE_KEY: ${{secrets.sauce_key}}

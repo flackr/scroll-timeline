@@ -26,3 +26,5 @@ coverage
 test/wpt
 
 .DS_Store
+
+.env

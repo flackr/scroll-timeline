@@ -7,13 +7,14 @@
   "scripts": {
     "build": "microbundle -f iife",
     "watch": "microbundle watch -f iife",
-    "dev": "run-all \"serve\" \" npm run watch \" ",
+    "dev": "run-all \"sirv\" \" npm run watch \" ",
     "deploy": "npm run build && ./deploy.sh && gh-pages build",
-    "format": "prettier --write \"src/**/*.js\"",
-    "test:setup": "wpt-setup.sh",
-    "serve:wpt": "sirv start test/wpt/ --port 8081",
+    "serve:wpt": "sirv start test/wpt/ --port 8081 --quite",
     "serve:demo": "sirv start demo",
-    "test:ci": "start-test serve:wpt :8081/scroll-animations/animation-with-root-scroller.html 'mocha'"
+    "test:setup:wpt": "./test/setup/wpt-repo.sh",
+    "test:run:local-simple": "npm run test:setup-wpt && npm run serve:wpt",
+    "test:setup:ci": "npm run test:setup:wpt && ./test/setup/start-tunnel.sh",
+    "test:run:webdriver": "mocha test/webdriver/index.js --delay --exit"
   },
   "repository": {
     "type": "git",
@@ -39,14 +40,13 @@
   "homepage": "https://github.com/flackr/scroll-timeline#readme",
   "devDependencies": {
     "chai": "^4.2.0",
+    "dotenv": "^8.2.0",
     "gh-pages": "^2.2.0",
     "microbundle": "^0.12.0-next.8",
     "mocha": "^7.1.1",
-    "prettier": "^2.0.4",
     "run-all": "^1.0.1",
     "selenium-webdriver": "^4.0.0-alpha.7",
-    "sirv-cli": "^0.4.5",
-    "start-server-and-test": "^1.11.0"
+    "sirv-cli": "^0.4.5"
   },
   "dependencies": {}
 }

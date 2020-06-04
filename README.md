@@ -1,5 +1,7 @@
 # scroll-timeline polyfill.
 
+[![Sauce Test Status](https://app.saucelabs.com/buildstatus/zochahou)](https://app.saucelabs.com/u/zochahou)
+
 A polyfill of ScrollTimeline as defined by the [spec](https://wicg.github.io/scroll-animations/).
 
 View a [cool demo showing its usage](https://flackr.github.io/scroll-timeline/demo/parallax/)!
