@@ -22,7 +22,7 @@ jobs:
       - name: Build polyfill
         run: npm build
       - name: Run Tests
-        run: npm run test:setup:ci ${{SAUCE_NAME}} ${{SAUCE_KEY}}
+        run: npm run test:setup:ci ${{secrets.sauce_name}} ${{secrets.sauce_key}}
         env:
           SAUCE_NAME: ${{secrets.sauce_name}}
           SAUCE_KEY: ${{secrets.sauce_key}}
