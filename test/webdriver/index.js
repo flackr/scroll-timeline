@@ -1,12 +1,18 @@
-require('dotenv').config();
+require("dotenv").config();
 const expect = require("chai").expect;
 const webdriver = require("selenium-webdriver");
 const builder = require('./driver-builder');
+const sirv = require("sirv");
+const {createServer} = require("http");
 
-let {harnessTests} = require("../tests.config.json");
+const {harnessTests} = require("../tests.config.json");
 
 // TODO: configure / accept as cli args
-let baseUrl = `http://localhost:8081`;
+const port = 8081;
+const origin = "localhost"
+// firefox requires a protocol even for localhost origins
+const baseUrl = `http://${origin}:${port}`;
+const WPT_DIR = process.env.WPT_DIR || ".";
 
 async function testPage(driver, testPath) {
     await driver.getSession().then(function (sessionid) {
@@ -28,7 +34,29 @@ async function testPage(driver, testPath) {
     })
 }
 
+async function startServer() {
+
+    let server = createServer(sirv(WPT_DIR, {quite: true}));
+
+    return new Promise((resolve, reject) => {
+        server.listen(port, origin, err => {
+            if (err) {
+                reject(e)
+            }
+            console.log("local server started")
+            resolve(true)
+        })
+    })
+}
+
 async function main() {
+    //TODO: convert JavaScript's rejection handling from try{}catch{} to:
+    // let [resolved, rejected] = await fn()
+    try {
+        await startServer()
+    } catch (e) {
+        throw new Error(e)
+    }
     let testResults = new Map();
     for (const [browser, driverBuilder] of builder.drivers.entries()) {
         let currentBrowserResults = []
@@ -52,19 +80,21 @@ async function main() {
 }
 
 main().then(testResults => {
-    testResults.forEach((browserResults, browser) => {
-        describe(`WPT Harness Tests + ScrollTimeline polyfill running on ${browser} browser`, function () {
-            this.timeout(80000);
-            Object(browserResults).forEach(suit => {
-                describe(suit.test, () => {
-                    suit.tests.forEach(t => {
-                        it(t.name, () => {
-                            expect(t.status, `${t.message}\n\n    ${t.stack}`).to.equal(0);
+    describe("WPT Harness Tests + ScrollTimeline polyfill", function () {
+        this.timeout(80000);
+        testResults.forEach((browserResults, browser) => {
+            describe(`Running on ${browser} browser`, () => {
+                Object(browserResults).forEach(suit => {
+                    describe(suit.test, () => {
+                        suit.tests.forEach(t => {
+                            it(t.name, () => {
+                                expect(t.status, `${t.message}`).to.equal(0);
+                            })
                         })
                     })
                 })
-            })
-        });
+            });
+        })
     })
     run()
 })

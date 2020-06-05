@@ -13,9 +13,9 @@
     "serve:demo": "sirv start demo",
     "test:setup:wpt": "./test/setup/wpt-repo.sh",
     "test:run:local-simple": "npm run test:setup:wpt && npm run serve:wpt",
-    "test:run:local-webdriver": "echo \"Make sure a WPT server is running on port 8081\" npm run test:setup:wpt && npm run test:run:webdriver",
+    "test:run:local-webdriver": "npm run test:setup:wpt && npm run test:run:webdriver",
     "test:setup:ci": "npm run test:setup:wpt && ./test/setup/start-tunnel.sh",
-    "test:run:webdriver": "mocha test/webdriver/index.js --delay || exit 0"
+    "test:run:webdriver": "mocha test/webdriver/index.js --delay --exit"
   },
   "repository": {
     "type": "git",
@@ -47,6 +47,7 @@
     "mocha": "^7.2.0",
     "run-all": "^1.0.1",
     "selenium-webdriver": "^4.0.0-alpha.7",
+    "sirv": "^0.4.6",
     "sirv-cli": "^0.4.5"
   },
   "dependencies": {}

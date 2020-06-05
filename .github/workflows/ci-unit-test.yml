@@ -26,3 +26,4 @@ jobs:
         env:
           SAUCE_NAME: ${{secrets.sauce_name}}
           SAUCE_KEY: ${{secrets.sauce_key}}
+          WPT_DIR: ${{test/wpt}}

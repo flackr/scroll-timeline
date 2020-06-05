@@ -6,6 +6,7 @@ check_output () {
   while read -r line; do
     echo $line
     if echo $line | grep -q 'you may start your tests.$'; then
+      echo "TNNELL"
       "$PROJ_DIR/test/setup/start-webdriver.sh"
     fi
   done
