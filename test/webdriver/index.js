@@ -131,6 +131,11 @@ async function runWebDriverTests() {
 
 t.pass("stupid actions shit")
 
-exec("ps aux | grep sc | grep -v grep | awk  '{print $2}' | xargs kill -9", () => {
-    process.exit();
+t.tearDown(() => {
+    console.log("close the tunnel");
+    exec("ps aux | grep sc | grep -v grep | awk  '{print $2}' | xargs kill -9", () => {
+        console.log("maybe err, but tunnel should be closed, let's see");
+    })
+
+
 })
