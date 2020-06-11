@@ -130,7 +130,7 @@ async function runWebDriverTests() {
 
 
 t.test("??", t =>{
-    t.pass("something")
+    t.fail("something")
     t.end()
 })
 
