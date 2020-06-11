@@ -14,8 +14,9 @@
     "test:setup:wpt": "./test/setup/wpt-repo.sh",
     "test:run:local-simple": "npm run test:setup:wpt && npm run serve:wpt",
     "test:run:local-webdriver": "npm run test:setup:wpt && npm run test:run:webdriver",
+    "test:kill-sc-tunnel": "ps aux | grep sc | grep -v grep | awk  '{print $2}' | xargs kill -9",
     "test:setup:ci": "npm run test:setup:wpt && ./test/setup/start-tunnel.sh",
-    "test:run:webdriver": "mocha test/webdriver/index.js --delay --exit"
+    "test:run:webdriver": "tap test/webdriver/index.js --no-coverage --timeout=240"
   },
   "repository": {
     "type": "git",
@@ -40,15 +41,14 @@
   },
   "homepage": "https://github.com/flackr/scroll-timeline#readme",
   "devDependencies": {
-    "chai": "^4.2.0",
     "dotenv": "^8.2.0",
     "gh-pages": "^2.2.0",
     "microbundle": "^0.12.0-next.8",
-    "mocha": "^7.2.0",
     "run-all": "^1.0.1",
     "selenium-webdriver": "^4.0.0-alpha.7",
     "sirv": "^0.4.6",
-    "sirv-cli": "^0.4.5"
+    "sirv-cli": "^0.4.5",
+    "tap": "^14.10.7"
   },
   "dependencies": {}
 }

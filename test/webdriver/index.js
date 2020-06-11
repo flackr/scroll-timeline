@@ -1,5 +1,4 @@
 require("dotenv").config();
-const expect = require("chai").expect;
 const webdriver = require("selenium-webdriver");
 const builder = require('./driver-builder');
 const sirv = require("sirv");
@@ -7,9 +6,16 @@ const {createServer} = require("http");
 
 const {harnessTests} = require("../tests.config.json");
 
+const {exec} = require("child_process");
+
+const t = require('tap')
+
+let server;
+
 // TODO: configure / accept as cli args
 const port = 8081;
 const origin = "localhost"
+
 // firefox requires a protocol even for localhost origins
 const baseUrl = `http://${origin}:${port}`;
 const WPT_DIR = process.env.WPT_DIR || ".";
@@ -36,7 +42,7 @@ async function testPage(driver, testPath) {
 
 async function startServer() {
 
-    let server = createServer(sirv(WPT_DIR, {quite: true}));
+    server = createServer(sirv(WPT_DIR, {quite: true}));
 
     return new Promise((resolve, reject) => {
         server.listen(port, origin, err => {
@@ -49,7 +55,7 @@ async function startServer() {
     })
 }
 
-async function main() {
+async function runWebDriverTests() {
     //TODO: convert JavaScript's rejection handling from try{}catch{} to:
     // let [resolved, rejected] = await fn()
     try {
@@ -75,26 +81,49 @@ async function main() {
         testResults.set(browser, currentBrowserResults)
     }
     return new Promise((resolve) => {
-        resolve(testResults)
+        server.close(() => {
+            resolve(testResults);
+        })
     })
 }
 
-main().then(testResults => {
-    describe("WPT Harness Tests + ScrollTimeline polyfill", function () {
-        this.timeout(80000);
-        testResults.forEach((browserResults, browser) => {
-            describe(`Running on ${browser} browser`, () => {
+
+t.test("WPT Harness Tests + ScrollTimeline polyfill", parentTest => {
+    // TODO: switch to a less callback-y async-await syntax
+    // https://node-tap.org/docs/api/promises/#promises
+    runWebDriverTests().then(results => {
+        results.forEach((browserResults, browser) => {
+            parentTest.test(`Running on ${browser} browser`, vendorTest => {
                 Object(browserResults).forEach(suit => {
-                    describe(suit.test, () => {
-                        suit.tests.forEach(t => {
-                            it(t.name, () => {
-                                expect(t.status, `${t.message}`).to.equal(0);
-                            })
-                        })
-                    })
-                })
+                    vendorTest.test(suit.test, harnessPageTest => {
+                        suit.tests.forEach(item => {
+                            harnessPageTest.test(item.name, harnessSubTest => {
+                                harnessSubTest.equal(item.status, 0, item.message);
+                                harnessSubTest.end();
+                            });
+                        });
+                        harnessPageTest.end();
+                    });
+                });
+                vendorTest.end();
             });
-        })
-    })
-    run()
+        });
+        parentTest.end();
+    });
+});
+
+t.tearDown(() => {
+    if( builder.isSaucelabsTest === true ) {
+        exec("ps aux | grep sc | grep -v grep | awk  '{print $2}' | xargs kill -9", (error, stdout, stderr) => {
+            if (error) {
+                console.log(`error: ${error.message}`);
+                return;
+            }
+            if (stderr) {
+                console.log(`stderr: ${stderr}`);
+                return;
+            }
+            console.log(`stdout: ${stdout}`);
+        });
+    }
 })
