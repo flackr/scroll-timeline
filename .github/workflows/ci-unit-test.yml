@@ -21,9 +21,14 @@ jobs:
         run: npm install
       - name: Build polyfill
         run: npm build
+      - uses: saucelabs/sauce-connect-action@v1.0.0
+        with:
+          - username: ${{secrets.sauce_name}}
+          - accessKey: ${{secrets.accessKey}}
+          - tunnelIdentifier: sc-wpt-tunnel
       - name: Run Tests
         run: npm run test:setup:ci ${{secrets.sauce_name}} ${{secrets.sauce_key}}
         env:
           SAUCE_NAME: ${{secrets.sauce_name}}
-          SAUCE_KEY: ${{secrets.sauce_key}}
+          SAUCE_KEY: ${{secrets.accessKey}}
           WPT_DIR: "test/wpt"

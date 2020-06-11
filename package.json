@@ -14,8 +14,7 @@
     "test:setup:wpt": "./test/setup/wpt-repo.sh",
     "test:run:local-simple": "npm run test:setup:wpt && npm run serve:wpt",
     "test:run:local-webdriver": "npm run test:setup:wpt && npm run test:run:webdriver",
-    "test:kill-sc-tunnel": "ps aux | grep sc | grep -v grep | awk  '{print $2}' | xargs kill -9",
-    "test:setup:ci": "npm run test:setup:wpt && ./test/setup/start-tunnel.sh",
+    "test:setup:ci": "npm run test:setup:wpt && npm run test:run:webdriver",
     "test:run:webdriver": "tap test/webdriver/index.js --no-coverage --timeout=1200 --reporter=min",
     "test:setup:dummy": "tap test/webdriver/index.js --no-coverage --timeout=1200 --reporter=min"
   },

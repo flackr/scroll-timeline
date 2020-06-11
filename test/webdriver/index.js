@@ -130,10 +130,6 @@ async function runWebDriverTests() {
 
 
 t.test("??", t =>{
-    t.fail("something")
+    t.pass("something")
     t.end()
-})
-
-t.tearDown(() => {
-    exec("ps aux | grep sc | grep -v grep | awk  '{print $2}' | xargs kill -9")
 })
