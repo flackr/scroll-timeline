@@ -77,7 +77,7 @@ async function runWebDriverTests() {
             }
         }
         // cleanup before going to next browser's driver
-        await driver.quit();
+        // await driver.quit();
         testResults.set(browser, currentBrowserResults)
     }
     return new Promise((resolve) => {
@@ -98,7 +98,7 @@ t.test("WPT Harness Tests + ScrollTimeline polyfill", parentTest => {
                     vendorTest.test(suit.test, harnessPageTest => {
                         suit.tests.forEach(item => {
                             harnessPageTest.test(item.name, harnessSubTest => {
-                                harnessSubTest.equal(item.status, 0, item.message);
+                                harnessSubTest.equal(+item.status, 0, item.message);
                                 harnessSubTest.end();
                             });
                         });

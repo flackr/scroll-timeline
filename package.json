@@ -16,7 +16,7 @@
     "test:run:local-webdriver": "npm run test:setup:wpt && npm run test:run:webdriver",
     "test:kill-sc-tunnel": "ps aux | grep sc | grep -v grep | awk  '{print $2}' | xargs kill -9",
     "test:setup:ci": "npm run test:setup:wpt && ./test/setup/start-tunnel.sh",
-    "test:run:webdriver": "tap test/webdriver/index.js --no-coverage --timeout=240"
+    "test:run:webdriver": "tap test/webdriver/index.js --no-coverage --timeout=1200 --reporter=min"
   },
   "repository": {
     "type": "git",

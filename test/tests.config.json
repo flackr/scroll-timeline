@@ -3,15 +3,7 @@
     "/polyfills/scroll-timeline.js"
   ],
   "harnessTests": [
-    "/scroll-animations/current-time-nan.html",
-    "/scroll-animations/current-time-root-scroller.html",
-    "/scroll-animations/current-time-writing-modes.html",
-    "/scroll-animations/current-time.html",
-    "/scroll-animations/scroll-animation.html",
-    "/scroll-animations/scroll-timeline-invalidation.html",
-    "/scroll-animations/scroll-timeline-phases.tentative.html",
-    "/scroll-animations/setting-current-time.html",
-    "/scroll-animations/setting-playback-rate.html"
+    "/scroll-animations/current-time-nan.html"
   ],
   "browsers": {
     "local": [
