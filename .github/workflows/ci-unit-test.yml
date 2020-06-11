@@ -23,9 +23,9 @@ jobs:
         run: npm build
       - uses: saucelabs/sauce-connect-action@v1.0.0
         with:
-          - username: ${{secrets.sauce_name}}
-          - accessKey: ${{secrets.accessKey}}
-          - tunnelIdentifier: sc-wpt-tunnel
+          username: ${{secrets.sauce_name}}
+          accessKey: ${{secrets.accessKey}}
+          tunnelIdentifier: sc-wpt-tunnel
       - name: Run Tests
         run: npm run test:setup:ci ${{secrets.sauce_name}} ${{secrets.sauce_key}}
         env:
