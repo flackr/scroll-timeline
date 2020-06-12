@@ -30,6 +30,6 @@ jobs:
         run: npm run test:sauce:setup-ci
         env:
           SAUCE_NAME: ${{secrets.sauce_name}}
-          SAUCE_KEY: ${{secrets.accessKey}}
+          SAUCE_KEY: ${{secrets.sauce_key}}
           WPT_DIR: "test/wpt"
           SC_TUNNEL_ID: sc-wpt-tunnel
