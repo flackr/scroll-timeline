@@ -6,11 +6,9 @@ const {createServer} = require("http");
 
 const {harnessTests} = require("../tests.config.json");
 
-const {exec} = require("child_process");
+const {magenta, cyan, red, green, white, black} = require("kleur");
 
-const t = require('tap')
-
-let server;
+let driver;
 
 // TODO: configure / accept as cli args
 const port = 8081;
@@ -21,9 +19,6 @@ const baseUrl = `http://${origin}:${port}`;
 const WPT_DIR = process.env.WPT_DIR || ".";
 
 async function testPage(driver, testPath) {
-    await driver.getSession().then(function (sessionid) {
-        driver.sessionID = sessionid.id_;
-    });
     await driver.get(baseUrl + testPath);
     let resultsScriptElement = await driver.findElement(
         webdriver.By.id("__testharness__results__")
@@ -40,26 +35,35 @@ async function testPage(driver, testPath) {
     })
 }
 
-async function startServer() {
-
-    server = createServer(sirv(WPT_DIR, {quite: true}));
-
+async function startLocalServer() {
+    let server = createServer(sirv(WPT_DIR, {quite: true}));
     return new Promise((resolve, reject) => {
         server.listen(port, origin, err => {
             if (err) {
-                reject(e)
+                return reject(err)
             }
-            console.log("local server started")
-            resolve(true)
+            resolve(server)
         })
     })
 }
 
+// async function stopLocalServer(instance) {
+//     return new Promise((resolve, reject) => {
+//         instance.close(err => {
+//             if (err) {
+//                 return reject(err);
+//             }
+//             resolve(true)
+//         })
+//     })
+// }
+
 async function runWebDriverTests() {
+    let server;
     //TODO: convert JavaScript's rejection handling from try{}catch{} to:
     // let [resolved, rejected] = await fn()
     try {
-        await startServer()
+        server = await startLocalServer()
     } catch (e) {
         throw new Error(e)
     }
@@ -87,27 +91,54 @@ async function runWebDriverTests() {
     })
 }
 
+async function reporter() {
+    let passes = 0;
+    let failures = 0;
+    let suitesOK = 0;
+    let suitesErr = 0;
+    let results = await runWebDriverTests();
+    results.forEach((browserResults, browser) => {
+        Object(browserResults).forEach(suite => {
+            console.log(`${magenta().bold([browser.toUpperCase()])} ${cyan().bold("testing: " + suite.test)}`)
+            if (suite.status === 0) {
+                console.log(green().bold("Harness Test: OK"))
+                suitesOK++
+            } else {
+                console.log(red().bold("Harness Test: Error"))
+                console.log(red(suite.message))
+                suitesErr++
+            }
+            console.log("Details:")
+            suite.tests.forEach(t => {
+                if (t.status === 0) {
+                    passes++;
+                    console.log(`\t${green().bold("PASS")} ${green(t.name)} `)
+                } else {
+                    failures++;
+                    console.log(`\t${red().bold("FAIL")} ${red(t.name)} `)
+                    console.log(`\t     ${ red("Details: ") + t.message }`)
+                }
+            })
+        })
+    })
 
-t.test("WPT Harness Tests + ScrollTimeline polyfill", parentTest => {
-    // TODO: switch to a less callback-y async-await syntax
-    // https://node-tap.org/docs/api/promises/#promises
-    runWebDriverTests().then(results => {
-        results.forEach((browserResults, browser) => {
-            parentTest.test(`Running on ${browser} browser`, vendorTest => {
-                Object(browserResults).forEach(suit => {
-                    vendorTest.test(suit.test, harnessPageTest => {
-                        suit.tests.forEach(item => {
-                            harnessPageTest.test(item.name, harnessSubTest => {
-                                harnessSubTest.equal(+item.status, 0, item.message);
-                                harnessSubTest.end();
-                            });
-                        });
-                        harnessPageTest.end();
-                    });
-                });
-                vendorTest.end();
-            });
-        });
-        parentTest.end();
-    });
-});
+    console.log(black().bgWhite(` SUMMARY `))
+    console.log(`Harness Tests Successfuly Completed: ${suitesOK}/${suitesOK + suitesErr}`);
+    console.log(`Tests failed: ${failures}`);
+    console.log(`Tests passed: ${passes}\n\n\n`);
+
+    return new Promise((resolve) => {
+        if( failures > 0 ) {
+            resolve(1)
+        } else {
+            resolve(0)
+        }
+    })
+}
+
+reporter().then(exitCode => {
+    process.exit(exitCode);
+}).catch(e => {
+    throw new Error(e);
+})
+

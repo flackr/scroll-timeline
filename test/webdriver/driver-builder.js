@@ -15,10 +15,11 @@ promise.USE_PROMISE_MANAGER = false;
 class Drivers {
     constructor() {
         this.sauceName = process.env.SAUCE_NAME;
-        this.sauceKey = process.env.SAUCE_KEY
-        this.isSaucelabsTest = this.sauceName && this.sauceKey;
+        this.sauceKey = process.env.SAUCE_KEY;
+        this.tunnelId = process.env.SC_TUNNEL_ID;
+        this.testEnv = process.env.TEST_ENV && process.env.TEST_ENV.toLowerCase() === 'sauce' ? 'sauce' : 'local' ;
         this.drivers = new Map();
-        if (!this.isSaucelabsTest) {
+        if (this.testEnv !== 'sauce') {
             browsers.local.forEach(browser => {
                 let browserConfig = require("selenium-webdriver/" + browser);
                 browserConfig.setDefaultService(new browserConfig.ServiceBuilder(driversBinaries[browser]).build());
@@ -40,8 +41,8 @@ class Drivers {
                             name: "WPT Harness Tests for ScrollTimeline",
                             maxDuration: 3600,
                             idleTimeout: 1000,
-                            tags: ["scroll-animations", "polyfill", "scroll-timeline", "wpt-harness-tests"],
-                            'tunnelIdentifier': 'sc-wpt-tunnel'
+                            tags: ["scroll-animations", "polyfill", "scroll-timeline", "wpt-harness-tests", "jest"],
+                            'tunnelIdentifier': this.tunnelId
                         },
                     })
                     .usingServer("https://ondemand.saucelabs.com/wd/hub")

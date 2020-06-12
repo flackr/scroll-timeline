@@ -32,3 +32,4 @@ jobs:
           SAUCE_NAME: ${{secrets.sauce_name}}
           SAUCE_KEY: ${{secrets.accessKey}}
           WPT_DIR: "test/wpt"
+          SC_TUNNEL_ID: sc-wpt-tunnel
