@@ -16,7 +16,7 @@ check_output () {
 }
 
 if [ "$(uname)" == "Darwin" ]; then
-  "$PROJ_DIR/test/local-proxy/mac/sc" -u $SAUCE_NAME -k $SAUCE_KEY -i $TUNNEL_ID | check_output
+  "$PROJ_DIR/test/sauce-proxy/mac/sc" -u $1 -k $2 -i sc-wpt-tunnel | check_output
 elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
-  "$PROJ_DIR/test/local-proxy/linux/sc" -u $SAUCE_NAME -k $SAUCE_KEY -i $TUNNEL_ID | check_output
+  "$PROJ_DIR/test/sauce-proxy/linux/sc" -u $1 -k $2 -i sc-wpt-tunnel | check_output
 fi
