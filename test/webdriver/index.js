@@ -77,7 +77,7 @@ async function runWebDriverTests() {
             }
         }
         // cleanup before going to next browser's driver
-        // await driver.quit();
+        await driver.quit();
         testResults.set(browser, currentBrowserResults)
     }
     return new Promise((resolve) => {
