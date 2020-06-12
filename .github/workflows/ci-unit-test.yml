@@ -27,7 +27,7 @@ jobs:
           accessKey: ${{secrets.sauce_key}}
           tunnelIdentifier: sc-wpt-tunnel
       - name: Run Tests
-        run: npm run test:setup:ci ${{secrets.sauce_name}} ${{secrets.sauce_key}}
+        run: npm run test:sauce:setup-ci
         env:
           SAUCE_NAME: ${{secrets.sauce_name}}
           SAUCE_KEY: ${{secrets.accessKey}}
