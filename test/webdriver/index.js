@@ -88,48 +88,26 @@ async function runWebDriverTests() {
 }
 
 
-// t.test("WPT Harness Tests + ScrollTimeline polyfill", parentTest => {
-//     // TODO: switch to a less callback-y async-await syntax
-//     // https://node-tap.org/docs/api/promises/#promises
-//     runWebDriverTests().then(results => {
-//         results.forEach((browserResults, browser) => {
-//             parentTest.test(`Running on ${browser} browser`, vendorTest => {
-//                 Object(browserResults).forEach(suit => {
-//                     vendorTest.test(suit.test, harnessPageTest => {
-//                         suit.tests.forEach(item => {
-//                             harnessPageTest.test(item.name, harnessSubTest => {
-//                                 harnessSubTest.equal(+item.status, 0, item.message);
-//                                 harnessSubTest.end();
-//                             });
-//                         });
-//                         harnessPageTest.end();
-//                     });
-//                 });
-//                 vendorTest.end();
-//             });
-//         });
-//         parentTest.end();
-//     });
-// });
-
-// t.tearDown(() => {
-//     if( builder.isSaucelabsTest === true ) {
-//         exec("ps aux | grep sc | grep -v grep | awk  '{print $2}' | xargs kill -9", (error, stdout, stderr) => {
-//             if (error) {
-//                 console.log(`error: ${error.message}`);
-//                 return;
-//             }
-//             if (stderr) {
-//                 console.log(`stderr: ${stderr}`);
-//                 return;
-//             }
-//             console.log(`stdout: ${stdout}`);
-//         });
-//     }
-// })
-
-
-t.test("??", t =>{
-    t.pass("something")
-    t.end()
-})
+t.test("WPT Harness Tests + ScrollTimeline polyfill", parentTest => {
+    // TODO: switch to a less callback-y async-await syntax
+    // https://node-tap.org/docs/api/promises/#promises
+    runWebDriverTests().then(results => {
+        results.forEach((browserResults, browser) => {
+            parentTest.test(`Running on ${browser} browser`, vendorTest => {
+                Object(browserResults).forEach(suit => {
+                    vendorTest.test(suit.test, harnessPageTest => {
+                        suit.tests.forEach(item => {
+                            harnessPageTest.test(item.name, harnessSubTest => {
+                                harnessSubTest.equal(+item.status, 0, item.message);
+                                harnessSubTest.end();
+                            });
+                        });
+                        harnessPageTest.end();
+                    });
+                });
+                vendorTest.end();
+            });
+        });
+        parentTest.end();
+    });
+});

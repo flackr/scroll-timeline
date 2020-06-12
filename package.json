@@ -15,8 +15,7 @@
     "test:run:local-simple": "npm run test:setup:wpt && npm run serve:wpt",
     "test:run:local-webdriver": "npm run test:setup:wpt && npm run test:run:webdriver",
     "test:setup:ci": "npm run test:setup:wpt && npm run test:run:webdriver",
-    "test:run:webdriver": "tap test/webdriver/index.js --no-coverage --timeout=1200 --reporter=min",
-    "test:setup:dummy": "tap test/webdriver/index.js --no-coverage --timeout=1200 --reporter=min"
+    "test:run:webdriver": "tap test/webdriver/index.js --no-coverage --timeout=1200"
   },
   "repository": {
     "type": "git",
