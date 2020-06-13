@@ -2,10 +2,6 @@
 
 PROJ_DIR="$( cd "$(dirname "$1")" && pwd)"
 
-SAUCE_NAME=$(grep SAUCE_NAME "$PROJ_DIR/.env" | cut -d '=' -f2)
-SAUCE_KEY=$(grep SAUCE_KEY "$PROJ_DIR/.env" | cut -d '=' -f2)
-TUNNEL_ID=$(grep SC_TUNNEL_ID "$PROJ_DIR/.env" | cut -d '=' -f2)
-
 check_output () {
   while read -r line; do
     echo $line
