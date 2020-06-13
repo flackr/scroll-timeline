@@ -8,10 +8,10 @@ const {createServer} = require("http");
 
 const {harnessTests} = require("../tests.config.json");
 
-const { execSync } = require('child_process');
-
-
 const {magenta, cyan, red, green, black} = require("kleur");
+
+const  SauceLabs = require('saucelabs').default;
+
 
 // TODO: configure / accept as cli args
 const port = 8081;
@@ -94,12 +94,11 @@ async function runWebDriverTests() {
     })
 }
 
-async function reporter() {
+async function reporter(results) {
     let passes = 0;
     let failures = 0;
     let suitesOK = 0;
     let suitesErr = 0;
-    let results = await runWebDriverTests();
     results.forEach((browserResults, browser) => {
         Object(browserResults).forEach(suite => {
             console.log(`${magenta().bold([browser.toUpperCase()])} ${cyan().bold("testing: " + suite.test)}`)
@@ -139,9 +138,13 @@ async function reporter() {
     })
 }
 
-reporter().then(exitCode => {
+(async () => {
+    const sauceAccount = new SauceLabs({ user: process.env.SAUCE_NAME, key: process.env.SAUCE_KEY });
+    const sc = await sauceAccount.startSauceConnect({
+        tunnelIdentifier: process.env.SC_TUNNEL_ID
+    })
+    const results = await runWebDriverTests();
+    const exitCode = await reporter(results)
+    await sc.close();
     process.exit(exitCode);
-}).catch(e => {
-    throw new Error(e);
-})
-
+})()

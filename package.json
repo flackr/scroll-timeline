@@ -11,8 +11,8 @@
     "deploy": "npm run build && ./deploy.sh && gh-pages build",
     "serve:wpt": "sirv start test/wpt/ --port 8081 --quite",
     "serve:demo": "sirv start demo",
-    "test:sauce:setup": "./test/setup/wpt-repo.sh && ./test/setup/start-tunnel.sh",
-    "test:sauce:run": "TEST_ENV=sauce node test/webdriver/index.js",
+    "test:sauce:setup": " ./test/setup/start-tunnel.sh",
+    "test:sauce:run": "./test/setup/wpt-repo.sh && TEST_ENV=sauce node test/webdriver/index.js --unhandled-rejections=strict",
     "test:webdriver:local": "./test/setup/wpt-repo.sh && TEST_ENV=local node test/webdriver/index.js"
   },
   "repository": {
@@ -38,18 +38,14 @@
   },
   "homepage": "https://github.com/flackr/scroll-timeline#readme",
   "devDependencies": {
-    "chai": "^4.2.0",
     "dotenv": "^8.2.0",
-    "gh-pages": "^2.2.0",
-    "jest": "^26.0.1",
     "kleur": "^3.0.3",
     "microbundle": "^0.12.0-next.8",
-    "mocha": "^8.0.1",
     "run-all": "^1.0.1",
+    "saucelabs": "^4.4.1",
     "selenium-webdriver": "^4.0.0-alpha.7",
     "sirv": "^0.4.6",
-    "sirv-cli": "^0.4.5",
-    "tap": "^14.10.7"
+    "sirv-cli": "^0.4.5"
   },
   "dependencies": {}
 }
