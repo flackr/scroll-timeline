@@ -140,10 +140,8 @@ async function reporter() {
 }
 
 reporter().then(exitCode => {
-    execSync("ps aux | grep sc | grep -v grep | awk  '{print $2}' | xargs kill -9")
     process.exit(exitCode);
 }).catch(e => {
-    execSync("ps aux | grep sc | grep -v grep | awk  '{print $2}' | xargs kill -9")
     throw new Error(e);
 })
 
