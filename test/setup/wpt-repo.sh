@@ -2,17 +2,15 @@
 
 PROJ_DIR="$(cd "$(dirname "$1")" && pwd)"
 
-
 WPT_DIR="$PROJ_DIR/test/wpt"
 
 # if directory does not exist, clone fresh-stuff from WPT master
 if [ ! -d "$WPT_DIR" ]; then
-  echo "WPT folder not found, cloning"
+  echo "WPT folder not found, cloning from remote..."
   git clone https://github.com/web-platform-tests/wpt $WPT_DIR
 fi
 
 if [ ! -d "$WPT_DIR/polyfills" ]; then
-  echo "creating polyfills folder"
   mkdir "$WPT_DIR/polyfills"
 fi
 
