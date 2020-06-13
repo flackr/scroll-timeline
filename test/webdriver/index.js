@@ -1,14 +1,17 @@
 require("dotenv").config();
 const webdriver = require("selenium-webdriver");
 const builder = require('./driver-builder');
+
 const sirv = require("sirv");
+
 const {createServer} = require("http");
 
 const {harnessTests} = require("../tests.config.json");
 
-const {magenta, cyan, red, green, white, black} = require("kleur");
+const { execSync } = require('child_process');
 
-let driver;
+
+const {magenta, cyan, red, green, black} = require("kleur");
 
 // TODO: configure / accept as cli args
 const port = 8081;
@@ -137,8 +140,10 @@ async function reporter() {
 }
 
 reporter().then(exitCode => {
+    execSync("ps aux | grep sc | grep -v grep | awk  '{print $2}' | xargs kill -9")
     process.exit(exitCode);
 }).catch(e => {
+    execSync("ps aux | grep sc | grep -v grep | awk  '{print $2}' | xargs kill -9")
     throw new Error(e);
 })
 
