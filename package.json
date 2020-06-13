@@ -11,8 +11,9 @@
     "deploy": "npm run build && ./deploy.sh && gh-pages build",
     "serve:wpt": "sirv start test/wpt/ --port 8081 --quite",
     "serve:demo": "sirv start demo",
-    "test:sauce:run": "./test/setup/wpt-repo.sh && TEST_ENV=sauce node test/webdriver/index.js",
-    "test:webdriver:local": "./test/setup/wpt-repo.sh && TEST_ENV=local node test/webdriver/index.js"
+    "test:setup": "./test/setup/wpt-repo.sh",
+    "test:sauce:run": "npm run test:setup && TEST_ENV=sauce node test/webdriver/index.js",
+    "test:webdriver:local": "npm run test:setup && TEST_ENV=local node test/webdriver/index.js"
   },
   "repository": {
     "type": "git",
