@@ -28,6 +28,7 @@ const nativeElementAnimate = window.Element.prototype.animate;
  * @param options {Object} WAAPI options object
  * @returns {Function}
  */
+
 const animate = function (keyframes, options) {
   let timeline = options.timeline;
   if (!timeline || !(timeline instanceof ScrollTimeline)) {
@@ -43,7 +44,6 @@ const animate = function (keyframes, options) {
 };
 
 installScrollOffsetExtension(parseOffset, calculateOffset);
-
 if (
   !Reflect.defineProperty(window, "ScrollTimeline", { value: ScrollTimeline })
 ) {

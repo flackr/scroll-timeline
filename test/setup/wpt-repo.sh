@@ -16,5 +16,3 @@ fi
 
 rm -rf "$WPT_DIR/polyfills/scroll-timeline.js"
 cp "$PROJ_DIR/dist/scroll-timeline.js" "$WPT_DIR/polyfills/"
-
-WPT_DIR="$WPT_DIR" node "$PROJ_DIR/test/setup/inject-polyfill.js"

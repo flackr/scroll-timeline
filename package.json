@@ -6,14 +6,10 @@
   "main": "dist/scroll-timeline.js",
   "scripts": {
     "build": "microbundle -f iife",
-    "watch": "microbundle watch -f iife",
-    "dev": "run-all \"sirv\" \" npm run watch \" ",
-    "deploy": "npm run build && ./deploy.sh && gh-pages build",
-    "serve:wpt": "sirv start test/wpt/ --port 8081 --quite",
-    "serve:demo": "sirv start demo",
-    "test:setup": "./test/setup/wpt-repo.sh",
-    "test:sauce:run": "npm run test:setup && TEST_ENV=sauce node test/webdriver/index.js",
-    "test:webdriver:local": "npm run test:setup && TEST_ENV=local node test/webdriver/index.js"
+    "dev": "run-all \"serve\" \" microbundle watch -f iife \"",
+    "deploy": "npm run build",
+    "test:simple": "./test/setup/wpt-repo.sh && node ./test/webdriver/wpt-server-cli.js",
+    "test:webdriver": "./test/setup/wpt-repo.sh && node test/webdriver/index.js"
   },
   "repository": {
     "type": "git",
@@ -40,11 +36,11 @@
   "devDependencies": {
     "dotenv": "^8.2.0",
     "kleur": "^3.0.3",
-    "microbundle": "^0.12.0-next.8",
+    "microbundle": "^0.12.2",
     "run-all": "^1.0.1",
     "saucelabs": "^4.4.1",
     "selenium-webdriver": "^4.0.0-alpha.7",
-    "sirv": "^0.4.6",
+    "serve": "^11.3.2",
     "sirv-cli": "^0.4.5"
   },
   "dependencies": {}

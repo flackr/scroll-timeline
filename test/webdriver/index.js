@@ -1,30 +1,41 @@
 // vendor
 require("dotenv").config();
 const webdriver = require("selenium-webdriver");
-const sirv = require("sirv");
 const { createServer } = require("http");
 const SauceLabs = require("saucelabs").default;
 
 // ours
-const createSeleniumDrivers = require('./driver-creator');
+const driverCreator = require('./selenium-driver-creator');
 const reporter = require("./reporter");
-const { harnessTests } = require("../tests.config.json");
+const wptServer = require("./wpt-server");
+const TEST_CONFIGS = require("../tests.config.json");
 
 // Env configs
-//
-// TODO: configure / accept as cli args
-const port = 8081;
-const origin = "localhost"
-const baseUrl = `http://${origin}:${port}`; // firefox requires a protocol even for localhost origins
-const WPT_DIR = process.env.WPT_DIR || ".";
-const sauceName = process.env.SAUCE_NAME || "";
-const sauceKey = process.env.SAUCE_KEY || "";
-const tunnelId = process.env.SC_TUNNEL_ID || "";
-const testEnv = process.env.TEST_ENV && process.env.TEST_ENV.toLowerCase() === 'sauce' ? 'sauce' : 'local' ;
+const ENV = {}
+ENV.WPT_SERVER_PORT = process.env.WPT_SERVER_PORT;
+ENV.ORIGIN = "localhost"
+ENV.WPT_DIR = process.env.WPT_DIR;
+ENV.TEST_ENV = process.env.TEST_ENV && process.env.TEST_ENV.toLowerCase() === 'sauce' ? 'sauce' : 'local' ;
 
-const drivers = createSeleniumDrivers({sauceName, sauceKey, tunnelId, testEnv});
+if ( ENV.TEST_ENV === "sauce" ) {
+    ENV.SAUCE_NAME = process.env.SAUCE_NAME;
+    ENV.SAUCE_KEY = process.env.SAUCE_KEY;
+    ENV.SC_TUNNEL_ID = process.env.SC_TUNNEL_ID;
+}
 
-async function collectHarnessTestResults(driver, testPath) {
+if ( ENV.TEST_ENV === "local" ) {
+    ENV.LOCAL_BROWSER = process.env.LOCAL_BROWSER;
+    ENV.LOCAL_WEBDRIVER_BIN = process.env.LOCAL_WEBDRIVER_BIN;
+}
+
+// ensure required config keys are all set in our configs object
+Object.keys(ENV).forEach((k) => {
+    if( typeof ENV[k] === 'undefined' ) {
+        throw new Error(`Missing required configuration, please set ${k} as node environment variable \n`)
+    }
+})
+
+async function collectHarnessTestResults(driver) {
     let resultsScriptElement = await driver.findElement(
         webdriver.By.id("__testharness__results__")
     );
@@ -41,7 +52,7 @@ async function collectHarnessTestResults(driver, testPath) {
 }
 
 async function serveWPT() {
-    let server = createServer(sirv(WPT_DIR, {quite: true}));
+    let server = createServer(sirv(ENV.WPT_DIR, {quite: true}));
     return new Promise((resolve, reject) => {
         server.listen(port, origin, err => {
             if (err) {
@@ -53,13 +64,34 @@ async function serveWPT() {
 }
 
 async function runWebDriverTests() {
-    let server;
-    let driver;
+    let server, driver;
+    let drivers = new Map();
     let testResults = new Map();
+    let { harnessTests, browsers } = TEST_CONFIGS;
+
+    const baseURL = `http://${ENV.ORIGIN}:${ENV.WPT_SERVER_PORT}`;
+
+    if(ENV.TEST_ENV === 'local') {
+        drivers.set(ENV.LOCAL_BROWSER, driverCreator.create(
+            ENV.TEST_ENV,
+            {
+                browserName: ENV.LOCAL_BROWSER,
+                webDriverBin: ENV.LOCAL_WEBDRIVER_BIN
+            }
+        ))
+    } else {
+        Object.keys(browsers.sauce).forEach(browser => {
+            drivers.set(browser, driverCreator.create(
+                ENV.TEST_ENV,
+                browsers.sauce[browser],
+                ENV
+            ))
+        })
+    }
     //TODO: convert JavaScript's rejection handling from try{}catch{} to:
     // let [resolved, rejected] = await fn()
     try {
-        server = await serveWPT()
+        server = await wptServer(TEST_CONFIGS, ENV)
     } catch (e) {
         console.error("Could not start local dev server..")
         throw new Error(e)
@@ -70,11 +102,10 @@ async function runWebDriverTests() {
             driver = await driverInstance.build();
         } catch (e) {
             console.error("Error creating driver...")
-            console.error(e);
+            throw new Error(e)
         }
         for (let i=0; i < harnessTests.length; i++) {
-            let testPath = harnessTests[i];
-            await driver.get(baseUrl + testPath);
+            await driver.get(baseURL + harnessTests[i]);
             let res = await collectHarnessTestResults(driver);
             currentBrowserResults.push(res)
         }
@@ -91,18 +122,17 @@ async function runWebDriverTests() {
 
 
 (async () => {
-    let sc, sauceAccount;
-
-    if( testEnv === "sauce") {
-        sauceAccount = new SauceLabs({ user: sauceName, key: sauceKey });
+    let sc, sauceAccount, results;
+    console.log(ENV.TEST_ENV)
+    if( ENV.TEST_ENV === "sauce") {
+        sauceAccount = new SauceLabs({ user: ENV.SAUCE_NAME, key: ENV.SAUCE_KEY });
         sc = await sauceAccount.startSauceConnect({
-            tunnelIdentifier: tunnelId
+            tunnelIdentifier: ENV.SC_TUNNEL_ID
         })
     }
-
-    const results = await runWebDriverTests();
+    results = await runWebDriverTests();
     const exitCode = await reporter(results)
-    if( testEnv === "sauce" ) {
+    if( ENV.TEST_ENV === "sauce" ) {
         await sc.close();
     }
     process.exit(exitCode);

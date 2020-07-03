@@ -14,24 +14,11 @@
     "/scroll-animations/setting-playback-rate.html"
   ],
   "browsers": {
-    "local": [
-      "chrome"
-    ],
     "sauce": {
       "edge": {
         "browserName": "MicrosoftEdge",
         "browserVersion": "latest",
         "platformName": "Windows 10"
-      },
-      "chrome": {
-        "browserName": "chrome",
-        "browserVersion": "latest",
-        "platformName": "Windows 10"
-      },
-      "firefox": {
-        "browserName": "firefox",
-        "platformName": "Windows 10",
-        "browserVersion": "latest"
       }
     }
   }
