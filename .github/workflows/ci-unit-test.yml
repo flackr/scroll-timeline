@@ -1,0 +1,31 @@
+name: Unit Tests CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  test:
+    name: Node.js v12
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 12
+      - name: Install Dependencies
+        run: npm install
+      - name: Build polyfill
+        run: npm build
+      - name: Web Platfom Tests (WPT)
+        run: TEST_ENV=sauce npm run test:webdriver
+        env:
+          SAUCE_NAME: ${{secrets.sauce_name}}
+          SAUCE_KEY: ${{secrets.sauce_key}}
+          WPT_DIR: "test/wpt"
+          SC_TUNNEL_ID: sc-wpt-tunnel
+          WPT_SERVER_PORT: 8081

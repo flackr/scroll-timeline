@@ -1,0 +1,29 @@
+{
+  "polyfillFiles": [
+    "/dist/scroll-timeline.js"
+  ],
+  "harnessTests": [
+    "/scroll-animations/**/*.html"
+  ],
+  "excludeTests": [
+  ],
+  "browsers": {
+    "sauce": {
+      "edge": {
+        "browserName": "MicrosoftEdge",
+        "browserVersion": "latest",
+        "platformName": "Windows 10"
+      },
+      "chrome": {
+        "browserName": "chrome",
+        "browserVersion": "latest",
+        "platformName": "Windows 10"
+      },
+      "firefox": {
+        "browserName": "firefox",
+        "platformName": "Windows 10",
+        "browserVersion": "latest"
+      }
+    }
+  }
+}

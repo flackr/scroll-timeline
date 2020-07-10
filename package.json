@@ -1,0 +1,47 @@
+{
+  "name": "scroll-timeline-polyfill",
+  "version": "1.0.0",
+  "description": "A polyfill for scroll-driven animations on the web via ScrollTimeline",
+  "source": "src/index.js",
+  "main": "dist/scroll-timeline.js",
+  "scripts": {
+    "build": "microbundle -f iife",
+    "dev": "run-all \"serve\" \" microbundle watch -f iife \"",
+    "deploy": "npm run build",
+    "test:simple": "./test/setup/wpt-repo.sh && node ./test/webdriver/wpt-server-cli.js",
+    "test:webdriver": "./test/setup/wpt-repo.sh && node test/webdriver/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/flackr/scroll-timeline.git"
+  },
+  "files": [
+    "src",
+    "dist"
+  ],
+  "keywords": [
+    "waapi",
+    "scrolltimeline",
+    "parallax",
+    "animations",
+    "web",
+    "animations"
+  ],
+  "author": "",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/flackr/scroll-timeline/issues"
+  },
+  "homepage": "https://github.com/flackr/scroll-timeline#readme",
+  "devDependencies": {
+    "dotenv": "^8.2.0",
+    "kleur": "^3.0.3",
+    "microbundle": "^0.12.2",
+    "run-all": "^1.0.1",
+    "saucelabs": "^4.4.1",
+    "selenium-webdriver": "^4.0.0-alpha.7",
+    "serve": "^11.3.2",
+    "tiny-glob": "^0.2.6"
+  },
+  "dependencies": {}
+}
