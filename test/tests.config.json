@@ -6,8 +6,6 @@
     "/scroll-animations/**/*.html"
   ],
   "excludeTests": [
-    "/scroll-animations/constructor-no-document.html",
-    "/scroll-animations/null-scroll-source-crash.html"
   ],
   "browsers": {
     "sauce": {

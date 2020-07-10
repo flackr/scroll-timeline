@@ -10,6 +10,7 @@ const reporter = require("./reporter");
 const wptServer = require("./wpt-server");
 const TEST_CONFIGS = require("../tests.config.json");
 const harnessTests = require("./harness-tests");
+const { resolve } = require("path");
 
 // Env configs
 const ENV = {}
@@ -36,19 +37,58 @@ Object.keys(ENV).forEach((k) => {
     }
 })
 
-async function collectHarnessTestResults(driver) {
+// used to create new objects that look like WPt Harness tets results, useful when having to create clean error responses
+function HarnessResult({ test, status, message, stack=null, tests=[] }) {
+    return {
+        test,
+        status,
+        message,
+        stack,
+        tests
+    }
+}
+
+async function collectHarnessTestResults(driver, file) {
+    let resJson;
     let resultsScriptElement = await driver.findElement(
         webdriver.By.id("__testharness__results__")
-    );
-    let resText = await resultsScriptElement.getAttribute("innerHTML");
-    return new Promise((resolve, reject) => {
-        let res = {}
+    ).catch(err => {
+        // maybe unable to locate the elememt, don't crash the entire thing
+        console.log("error could not find __testharness__results__ in ", file, err)
+        resJson = new HarnessResult({
+            file,
+            status: 1,
+            message: "Could not find __testharness__results__"
+        })
+    });
+    if (typeof resultsScriptElement !== "undefined") {
+        let resText = await resultsScriptElement.getAttribute("innerHTML").catch(err => {
+            console.log("error could not read #__testharness__results__ innerHTML", file)
+            resJson = new HarnessResult({
+                file,
+                status: 1,
+                message: "Could not read innerHTML"
+            })
+        });
         try {
-            res = JSON.parse(resText);
-            resolve(res)
+            resJson = JSON.parse(resText);
         } catch (e) {
-            reject(e)
+            console.log("error parsing harness test JSON for", url)
+            resJson = new HarnessResult({
+                file,
+                status: 1,
+                message: "Could not parse JSON"
+            })
         }
+    } else {
+        resJson = new HarnessResult({
+            file,
+            status: 1,
+            message: "Could not find #__testharness__results__ element"
+        })
+    }
+    return new Promise((res) => {
+        res(resJson)
     })
 }
 
@@ -92,6 +132,10 @@ async function runWebDriverTests() {
         }
 
         for (let testFile of testFiles) {
+            // convert: test/wpt/scroll-timeline/....html
+            // to: localhost:PORT/scroll-timeline/....html
+            let url = testFile.replace(ENV.WPT_DIR, baseURL);
+            let res;
             // TODO: (zouhir, easy) normalize testFile path so we don't have to keep doing str replcae
             // Why we doing str replace here? because:
             // testFile: test/wpt/scroll-timeline/....html
@@ -100,13 +144,17 @@ async function runWebDriverTests() {
             if (excludedTests.has(testFile.replace(ENV.WPT_DIR, ""))) {
                 continue;
             }
-            // TODO: (zouhir, easy) normalize testFile path so we don't have to keep doing str replcae
-            // kinda-similarish to the note above
-            await driver.get(testFile.replace(ENV.WPT_DIR, baseURL));
-            let res = await collectHarnessTestResults(driver);
+            await driver.get(url).catch(e => {
+                console.log(e)
+                res = new HarnessResult({
+                    test: url,
+                    status: 1,
+                    message: "Webdriver could not get that page"
+                })
+            })
+            res = await collectHarnessTestResults(driver)
             currentBrowserResults.push(res)
         }
-
         // cleanup before going to next browser's driver
         await driver.quit();
         testResults.set(browser, currentBrowserResults)
