@@ -14,8 +14,9 @@ node_modules
 # Output of 'npm pack'
 *.tgz
 
-# webstorm or intellij configs
+# VSCode, webstorm or intellij configs
 .idea
+.vscode
 
 # demos deployment directory
 build

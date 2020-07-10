@@ -8,11 +8,7 @@ WPT_DIR="$PROJ_DIR/test/wpt"
 if [ ! -d "$WPT_DIR" ]; then
   echo "WPT folder not found, cloning from remote..."
   git clone https://github.com/web-platform-tests/wpt $WPT_DIR
+else
+  # ask git to attempt to rebase our changes on top of remote
+  git -C "$WPT_DIR" pull --ff-only
 fi
-
-if [ ! -d "$WPT_DIR/polyfills" ]; then
-  mkdir "$WPT_DIR/polyfills"
-fi
-
-rm -rf "$WPT_DIR/polyfills/scroll-timeline.js"
-cp "$PROJ_DIR/dist/scroll-timeline.js" "$WPT_DIR/polyfills/"

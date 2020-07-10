@@ -1,9 +1,7 @@
 const fs = require('fs');
 const http = require('http');
 
-const base = 'test/wpt';
-
-async function wptServer(testConfigs, env) {
+async function wptServer(harnessTestURLs, testConfigs, env) {
 
     let polyfillStr = ``;
     testConfigs.polyfillFiles.forEach((polyfill) => {
@@ -11,16 +9,18 @@ async function wptServer(testConfigs, env) {
         polyfillStr += `\n<script src="${polyfill}" type="text/javascript"></script>`;
     });
 
-    let harnessTestURLs = new Set(testConfigs.harnessTests);
+    let polyfillsSet = new Set(testConfigs.polyfillFiles)
+
     function handler(req, res) {
         let url = req.url
-
+        let fileToServe = env.WPT_DIR + url
+        if( polyfillsSet.has(url) ) {
+            fileToServe = process.cwd() + url
+        }
         // this is not safe to use as generic server
         // anyone can navigate back to serve any file on your server
         // outside the desired `base` but for our use, it's fine.
-        // also, its sync file-reader and server, not streams based
-        // so I'd avoid outside our small use case
-        fs.readFile(base + url, "utf8", (err, data) => {
+        fs.readFile(fileToServe, "utf8", (err, data) => {
             if (err) {
                 res.writeHead(404, {"Content-Type": "text/plain"});
                 res.write('404 not found');
@@ -29,7 +29,7 @@ async function wptServer(testConfigs, env) {
 
             res.statusCode = 200;
             // if the URL being served is for a harness test we need to inject the polyfill
-            if( harnessTestURLs.has(url) ) {
+            if( harnessTestURLs.has(fileToServe) ) {
                 console.log("Injecting polyfill in " + url);
                 data = data.replace(/(<\/.*title.*>)/gi, `$1${polyfillStr}`);
             }

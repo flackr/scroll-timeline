@@ -41,7 +41,7 @@
     "saucelabs": "^4.4.1",
     "selenium-webdriver": "^4.0.0-alpha.7",
     "serve": "^11.3.2",
-    "sirv-cli": "^0.4.5"
+    "tiny-glob": "^0.2.6"
   },
   "dependencies": {}
 }
