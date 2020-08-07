@@ -288,9 +288,11 @@ export class ScrollTimeline {
     let timeRange = calculateTimeRange(this);
 
     // Step 2
-    let currentScrollOffset = this.orientation === 'block'
-      ? this.scrollSource.scrollTop
-      : this.scrollSource.scrollLeft
+    // TODO: Support other writing directions.
+    let currentScrollOffset = this.scrollSource.scrollTop
+    if (this.orientation === 'inline' || this.orientation === 'horizontal') {
+      currentScrollOffset = this.scrollSource.scrollLeft
+    }
 
     // Step 3
     if (currentScrollOffset < startOffset) {
