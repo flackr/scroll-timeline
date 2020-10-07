@@ -9,7 +9,10 @@ async function wptServer(harnessTestURLs, testConfigs, env) {
         polyfillStr += `\n<script src="${polyfill}" type="text/javascript"></script>`;
     });
 
-    let polyfillsSet = new Set(testConfigs.polyfillFiles)
+    let polyfillsSet = new Set(testConfigs.polyfillFiles);
+    testConfigs.serveFiles.forEach((file) => {
+      polyfillsSet.add(file);
+    });
 
     function handler(req, res) {
         let url = req.url

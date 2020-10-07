@@ -2,6 +2,9 @@
   "polyfillFiles": [
     "/dist/scroll-timeline.js"
   ],
+  "serveFiles": [
+    "/dist/scroll-timeline.js.map"
+  ],
   "harnessTests": [
     "/scroll-animations/**/*.html"
   ],
