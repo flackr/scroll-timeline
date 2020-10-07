@@ -14,6 +14,8 @@
 
 import { parseLength } from "./utils";
 
+const AUTO = "auto";
+
 let scrollTimelineOptions = new WeakMap();
 let extensionScrollOffsetFunctions = [];
 
@@ -43,47 +45,32 @@ function updateInternal(scrollTimelineInstance) {
 }
 
 /**
- * Calculates the number of milliseconds mapped to the scroll range in case of "auto"
+ * Calculates the number of milliseconds mapped to the scroll range in case of AUTO
  *  in case developer provided timeRange, we use that directly.
  * @param scrollTimeline {ScrollTimeline}
  * @returns {Number}
  */
 function calculateTimeRange(scrollTimeline) {
   let timeRange = scrollTimeline.timeRange;
-  if (timeRange === "auto") {
+  if (timeRange === AUTO) {
     timeRange = 0;
-    let options = scrollTimelineOptions.get(scrollTimeline).animationOptions;
-    for (let i = 0; i < options.length; i++) {
-      timeRange = Math.max(timeRange, calculateTargetEffectEnd(options[i]));
+    let animations = scrollTimelineOptions.get(scrollTimeline).animations;
+    for (let i = 0; i < animations.length; i++) {
+      timeRange = Math.max(timeRange, calculateTargetEffectEnd(animations[i]));
     }
     if (timeRange === Infinity) timeRange = 0;
   }
   return timeRange;
 }
 
-// TODO: commented as it's currently not being utilized
-// function removeAnimation(scrollTimeline, animation) {
-//   let animations = scrollTimelineOptions.get(scrollTimeline).animations;
-//   let index = animations.indexOf(animation);
-//   if (index === -1) return;
-//   animations.splice(index, 1);
-//   scrollTimelineOptions.get(scrollTimeline).animationOptions.splice(index, 1);
-// }
-
 /**
  * Determines target effect end based on animation duration, iterations count and start and end delays
  *  returned value should always be positive
- * @param options {Object} ScrollTimeline options
+ * @param options {Animation} animation
  * @returns {number}
  */
-export function calculateTargetEffectEnd(options) {
-  if (options.iterationCount === Infinity) return Infinity;
-  return Math.max(
-    (options.startDelay || 0) +
-      (options.duration || 0) * (options.iterationCount || 1) +
-      (options.endDelay || 0),
-    0
-  );
+export function calculateTargetEffectEnd(animation) {
+  return animation.effect.getComputedTiming().activeDuration;
 }
 
 /**
@@ -138,9 +125,22 @@ export function calculateScrollOffset(
     orientation === "vertical"
       ? scrollSource.scrollHeight - scrollSource.clientHeight
       : scrollSource.scrollWidth - scrollSource.clientWidth;
-  let parsed = parseLength(offset === "auto" ? autoValue : offset);
+  let parsed = parseLength(offset === AUTO ? autoValue : offset);
   if (parsed.unit === "%") return (parseFloat(parsed.value) * maxValue) / 100;
   return parseFloat(parsed.value);
+}
+
+/**
+ * Removes a Web Animation instance from ScrollTimeline
+ * @param scrollTimeline {ScrollTimeline}
+ * @param animation {Animation}
+ * @param options {Object}
+ */
+export function removeAnimation(scrollTimeline, animation) {
+  let animations = scrollTimelineOptions.get(scrollTimeline).animations;
+  let index = animations.indexOf(animation);
+  if (index === -1) return;
+  animations.splice(index, 1);
 }
 
 /**
@@ -151,10 +151,7 @@ export function calculateScrollOffset(
  */
 export function addAnimation(scrollTimeline, animation, options) {
   let animations = scrollTimelineOptions.get(scrollTimeline).animations;
-  let animationOptions = scrollTimelineOptions.get(scrollTimeline)
-    .animationOptions;
   animations.push(animation);
-  animationOptions.push(options);
   updateInternal(scrollTimeline);
 }
 
@@ -168,21 +165,20 @@ export class ScrollTimeline {
     scrollTimelineOptions.set(this, {
       scrollSource: null,
       orientation: "block",
-      startScrollOffset: "auto",
-      endScrollOffset: "auto",
-      timeRange: "auto",
+      startScrollOffset: AUTO,
+      endScrollOffset: AUTO,
+      timeRange: AUTO,
       fill: "none",
 
       // Internal members
       animations: [],
-      animationOptions: [],
     });
     this.scrollSource =
       (options && options.scrollSource) || document.scrollingElement;
     this.orientation = (options && options.orientation) || "block";
-    this.startScrollOffset = (options && options.startScrollOffset) || "auto";
-    this.endScrollOffset = (options && options.endScrollOffset) || "auto";
-    this.timeRange = (options && options.timeRange) || "auto";
+    this.startScrollOffset = (options && options.startScrollOffset) || AUTO;
+    this.endScrollOffset = (options && options.endScrollOffset) || AUTO;
+    this.timeRange = (options && options.timeRange) || AUTO;
     this.fill = (options && options.fill) || "none";
   }
 

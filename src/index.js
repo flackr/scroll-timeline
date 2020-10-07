@@ -14,36 +14,16 @@
 
 import {
   ScrollTimeline,
-  installScrollOffsetExtension,
-  addAnimation,
+  installScrollOffsetExtension
 } from "./scroll-timeline-base";
+import {
+  animate,
+  ProxyAnimation
+} from "./proxy-animation.js";
 import { calculateOffset, parseOffset } from "./intersection-based-offset";
 
-const nativeElementAnimate = window.Element.prototype.animate;
-
-/**
- * Decides whether to use native Element.prototype.animate function in regular fashion or pass it to our polyfill
- *  so its current time is driven by scroll event
- * @param keyframes {Object} array of keyframe objects
- * @param options {Object} WAAPI options object
- * @returns {Function}
- */
-
-const animate = function (keyframes, options) {
-  let timeline = options.timeline;
-  if (!timeline || !(timeline instanceof ScrollTimeline)) {
-    return nativeElementAnimate.apply(this, [keyframes, options]);
-  }
-  delete options.timeline;
-  let animation = nativeElementAnimate.apply(this, [keyframes, options]);
-  // TODO: Create a proxy for the animation to control and fake the animation
-  // play state.
-  animation.pause();
-  addAnimation(timeline, animation, options);
-  return animation;
-};
-
 installScrollOffsetExtension(parseOffset, calculateOffset);
+
 if (
   !Reflect.defineProperty(window, "ScrollTimeline", { value: ScrollTimeline })
 ) {
@@ -56,4 +36,7 @@ if (!Reflect.defineProperty(Element.prototype, "animate", { value: animate })) {
   throw Error(
     "Error installing ScrollTimeline polyfill: could not attach WAAPI's animate to DOM Element"
   );
+}
+if (!Reflect.defineProperty(window, "Animation", {value: ProxyAnimation})) {
+  throw Error("Error installing Animation constructor.");
 }
