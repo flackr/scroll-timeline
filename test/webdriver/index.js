@@ -48,10 +48,33 @@ function HarnessResult({ test, status, message, stack=null, tests=[] }) {
     }
 }
 
+function waitForElement(driver, selector, timeout) {
+  return new Promise((resolve, reject) => {
+    const startTime = (new Date()).getTime();
+    let tryAgain = async function() {
+      let maybeRetry = function(err) {
+        let timeLeft = startTime + timeout - (new Date()).getTime();
+        // Try again in 50ms.
+        if (timeLeft > 0)
+          setTimeout(tryAgain, Math.min(timeLeft, 50));
+        else
+          reject(err);
+      }
+      let result = await driver.findElement(selector).catch(maybeRetry);
+      if (typeof result === "undefined")
+        maybeRetry("TIMEOUT");
+      else
+        resolve(result);
+    }
+    tryAgain();
+  });
+}
+
+const TEST_TIMEOUT = 5000;
 async function collectHarnessTestResults(driver, file) {
     let resJson;
-    let resultsScriptElement = await driver.findElement(
-        webdriver.By.id("__testharness__results__")
+    let resultsScriptElement = await waitForElement(driver,
+        webdriver.By.id("__testharness__results__"), TEST_TIMEOUT
     ).catch(err => {
         // maybe unable to locate the elememt, don't crash the entire thing
         console.log("error could not find __testharness__results__ in ", file, err)
