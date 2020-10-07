@@ -14,7 +14,7 @@
 
 import { parseLength } from "./utils";
 
-const AUTO = "auto";
+const AUTO = new CSSKeywordValue("auto");
 
 let scrollTimelineOptions = new WeakMap();
 let extensionScrollOffsetFunctions = [];
@@ -202,8 +202,9 @@ export class ScrollTimeline {
   set orientation(orientation) {
     if (
       ["block", "inline", "horizontal", "vertical"].indexOf(orientation) === -1
-    )
-      orientation = "block";
+    ) {
+      throw TypeError("Invalid orientation");
+    }
     scrollTimelineOptions.get(this).orientation = orientation;
     updateInternal(this);
   }
@@ -213,6 +214,8 @@ export class ScrollTimeline {
   }
 
   set startScrollOffset(offset) {
+    if (offset == "auto")
+      offset = AUTO;
     let currentStlOptions = scrollTimelineOptions.get(this);
     // Allow extensions to override scroll offset calculation.
     currentStlOptions.startScrollOffsetFunction = null;
@@ -225,6 +228,8 @@ export class ScrollTimeline {
         break;
       }
     }
+    if (!scrollTimelineOptions.get(this).startScrollOffsetFunction && offset != AUTO && !parseLength(offset))
+      throw TypeError("Invalid start offset.");
     currentStlOptions.startScrollOffset = offset;
     updateInternal(this);
   }
@@ -234,6 +239,8 @@ export class ScrollTimeline {
   }
 
   set endScrollOffset(offset) {
+    if (offset == "auto")
+      offset = AUTO;
     // Allow extensions to override scroll offset calculation.
     scrollTimelineOptions.get(this).endScrollOffsetFunction = null;
     for (let i = 0; i < extensionScrollOffsetFunctions.length; i++) {
@@ -245,6 +252,8 @@ export class ScrollTimeline {
         break;
       }
     }
+    if (!scrollTimelineOptions.get(this).endScrollOffsetFunction && offset != AUTO && !parseLength(offset))
+      throw TypeError("Invalid end offset.");
     scrollTimelineOptions.get(this).endScrollOffset = offset;
     updateInternal(this);
   }

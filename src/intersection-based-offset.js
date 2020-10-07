@@ -80,6 +80,9 @@ class IntersectionBasedOffset {
 
   set threshold(value) {
     let threshold = parseFloat(value);
+    // Throw a TypeError for a parse error.
+    if (threshold != threshold)
+      throw TypeError("Invalid threshold.");
     // Throw a RangeError for out of range threshold:
     // https://w3c.github.io/IntersectionObserver/#intersection-observer-interface
     if (threshold < 0 || threshold > 1)
