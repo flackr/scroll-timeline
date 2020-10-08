@@ -190,7 +190,7 @@ export class ScrollTimeline {
       animations: [],
     });
     this.scrollSource =
-      (options && options.scrollSource) || document.scrollingElement;
+      options && options.scrollSource !== undefined ? options.scrollSource : document.scrollingElement;
     this.orientation = (options && options.orientation) || "block";
     this.startScrollOffset = (options && options.startScrollOffset) || AUTO;
     this.endScrollOffset = (options && options.endScrollOffset) || AUTO;
@@ -202,11 +202,12 @@ export class ScrollTimeline {
       scrollEventSource(this.scrollSource).removeEventListener("scroll", () =>
         updateInternal(this)
       );
-    if (!(element instanceof Element)) element = document.scrollingElement;
     scrollTimelineOptions.get(this).scrollSource = element;
-    scrollEventSource(element).addEventListener("scroll", () =>
-      updateInternal(this)
-    );
+    if (element) {
+      scrollEventSource(element).addEventListener("scroll", () =>
+        updateInternal(this)
+      );
+    }
     updateInternal(this);
   }
 
