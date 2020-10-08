@@ -347,7 +347,15 @@ export class ScrollTimeline {
     // Per https://drafts.csswg.org/scroll-animations-1/#phase-algorithm
     // Step 1
     let unresolved = null;
+    //   if source is null
     if (!this.scrollSource) return "inactive";
+    let scrollerStyle = getComputedStyle(this.scrollSource);
+    //   if source does not currently have a CSS layout box
+    if (scrollerStyle.display == "none")
+      return "inactive";
+    //   if source's layout box is not a scroll container"
+    if (scrollerStyle.overflow == "visible" || scrollerStyle.overflow == "clip")
+      return "inactive";
     let startOffset = calculateScrollOffset(
       new CSSUnitValue(0, 'percent'),
       this.scrollSource,
@@ -362,8 +370,15 @@ export class ScrollTimeline {
       this.endScrollOffset,
       scrollTimelineOptions.get(this).endScrollOffsetFunction
     );
-    let effectiveScrollRange = endOffset - startOffset;
-    if (effectiveScrollRange <= 0)
+    let maxOffset = calculateScrollOffset(
+      new CSSUnitValue(100, 'percent'),
+      this.scrollSource,
+      this.orientation,
+      new CSSUnitValue(100, 'percent'),
+      null
+    );
+    //   if source's effective scroll range is null
+    if (startOffset === null || endOffset === null)
       return "inactive";
 
     // Step 2
@@ -376,7 +391,7 @@ export class ScrollTimeline {
     // Step 3
     if (currentScrollOffset < startOffset)
       return "before";
-    if (currentScrollOffset >= endOffset)
+    if (currentScrollOffset >= endOffset && endOffset < maxOffset)
       return "after";
     return "active"
   }
