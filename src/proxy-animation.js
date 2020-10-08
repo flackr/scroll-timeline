@@ -16,6 +16,26 @@ const nativeAnimation = window.Animation;
  * @returns {Function}
  */
 
+function createReadyPromise(details) {
+  let sequence = ++details.sequence;
+  let promise = details.readyPromise = new Promise((resolve, reject) => {
+    // TODO: We should actually not apply the animation until this is
+    // resolved.
+    requestAnimationFrame(() => {
+      // If this promise was replaced, this animation was aborted.
+      if (details.readyPromise == promise)
+        details.readyPromise = null;
+      if (details.aborted.has(sequence)) {
+        details.aborted.delete(sequence);
+        // Reject with a non-visible AbortError.
+        reject(new DOMException("Animation aborted", "AbortError"));
+      } else {
+        resolve();
+      }
+    });
+  });
+}
+
 // Create an alternate Animation class which proxies API requests.
 // TODO: Create a full-fledged proxy so missing methods are automatically
 // fetched from Animation.
@@ -28,6 +48,8 @@ export class ProxyAnimation {
         timeline,
         playState: "idle",
         readyPromise: null,
+        sequence: 0, /* Used to track ready promises. */
+        aborted: new Set(), /* Aborted sequences. */
       });
       return;
     }
@@ -37,6 +59,9 @@ export class ProxyAnimation {
       animation: new nativeAnimation(effect, animationTimeline),
       timeline: isScrollAnimation ? timeline : undefined,
       playState: isScrollAnimation ? "idle" : null,
+      readyPromise: null,
+      sequence: 0, /* Used to track ready promises. */
+      aborted: new Set(), /* Aborted sequences. */
     });
   }
 
@@ -128,31 +153,20 @@ export class ProxyAnimation {
 
     addAnimation(details.timeline, proxyAnimations.get(this).animation);
     proxyAnimations.get(this).playState = "running";
-    let promise = details.readyPromise = new Promise((resolve, reject) => {
-      // TODO: We should actually not apply the animation until this is
-      // resolved.
-      requestAnimationFrame(() => {
-        // If this promise was replaced, this animation was aborted.
-        if (details.readyPromise == promise) {
-          details.readyPromise = null;
-          resolve();
-        } else {
-          reject();
-        }
-      });
-    });
+    createReadyPromise(details);
   }
 
   pause() {
-    let internalTimeline = proxyAnimations.get(this).timeline;
-    if (!internalTimeline) {
+    let details = proxyAnimations.get(this);
+    if (!details.timeline) {
       proxyAnimations.get(this).animation.pause();
       return;
     }
     if (proxyAnimations.get(this).playState == "paused")
       return;
     proxyAnimations.get(this).playState = "paused";
-    removeAnimation(internalTimeline, proxyAnimations.get(this).animation);
+    removeAnimation(details.timeline, details.animation);
+    createReadyPromise(details);
   }
 
   reverse() {
@@ -183,7 +197,10 @@ export class ProxyAnimation {
     if (details.playState == "running")
       removeAnimation(internalTimeline, details.animation);
     details.playState = "finished";
-    details.readyPromise = null;
+    if (details.readyPromise) {
+      details.aborted.add(details.sequence);
+      details.readyPromise = null;
+    }
   }
 
   get onfinish() {
