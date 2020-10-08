@@ -103,6 +103,24 @@ export function calculateMaxScrollOffset(scrollSource, orientation) {
     return scrollSource.scrollWidth - scrollSource.clientWidth;
 }
 
+function resolvePx(cssValue, resolvedLength) {
+  if (cssValue instanceof CSSUnitValue) {
+    if (cssValue.unit == "percent")
+      return cssValue.value * resolvedLength / 100;
+    else if (cssValue.unit == "px")
+      return cssValue.value;
+    else
+      throw TypeError("Unhandled unit type " + cssValue.unit);
+  } else if (cssValue instanceof CSSMathSum) {
+    let total = 0;
+    for (let value of cssValue.values) {
+      total += resolvePx(value, resolvedLength);
+    }
+    return total;
+  }
+  throw TypeError("Unsupported value type: " + typeof(cssValue));
+}
+
 export function calculateScrollOffset(
   autoValue,
   scrollSource,
@@ -115,7 +133,7 @@ export function calculateScrollOffset(
       scrollSource,
       orientation,
       offset,
-      autoValue === "0%" ? "start" : "end"
+      autoValue.value == 0 ? "start" : "end"
     );
   // TODO: Support other writing directions.
   if (orientation === "block") orientation = "vertical";
@@ -126,8 +144,7 @@ export function calculateScrollOffset(
       ? scrollSource.scrollHeight - scrollSource.clientHeight
       : scrollSource.scrollWidth - scrollSource.clientWidth;
   let parsed = parseLength(offset === AUTO ? autoValue : offset);
-  if (parsed.unit === "percent") return (parseFloat(parsed.value) * maxValue) / 100;
-  return parseFloat(parsed.value);
+  return resolvePx(parsed, maxValue);
 }
 
 /**
@@ -230,7 +247,8 @@ export class ScrollTimeline {
     }
     if (offset != AUTO && !scrollTimelineOptions.get(this).startScrollOffsetFunction) {
       let parsed = parseLength(offset);
-      if (!parsed || !parsed.unit)
+      // TODO: This should check CSSMathSum values as well.
+      if (!parsed || (parsed instanceof CSSUnitValue && parsed.unit == "number"))
         throw TypeError("Invalid start offset.");
     }
     currentStlOptions.startScrollOffset = offset;
@@ -257,7 +275,8 @@ export class ScrollTimeline {
     }
     if (offset != AUTO && !scrollTimelineOptions.get(this).startScrollOffsetFunction) {
       let parsed = parseLength(offset);
-      if (!parsed || parsed.unit == "number")
+      // TODO: This should check CSSMathSum values as well.
+      if (!parsed || (parsed instanceof CSSUnitValue && parsed.unit == "number"))
         throw TypeError("Invalid end offset.");
     }
     scrollTimelineOptions.get(this).endScrollOffset = offset;
@@ -283,14 +302,14 @@ export class ScrollTimeline {
     let unresolved = null;
     if (!this.scrollSource) return unresolved;
     let startOffset = calculateScrollOffset(
-      "0%",
+      new CSSUnitValue(0, 'percent'),
       this.scrollSource,
       this.orientation,
       this.startScrollOffset,
       scrollTimelineOptions.get(this).startScrollOffsetFunction
     );
     let endOffset = calculateScrollOffset(
-      "100%",
+      new CSSUnitValue(100, 'percent'),
       this.scrollSource,
       this.orientation,
       this.endScrollOffset,
