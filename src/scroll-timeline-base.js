@@ -126,7 +126,7 @@ export function calculateScrollOffset(
       ? scrollSource.scrollHeight - scrollSource.clientHeight
       : scrollSource.scrollWidth - scrollSource.clientWidth;
   let parsed = parseLength(offset === AUTO ? autoValue : offset);
-  if (parsed.unit === "%") return (parseFloat(parsed.value) * maxValue) / 100;
+  if (parsed.unit === "percent") return (parseFloat(parsed.value) * maxValue) / 100;
   return parseFloat(parsed.value);
 }
 
@@ -228,8 +228,11 @@ export class ScrollTimeline {
         break;
       }
     }
-    if (!scrollTimelineOptions.get(this).startScrollOffsetFunction && offset != AUTO && !parseLength(offset))
-      throw TypeError("Invalid start offset.");
+    if (offset != AUTO && !scrollTimelineOptions.get(this).startScrollOffsetFunction) {
+      let parsed = parseLength(offset);
+      if (!parsed || !parsed.unit)
+        throw TypeError("Invalid start offset.");
+    }
     currentStlOptions.startScrollOffset = offset;
     updateInternal(this);
   }
@@ -252,8 +255,11 @@ export class ScrollTimeline {
         break;
       }
     }
-    if (!scrollTimelineOptions.get(this).endScrollOffsetFunction && offset != AUTO && !parseLength(offset))
-      throw TypeError("Invalid end offset.");
+    if (offset != AUTO && !scrollTimelineOptions.get(this).startScrollOffsetFunction) {
+      let parsed = parseLength(offset);
+      if (!parsed || parsed.unit == "number")
+        throw TypeError("Invalid end offset.");
+    }
     scrollTimelineOptions.get(this).endScrollOffset = offset;
     updateInternal(this);
   }

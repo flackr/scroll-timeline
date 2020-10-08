@@ -136,7 +136,7 @@ export function parseOffset(value) {
 }
 
 function resolveLength(length, containerSize) {
-  if (length[1] == "%") return (length[0] * containerSize) / 100;
+  if (length[1] == "percent") return (length[0] * containerSize) / 100;
   // Assumption is only px or % will be passed in.
   // TODO: Support other length types (e.g. em, vh, etc).
   return length[0];
