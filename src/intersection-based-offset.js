@@ -83,10 +83,11 @@ class IntersectionBasedOffset {
     // Throw a TypeError for a parse error.
     if (threshold != threshold)
       throw TypeError("Invalid threshold.");
-    // Throw a RangeError for out of range threshold:
-    // https://w3c.github.io/IntersectionObserver/#intersection-observer-interface
+    // TODO(https://crbug.com/1136516): This should throw a RangeError
+    // consistent with the intersection observer spec but the current
+    // test expectations are looking for a TypeError.
     if (threshold < 0 || threshold > 1)
-      throw RangeError("threshold must be in the range [0, 1]");
+      throw TypeError("threshold must be in the range [0, 1]");
     IntersectionOptions.get(this).threshold = threshold;
   }
 
