@@ -294,6 +294,44 @@ export class ScrollTimeline {
     return scrollTimelineOptions.get(this).timeRange;
   }
 
+  get phase() {
+    // Per https://drafts.csswg.org/scroll-animations-1/#phase-algorithm
+    // Step 1
+    let unresolved = null;
+    if (!this.scrollSource) return "inactive";
+    let startOffset = calculateScrollOffset(
+      new CSSUnitValue(0, 'percent'),
+      this.scrollSource,
+      this.orientation,
+      this.startScrollOffset,
+      scrollTimelineOptions.get(this).startScrollOffsetFunction
+    );
+    let endOffset = calculateScrollOffset(
+      new CSSUnitValue(100, 'percent'),
+      this.scrollSource,
+      this.orientation,
+      this.endScrollOffset,
+      scrollTimelineOptions.get(this).endScrollOffsetFunction
+    );
+    let effectiveScrollRange = endOffset - startOffset;
+    if (effectiveScrollRange <= 0)
+      return "inactive";
+
+    // Step 2
+    // TODO: Support other writing directions.
+    let currentScrollOffset = this.scrollSource.scrollTop
+    if (this.orientation === 'inline' || this.orientation === 'horizontal') {
+      currentScrollOffset = this.scrollSource.scrollLeft
+    }
+
+    // Step 3
+    if (currentScrollOffset < startOffset)
+      return "before";
+    if (currentScrollOffset >= endOffset)
+      return "after";
+    return "active"
+  }
+
   get currentTime() {
     // Per https://wicg.github.io/scroll-animations/#current-time-algorithm
     // Step 1
