@@ -52,7 +52,7 @@ function updateInternal(scrollTimelineInstance) {
  */
 function calculateTimeRange(scrollTimeline) {
   let timeRange = scrollTimeline.timeRange;
-  if (timeRange === AUTO) {
+  if (timeRange == AUTO) {
     timeRange = 0;
     let animations = scrollTimelineOptions.get(scrollTimeline).animations;
     for (let i = 0; i < animations.length; i++) {
@@ -194,7 +194,7 @@ export class ScrollTimeline {
     this.orientation = (options && options.orientation) || "block";
     this.startScrollOffset = (options && options.startScrollOffset) || AUTO;
     this.endScrollOffset = (options && options.endScrollOffset) || AUTO;
-    this.timeRange = (options && options.timeRange) || AUTO;
+    this.timeRange = options && options.timeRange !== undefined ? options.timeRange : "auto";
   }
 
   set scrollSource(element) {
@@ -285,8 +285,13 @@ export class ScrollTimeline {
     return scrollTimelineOptions.get(this).endScrollOffset;
   }
 
-  set timeRange(offset) {
-    scrollTimelineOptions.get(this).timeRange = offset;
+  set timeRange(range) {
+    if (range != "auto") {
+      // Check for a valid number, which if finite and not NaN.
+      if (typeof(range) != "number" || !Number.isFinite(range) || range != range)
+        throw TypeError("Invalid timeRange value");
+    }
+    scrollTimelineOptions.get(this).timeRange = range;
     updateInternal(this);
   }
 
