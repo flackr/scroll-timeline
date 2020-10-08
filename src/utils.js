@@ -1,6 +1,8 @@
-export function parseLength(obj) {
+export function parseLength(obj, acceptStr) {
   if (obj instanceof CSSUnitValue || obj instanceof CSSMathSum)
     return obj;
+  if (!acceptStr)
+    return null;
   let matches = obj.trim().match(/^(-?[0-9]*\.?[0-9]*)(px|%)$/);
   if (matches) {
     let value = matches[1];

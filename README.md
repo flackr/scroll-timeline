@@ -16,7 +16,7 @@ document.getElementById('parallax').animate(
     { duration: 10000, // Totally arbitrary!
       fill: 'both',
       timeline: new ScrollTimeline({
-          endScrollOffset: '200px'})
+          endScrollOffset: new CSSUnitValue(200, 'px')})
     });
 ```
 

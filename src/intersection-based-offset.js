@@ -103,7 +103,7 @@ class IntersectionBasedOffset {
       );
     let parsedMargins = [[], [], [], []];
     for (let i = 0; i < margins.length; i++) {
-      let parsedValue = parseLength(margins[i]);
+      let parsedValue = parseLength(margins[i], true);
       if (!parsedValue) throw TypeError("Unrecognized rootMargin length");
       let positions = MARGIN_MAP[margins.length - 1][i];
       for (let j = 0; j < positions.length; j++) {
