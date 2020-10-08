@@ -27,6 +27,7 @@ export class ProxyAnimation {
         animation: effect,
         timeline,
         playState: "idle",
+        readyPromise: null,
       });
       return;
     }
@@ -91,25 +92,30 @@ export class ProxyAnimation {
   }
 
   get pending() {
+    const details = proxyAnimations.get(this);
+    if (details.readyPromise)
+      return true;
     return proxyAnimations.get(this).animation.pending;
   }
 
   finish() {
-    proxyAnimations.get(this).animation.finish();
-    let internalTimeline = proxyAnimations.get(this).timeline;
+    let details = proxyAnimations.get(this);
+    details.animation.finish();
+    let internalTimeline = details.timeline;
     if (!internalTimeline) {
-      proxyAnimations.get(this).animation.play();
+      details.animation.play();
       return;
     }
-    if (proxyAnimations.get(this).playState == "finished")
+    if (details.playState == "finished")
       return;
-    proxyAnimations.get(this).playState = "finished";
-    removeAnimation(internalTimeline, proxyAnimations.get(this).animation);
+    details.playState = "finished";
+    details.readyPromise = null;
+    removeAnimation(internalTimeline, details.animation);
   }
 
   play() {
-    let internalTimeline = proxyAnimations.get(this).timeline;
-    if (!internalTimeline) {
+    let details = proxyAnimations.get(this);
+    if (!details.timeline) {
       proxyAnimations.get(this).animation.play();
       return;
     }
@@ -119,8 +125,22 @@ export class ProxyAnimation {
     }
     if (proxyAnimations.get(this).playState == "running")
       return;
-    addAnimation(internalTimeline, proxyAnimations.get(this).animation);
+
+    addAnimation(details.timeline, proxyAnimations.get(this).animation);
     proxyAnimations.get(this).playState = "running";
+    let promise = details.readyPromise = new Promise((resolve, reject) => {
+      // TODO: We should actually not apply the animation until this is
+      // resolved.
+      requestAnimationFrame(() => {
+        // If this promise was replaced, this animation was aborted.
+        if (details.readyPromise == promise) {
+          details.readyPromise = null;
+          resolve();
+        } else {
+          reject();
+        }
+      });
+    });
   }
 
   pause() {
@@ -152,16 +172,18 @@ export class ProxyAnimation {
   }
 
   cancel() {
-    proxyAnimations.get(this).animation.cancel();
-    let internalTimeline = proxyAnimations.get(this).timeline;
+    let details = proxyAnimations.get(this);
+    details.animation.cancel();
+    let internalTimeline = details.timeline;
     if (!internalTimeline)
       return;
-    if (proxyAnimations.get(this).playState == "idle" ||
-        proxyAnimations.get(this).playState == "finished")
+    if (details.playState == "idle" ||
+        details.playState == "finished")
       return;
-    if (proxyAnimations.get(this).playState == "running")
-      removeAnimation(internalTimeline, proxyAnimations.get(this).animation);
-    proxyAnimations.get(this).playState = "finished";
+    if (details.playState == "running")
+      removeAnimation(internalTimeline, details.animation);
+    details.playState = "finished";
+    details.readyPromise = null;
   }
 
   get onfinish() {
@@ -188,6 +210,10 @@ export class ProxyAnimation {
   }
 
   get ready() {
+    const details = proxyAnimations.get(this);
+    if (details.readyPromise)
+      return details.readyPromise;
+
     proxyAnimations.get(this).animation.ready;
   }
 
