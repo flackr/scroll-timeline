@@ -184,16 +184,19 @@ export class ScrollTimeline {
       orientation: "block",
       startScrollOffset: AUTO,
       endScrollOffset: AUTO,
+      scrollOffsets: [],
       timeRange: AUTO,
 
       // Internal members
       animations: [],
+      scrollOffsetFns: [],
     });
     this.scrollSource =
       options && options.scrollSource !== undefined ? options.scrollSource : document.scrollingElement;
     this.orientation = (options && options.orientation) || "block";
     this.startScrollOffset = (options && options.startScrollOffset) || AUTO;
     this.endScrollOffset = (options && options.endScrollOffset) || AUTO;
+    this.scrollOffsets = options && options.scrollOffsets !== undefined ? options.scrollOffsets : [];
     this.timeRange = options && options.timeRange !== undefined ? options.timeRange : "auto";
   }
 
@@ -227,6 +230,46 @@ export class ScrollTimeline {
 
   get orientation() {
     return scrollTimelineOptions.get(this).orientation;
+  }
+
+  set scrollOffsets(value) {
+    let offsets = [];
+    let fns = [];
+    for (let input of value) {
+      let fn = null;
+      let offset = undefined;
+      if (input == "auto")
+        input = AUTO;
+      for (let i = 0; i < extensionScrollOffsetFunctions.length; i++) {
+        let result = extensionScrollOffsetFunctions[i].parse(input);
+        if (result !== undefined) {
+          offset = result;
+          fn = extensionScrollOffsetFunctions[i].evaluate;
+          break;
+        }
+      }
+      if (!fn) {
+        if (input != AUTO) {
+          let parsed = parseLength(input);
+          // TODO: This should check CSSMathSum values as well.
+          if (!parsed || (parsed instanceof CSSUnitValue && parsed.unit == "number"))
+            throw TypeError("Invalid scrollOffsets entry.");
+        }
+        offset = input;
+      }
+      offsets.push(offset);
+      fns.push(fn);
+    }
+    if (offsets.length == 1 && offsets[0] == AUTO)
+      throw TypeError("Invalid scrollOffsets value.");
+    let data = scrollTimelineOptions.get(this);
+    data.scrollOffsets = offsets;
+    data.scrollOffsetFns = fns;
+  }
+
+  get scrollOffsets() {
+    let data = scrollTimelineOptions.get(this);
+    return data.scrollOffsets;
   }
 
   set startScrollOffset(offset) {
