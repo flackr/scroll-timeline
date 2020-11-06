@@ -31,15 +31,18 @@ function scrollEventSource(scrollSource) {
 function updateInternal(scrollTimelineInstance) {
   let animations = scrollTimelineOptions.get(scrollTimelineInstance).animations;
   if (animations.length === 0) return;
-  let currentTime = scrollTimelineInstance.currentTime;
+  let timelineCurrentTime = scrollTimelineInstance.currentTime;
+
   for (let i = 0; i < animations.length; i++) {
+    const animation = animations[i];
     // The web-animations spec says to throw a TypeError if you try to seek to
     // an unresolved time value from a resolved time value, so to polyfill the
     // expected behavior we cancel the underlying animation.
-    if (currentTime == null) {
-      if (animations[i].playState === "paused") animations[i].cancel();
-    } else {
-      animations[i].currentTime = currentTime;
+    if (timelineCurrentTime == null) {
+      if (animation.playState === "paused") animation.cancel();
+    } else if (animation.playState == 'running') {
+      animation.currentTime =
+          (timelineCurrentTime - animation.startTime) * animation.playbackRate;
     }
   }
 }
@@ -160,15 +163,23 @@ export function removeAnimation(scrollTimeline, animation) {
   animations.splice(index, 1);
 }
 
+function find(scrollTimeline, animation) {
+  const animations = scrollTimelineOptions.get(scrollTimeline).animations;
+  let index = animations.indexOf(animation);
+  return (index === -1) ? null : animations[index];
+}
+
 /**
- * Attaches a Web Animation instance to ScrollTimeline
+ * Attaches a Web Animation instance to ScrollTimeline.
  * @param scrollTimeline {ScrollTimeline}
  * @param animation {Animation}
  * @param options {Object}
  */
 export function addAnimation(scrollTimeline, animation, options) {
-  let animations = scrollTimelineOptions.get(scrollTimeline).animations;
-  animations.push(animation);
+  if (!find(scrollTimeline, animation)) {
+    let animations = scrollTimelineOptions.get(scrollTimeline).animations;
+    animations.push(animation);
+  }
   updateInternal(scrollTimeline);
 }
 
