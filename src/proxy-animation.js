@@ -30,10 +30,91 @@ function createReadyPromise(details) {
         // Reject with a non-visible AbortError.
         reject(new DOMException("Animation aborted", "AbortError"));
       } else {
+        // Apply pending playbackRate
+        if (typeof details.pendingPlaybackRate == 'number') {
+          const previousCurrentTime = details.animation.currentTime;
+          details.animation.playbackRate = details.pendingPlaybackRate;
+          const timelineTime = details.timeline.currentTime;
+          details.startTime = details.pendingPlaybackRate ?
+              timelineTime - previousCurrentTime / details.pendingPlaybackRate :
+              previousCurrentTime;
+          details.pendingPlaybackRate = null;
+        }
+        switch(details.playState) {
+          case 'paused':
+            details.startTime = null;
+            break;
+
+          case 'running':
+          case 'finished':
+            details.holdTime = null;
+        }
         resolve();
       }
     });
   });
+}
+
+function getAnimationProperty(details, name) {
+  if (details.timeline && (name in details))
+    return details[name];
+  else
+    return details.animation[name];
+}
+
+function setAnimationProperty(details, name, value) {
+  if (details.timeline && (name in details))
+    details[name] = value;
+  else
+    details.animation[name] = value;
+}
+
+function effectivePlaybackRate(details) {
+  if (details.pendingPlaybackRate)
+    return details.pendingPlaybackRate;
+  return details.animation.playbackRate;
+}
+
+function applyPendingPlaybackRate(details) {
+  if (details.pendingPlaybackRate) {
+    details.animation.playbackRate = details.pendingPlaybackRate;
+    details.pendingPlaybackRate = null;
+  }
+}
+
+function updateFinishedState(details) {
+  if (!details.timeline)
+    return;
+
+  const isFinished = () => {
+    if (details.playState == 'paused')
+      return false;
+
+    const playbackRate = effectivePlaybackRate(details);
+    const currentTime = details.animation.currentTime;
+    if (playbackRate < 0 && currentTime <= 0)
+      return true;
+    if (playbackRate > 0 &&
+        currentTime >= details.animation.effect.getTiming().duration)
+      return true;
+
+    return false;
+  };
+
+  if (isFinished()) {
+    if (details.playState != 'finished') {
+      details.playState = 'finished';
+      // TODO: Ensure that finished promise and events fire.
+      // Possibly best to call finish after rAF though that would force a snap
+      // to the boundary, which is not quite correct.
+    }
+  } else if (details.playState == 'finished') {
+    details.playState = 'running';
+  }
+}
+
+function hasActiveTimeline(details) {
+  return !details.timeline || details.timeline.phase != 'inactive';
 }
 
 // Create an alternate Animation class which proxies API requests.
@@ -41,7 +122,7 @@ function createReadyPromise(details) {
 // fetched from Animation.
 let proxyAnimations = new WeakMap();
 
-// Hack for testing
+// Hack for testing / debugging
 window.proxyAnimations = proxyAnimations;
 
 export class ProxyAnimation {
@@ -67,248 +148,313 @@ export class ProxyAnimation {
       // When changing the timeline on a paused animation, we defer updating the
       // start time until the animation resumes playing.
       resetCurrentTimeOnResume: false,
-      // Calls to reverse and updatePlaybackRate set a pending rate that
-      // does not immediately take effect. The value of this property is
-      // inaccessible via the web animations API.
+      // Calls to reverse and updatePlaybackRate set a pending rate that does
+      // not immediately take effect. The value of this property is
+      // inaccessible via the web animations API and therefore explicitly
+      // tracked.
       pendingPlaybackRate: null,
       sequence: 0, /* Used to track ready promises. */
       aborted: new Set(), /* Aborted sequences. */
     });
   }
 
-  getProperty(name) {
-    const proxy = proxyAnimations.get(this);
-    if (proxy.timeline && (name in proxy))
-      return proxy[name];
-    else
-      return proxy.animation[name];
-  }
+  // -----------------------------------------
+  // Helper method
+  // -----------------------------------------
 
-  setProperty(name, value) {
-    const proxy = proxyAnimations.get(this);
-    if (proxy.timeline && (name in proxy))
-      proxy[name] = value;
-    else
-      proxy.animation[name] = value;
-  }
-
-  useProxy() {
-    return !!proxyAnimations.get(this).timeline;
-  }
-
-  effectivePlaybackRate() {
-    const proxy = proxyAnimations.get(this);
-    if (proxy.pendingPlaybackRate)
-      return proxy.pendingPlaybackRate;
-    return this.playbackRate;
-  }
-
-  commitPendingPlaybackRate() {
-    const proxy = proxyAnimations.get(this);
-    if (proxy.pendingPlaybackRate) {
-      this.playbackRate = proxy.pendingPlaybackRate;
-      proxy.pendingPlaybackRate = null;
+  tick(timelineTime) {
+    if (timelineTime != null && this.playState == 'running') {
+      proxyAnimations.get(this).animation.currentTime =
+          (timelineTime - this.startTime) * this.playbackRate;
+      updateFinishedState(proxyAnimations.get(this));
     }
   }
 
+  // -----------------------------------------
+  // Web animation API
+  // -----------------------------------------
+
   get effect() {
-    return this.getProperty('effect');
+    return getAnimationProperty(proxyAnimations.get(this), 'effect');
   }
   set effect(newEffect) {
-    this.setProperty('effect', newEffect);
+    setAnimationProperty(proxyAnimations.get(this), 'effect', newEffect);
   }
 
   get timeline() {
-    return this.getProperty('timeline');
+    const details = proxyAnimations.get(this);
+    return details.timeline || details.animation.timeline;
   }
   set timeline(newTimeline) {
     const oldTimeline = this.timeline;
     if (oldTimeline == newTimeline)
       return;
 
+    const details = proxyAnimations.get(this);
+
     const fromScrollTimeline = (oldTimeline instanceof ScrollTimeline);
     const toScrollTimeline = (newTimeline instanceof ScrollTimeline);
     const previousCurrentTime = this.currentTime;
     const previousPlayState = this.playState;
-    const playbackRate = this.effectivePlaybackRate();
+    const playbackRate = effectivePlaybackRate(details);
     const pending = this.pending;
-    const proxy = proxyAnimations.get(this);
 
     if (fromScrollTimeline) {
-      removeAnimation(proxy.timeline, proxy.animation);
+      removeAnimation(details.timeline, details.animation);
     }
 
-    proxy.resetCurrentTimeOnResume = false;
+    details.resetCurrentTimeOnResume = false;
     if (toScrollTimeline) {
       // Cannot assume that the underlying native implementation supports
       // mutable timelines. Thus, we leave its timeline untouched, and simply
       // ensure that it is in the paused state.
-      proxy.timeline = newTimeline;
-      this.commitPendingPlaybackRate();
-      proxy.animation.pause();
+      details.timeline = newTimeline;
+      applyPendingPlaybackRate(details);
+      details.animation.pause();
       switch(previousPlayState) {
         case 'idle':
-          proxy.playState = 'idle';
-          proxy.holdTime = null;
-          proxy.startTime = null;
+          details.playState = 'idle';
+          details.holdTime = null;
+          details.startTime = null;
           break;
 
         case 'paused':
-          proxy.playState = 'paused';
-          proxy.resetCurrentTimeOnResume = true;
-          this.currentTime = previousCurrentTime;
+          details.playState = 'paused';
+          details.resetCurrentTimeOnResume = true;
+          details.animation.currentTime = previousCurrentTime;
           break;
 
         case 'running':
         case 'finished':
-          proxy.playState = 'running';
-          this.startTime =
-              playbackRate < 0 ? proxy.animation.effect.getTiming().duration
+          details.playState = 'running';
+          details.startTime =
+              playbackRate < 0 ? details.animation.effect.getTiming().duration
                                : 0;
+          details.holdTime = null;
           break;
       }
-      addAnimation(proxy.timeline, this);
+      addAnimation(details.timeline, this);
       if (pending)
-        createReadyPromise(proxy);
+        createReadyPromise(details);
     } else {
       // TODO: polyfill mutable timeline support. Cannot assume the native
       // animation supports mutable timelines. Could keep a list of detached
       // timelines and pump updates to current time via rAF.
-      proxy.animation.timeline = newTimeline;
+      details.animation.timeline = newTimeline;
       if (fromScrollTimeline) {
         // TODO: sync pending status & play state (ready promise).
-        proxyAnimations.get(this).currentTime = previousCurrentTime;
+        details.timeline = null;
+        details.animation.currentTime = previousCurrentTime;
       }
     }
   }
 
   get startTime() {
-    return this.getProperty('startTime');
+    return getAnimationProperty(proxyAnimations.get(this), 'startTime');
   }
   set startTime(value) {
-    this.setProperty('startTime', value);
-    const proxy = proxyAnimations.get(this);
-    proxy.resetCurrentTimeOnResume = false;
-    if (this.useProxy()) {
-      proxy.playState = 'running';
+    const previousCurrentTime = this.currentTime;
+    const details = proxyAnimations.get(this);
+
+    if (!details.timeline) {
+      details.animation.startTime = value;
+      return;
+    }
+
+    details.resetCurrentTimeOnResume = false;
+    applyPendingPlaybackRate(details);
+    details.readyPromise = null;
+    if (typeof value == 'number') {
+      details.holdTime = null;
+      details.startTime = value;
+      details.playState = 'running';
+      const timelineTime = details.timeline.currentTime;
+      details.animation.currentTime =
+          (timelineTime - details.startTime) * this.playbackRate;
+      updateFinishedState(details);
+    } else {
+      details.holdTime = previousCurrentTime;
+      details.startTime = null;
+      details.playState =
+          (typeof previousCurrentTime == 'number') ? 'paused' : 'idle';
     }
   }
 
   get currentTime() {
-    return this.getProperty('currentTime');
+    const details = proxyAnimations.get(this);
+    if (details.timeline) {
+      if (!details.playState || details.playState == 'idle')
+        return null;
+      if (details.playState == 'running' &&
+          details.timeline.phase == 'inactive')
+        return null;
+    }
+    return getAnimationProperty(details, 'currentTime');
   }
   set currentTime(value) {
-    this.setProperty('currentTime', value);
-    const proxy = proxyAnimations.get(this);
-    // proxy.resetCurrentTimeOnResume = false;
-    if (this.useProxy()) {
+    const details = proxyAnimations.get(this);
+    setAnimationProperty(details, 'currentTime', value);
+    details.resetCurrentTimeOnResume = false;
+    if (details.timeline) {
        // Update the start or the hold time of the proxy animation depending
        // on the play sate.
-       const timelineTime = proxy.timeline.currentTime;
+       const timelineTime = details.timeline.currentTime;
        const playbackRate = this.playbackRate;
-       switch(proxy.playState) {
-         case 'paused':
-           proxy.holdTime = value;
-           proxy.startTime = null;
-           break;
-
+       switch(details.playState) {
         case 'running':
         case 'finished':
           // TODO: handle value == null or playbackRate == 0.
-          proxy.startTime = timelineTime - value / playbackRate;
-          proxy.holdTime = null;
+          details.startTime = timelineTime - value / playbackRate;
+          details.holdTime = null;
           break;
 
         default:
-          // TODO: implement me.
+           details.playState = value ? 'paused' : 'idle';
+           details.holdTime = value;
+           details.startTime = null;
+           break;
        }
+       updateFinishedState(details);
     }
   }
 
   get playbackRate() {
-    return this.getProperty('playbackRate');
+    return proxyAnimations.get(this).animation.playbackRate;
   }
   set playbackRate(value) {
-    this.setProperty('playbackRate', value);
+    const details = proxyAnimations.get(this);
+    details.animation.playbackRate = value;
+    if (details.timeline) {
+      details.pendingPlaybackRate = null;
+      updateFinishedState(details);
+    }
   }
 
   get playState() {
-    return this.getProperty('playState');
+    return getAnimationProperty(proxyAnimations.get(this), 'playState');
   }
 
   get replaceState() {
+    // TODO: Fix me. Replace state is not a boolean.
     return proxyAnimations.get(this).animation.pending;
   }
 
   get pending() {
     const details = proxyAnimations.get(this);
-    if (details.readyPromise)
-      return true;
-    return proxyAnimations.get(this).animation.pending;
+    if (details.timeline)
+      return !!details.readyPromise;
+
+    return details.animation.pending;
   }
 
   finish() {
-    let details = proxyAnimations.get(this);
+    const details = proxyAnimations.get(this);
     details.animation.finish();
-    let internalTimeline = details.timeline;
-    if (!internalTimeline) {
-      details.animation.play();
-      return;
+    if (details.timeline) {
+      const previousCurrentTime = details.animation.currentTime;
+      details.playState = "finished";
+      removeAnimation(details.timeline, details.animation);
+      // Force reevaluation of the surrogate's start time.
+      this.currentTime = previousCurrentTime;
+      if (this.pending && !hasActiveTimeline(details)) {
+        // A pending promise is not resolved while the timeline is inactive.
+        details.holdTime = previousCurrentTime;
+        details.startTime = null;
+      } else {
+        details.readyPromise = null;
+      }
     }
-    if (details.playState == "finished")
-      return;
-    details.playState = "finished";
-    details.readyPromise = null;
-    removeAnimation(internalTimeline, details.animation);
   }
 
   play() {
-    let proxy = proxyAnimations.get(this);
-    if (!this.useProxy()) {
-      proxy.animation.play();
+    const details = proxyAnimations.get(this);
+    if (!details.timeline) {
+      details.animation.play();
       return;
     }
 
-    let previousCurrentTime = this.currentTime;
-    proxy.animation.pause();
-    if (!previousCurrentTime || proxy.resetCurrentTimeOnResume) {
+    // TODO: Still some work to be done even if the animation is already
+    // playing.
+    if (details.playState == 'running')
+      return;
+
+    const previousCurrentTime = this.currentTime;
+    details.playState = "running";
+    if ((previousCurrentTime == null) || details.resetCurrentTimeOnResume) {
       this.startTime =
-          this.effectivePlaybackRate() < 0 ?
-              proxy.animation.effect.getTiming().duration : 0;
-      proxy.resetCurrentTimeOnResume = false;
+          effectivePlaybackRate(details) < 0 ?
+              details.animation.effect.getTiming().duration : 0;
+      details.resetCurrentTimeOnResume = false;
+    } else {
+      // Force recalculation of the start time.
+      this.currentTime = previousCurrentTime;
     }
 
-    proxy.playState = "running";
-    addAnimation(proxy.timeline, this);
-
-    if (!proxy.readyPromise)
-      createReadyPromise(proxy);
+    addAnimation(details.timeline, this);
+    if (!details.readyPromise)
+      createReadyPromise(details);
   }
 
   pause() {
-    let details = proxyAnimations.get(this);
+    const details = proxyAnimations.get(this);
     if (!details.timeline) {
-      proxyAnimations.get(this).animation.pause();
+      details.animation.pause();
       return;
     }
-    if (proxyAnimations.get(this).playState == "paused")
+
+    if (details.playState == "paused")
       return;
-    proxyAnimations.get(this).playState = "paused";
+
+    const previousCurrentTime = details.animation.currentTime;
+    if (!previousCurrentTime) {
+      details.startTime =
+          effectivePlaybackRate(details) < 0 ?
+              details.animation.effect.getTiming().duration : 0;
+    } else {
+       details.holdTime = previousCurrentTime;
+    }
+    details.playState = "paused";
     removeAnimation(details.timeline, details.animation);
-    createReadyPromise(details);
+    if (!details.readyPromise)
+      createReadyPromise(details);
   }
 
   reverse() {
-    const proxy = proxyAnimations.get(this);
-    const playbackRate = this.effectivePlaybackRate();
-    proxy.animation.reverse();
-    proxy.pendingPlaybackRate = -playbackRate;
+    const details = proxyAnimations.get(this);
+    if (!details.timeline) {
+      details.animation.reverse();
+      return;
+    }
+
+    this.updatePlaybackRate(-effectivePlaybackRate(details));
+    this.play();
   }
 
   updatePlaybackRate(rate) {
-    const proxy = proxyAnimations.get(this);
-    proxy.animation.updatePlaybackRate(rate);
-    proxy.pendingPlaybackRate = rate;
+    const details = proxyAnimations.get(this);
+    details.pendingPlaybackRate = rate;
+    if (!details.timeline) {
+      details.animation.updatePlaybackRate(rate);
+      return;
+    }
+
+    const previousCurrentTime = this.currentTime;
+
+    // We do not update the playback rate of the underlaying animation since
+    // timing of when the playback rate takes effect depends on the play state.
+    switch(details.playState) {
+      case 'idle':
+      case 'paused':
+        applyPendingPlaybackRate(details);
+        break;
+
+      case 'finished':
+      case 'running':
+        // pending playback rate is applied when the pending ready promise is
+        // resolved.
+        createReadyPromise(details);
+        updateFinishedState(details);
+    }
   }
 
   persist() {
@@ -320,20 +466,17 @@ export class ProxyAnimation {
   }
 
   cancel() {
-    let details = proxyAnimations.get(this);
+    const details = proxyAnimations.get(this);
     details.animation.cancel();
-    let internalTimeline = details.timeline;
-    if (!internalTimeline)
-      return;
-    if (details.playState == "idle" ||
-        details.playState == "finished")
-      return;
-    if (details.playState == "running")
-      removeAnimation(internalTimeline, details.animation);
-    details.playState = "finished";
-    if (details.readyPromise) {
-      details.aborted.add(details.sequence);
-      details.readyPromise = null;
+    if (details.timeline) {
+      details.startTime = null;
+      details.holdTime = null;
+      details.playState = 'idle';
+      removeAnimation(details.timeline, details.animation);
+      if (details.readyPromise) {
+        details.aborted.add(proxy.sequence);
+        details.readyPromise = null;
+      }
     }
   }
 
@@ -361,12 +504,18 @@ export class ProxyAnimation {
   }
 
   get ready() {
-    const proxy = proxyAnimations.get(this);
-    if (this.useProxy()) {
-      if (proxy.readyPromise)
-        return proxy.readyPromise;
+    const details = proxyAnimations.get(this);
+    if (details.timeline) {
+      if (details.readyPromise)
+        return details.readyPromise;
+
+      // TODO: If not waiting on a pending task, we still need to return a ready
+      // promise; however, the promise can be immediately resolved. Cannot use
+      // the underlying animation as it is intentionally locked in a
+      // pause-pending state.
     }
-    return proxy.animation.ready;
+
+    return details.animation.ready;
   }
 
 };
@@ -376,7 +525,7 @@ export function animate(keyframes, options) {
   if (!timeline || !(timeline instanceof ScrollTimeline)) {
     let animation = nativeElementAnimate.apply(this, [keyframes, options]);
     // Even through this animation runs as a native animation, we still wrap
-    // it in a proxy animation to handle changing the animation's timeline.
+    // it in a proxy animation to allow changing of the animation's timeline.
     let proxyAnimation = new ProxyAnimation(animation, timeline);
     return proxyAnimation;
   }

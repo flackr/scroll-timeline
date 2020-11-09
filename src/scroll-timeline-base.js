@@ -31,19 +31,21 @@ function scrollEventSource(scrollSource) {
 function updateInternal(scrollTimelineInstance) {
   let animations = scrollTimelineOptions.get(scrollTimelineInstance).animations;
   if (animations.length === 0) return;
-  let timelineCurrentTime = scrollTimelineInstance.currentTime;
+  let timelineTime = scrollTimelineInstance.currentTime;
 
   for (let i = 0; i < animations.length; i++) {
-    const animation = animations[i];
-    // The web-animations spec says to throw a TypeError if you try to seek to
-    // an unresolved time value from a resolved time value, so to polyfill the
-    // expected behavior we cancel the underlying animation.
-    if (timelineCurrentTime == null) {
-      if (animation.playState === "paused") animation.cancel();
-    } else if (animation.playState == 'running') {
-      animation.currentTime =
-          (timelineCurrentTime - animation.startTime) * animation.playbackRate;
-    }
+    animations[i].tick(timelineTime);
+
+    // const animation = animations[i];
+    // // The web-animations spec says to throw a TypeError if you try to seek to
+    // // an unresolved time value from a resolved time value, so to polyfill the
+    // // expected behavior we cancel the underlying animation.
+    // if (timelineCurrentTime == null) {
+    //   if (animation.playState === "paused") animation.cancel();
+    // } else if (animation.playState == 'running') {
+    //   animation.currentTime =
+    //       (timelineCurrentTime - animation.startTime) * animation.playbackRate;
+    // }
   }
 }
 
@@ -412,6 +414,9 @@ export class ScrollTimeline {
     // Step 1
     let unresolved = null;
     if (!this.scrollSource) return unresolved;
+    if (this.phase == 'inactive')
+      return unresolved;
+
     let startOffset = calculateScrollOffset(
       new CSSUnitValue(0, 'percent'),
       this.scrollSource,
