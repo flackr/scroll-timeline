@@ -110,6 +110,7 @@ function updateFinishedState(details) {
     }
   } else if (details.playState == 'finished') {
     details.playState = 'running';
+    addAnimation(details.timeline, details.proxy);
   }
 }
 
@@ -153,6 +154,7 @@ export class ProxyAnimation {
       // inaccessible via the web animations API and therefore explicitly
       // tracked.
       pendingPlaybackRate: null,
+      proxy: this,
       sequence: 0, /* Used to track ready promises. */
       aborted: new Set(), /* Aborted sequences. */
     });
@@ -349,20 +351,37 @@ export class ProxyAnimation {
 
   finish() {
     const details = proxyAnimations.get(this);
-    details.animation.finish();
-    if (details.timeline) {
-      const previousCurrentTime = details.animation.currentTime;
-      details.playState = "finished";
+    if (!details.timeline) {
+      details.animation.finish();
+      return;
+    }
+
+    const playbackRate = effectivePlaybackRate(details);
+    const duration = details.animation.effect.getTiming().duration;
+    if (playbackRate == 0 || (playbackRate < 0 && duration == Infinity)) {
+      // Let native implementation handle throwing the exception. This should
+      // not affect the state of the native animation.
+      details.animation.finish();
+      return;
+    }
+
+    applyPendingPlaybackRate(details);
+    const seekTime = playbackRate < 0 ? 0 : duration;
+    const timelineTime = details.timeline.currentTime;
+    details.animation.currentTime = seekTime;
+
+    if (hasActiveTimeline(details)) {
+      details.startTime = timelineTime - seekTime / playbackRate;
+      details.holdTime = null;
+      details.playState = 'finished';
       removeAnimation(details.timeline, details.animation);
-      // Force reevaluation of the surrogate's start time.
-      this.currentTime = previousCurrentTime;
-      if (this.pending && !hasActiveTimeline(details)) {
-        // A pending promise is not resolved while the timeline is inactive.
-        details.holdTime = previousCurrentTime;
-        details.startTime = null;
-      } else {
-        details.readyPromise = null;
-      }
+      details.readyPromise = null;
+      // Resolve the finished promise and fire the finished event.
+      details.animation.finish();
+    } else {
+      details.startTime = null;
+      details.holdTime = seekTime;
+      details.playState = 'paused';
     }
   }
 
@@ -373,18 +392,35 @@ export class ProxyAnimation {
       return;
     }
 
-    // TODO: Still some work to be done even if the animation is already
-    // playing.
-    if (details.playState == 'running')
-      return;
+    let previousCurrentTime = details.animation.currentTime;
 
-    const previousCurrentTime = this.currentTime;
-    details.playState = "running";
-    if ((previousCurrentTime == null) || details.resetCurrentTimeOnResume) {
-      this.startTime =
-          effectivePlaybackRate(details) < 0 ?
-              details.animation.effect.getTiming().duration : 0;
+    // Resume of a paused animation after a timeline change snaps to
+    // the scroll position.
+    if (details.resetCurrentTimeOnResume) {
+      previousCurrentTime = null;
       details.resetCurrentTimeOnResume = false;
+    }
+
+    // Snap to boundary if currently out of bounds.
+    const playbackRate = effectivePlaybackRate(details);
+    const duration = details.animation.effect.getTiming().duration;
+    let seekTime = null;
+    if (playbackRate > 0 && (previousCurrentTime == null ||
+                             previousCurrentTime < 0 ||
+                             previousCurrentTime >= duration)) {
+      // TODO: throw exception if duration == Infinity.
+      seekTime = 0;
+    } else if (playbackRate < 0 && (previousCurrentTime == null ||
+                                    previousCurrentTime < 0 ||
+                                    previousCurrentTime > duration)) {
+      seekTime = duration;
+    } else if (playbackRate == 0 && previousCurrentTime == null) {
+      seekTime = 0;
+    }
+
+    details.playState = "running";
+    if (seekTime != null) {
+      this.startTime = seekTime;
     } else {
       // Force recalculation of the start time.
       this.currentTime = previousCurrentTime;
@@ -426,6 +462,9 @@ export class ProxyAnimation {
       return;
     }
 
+    // TODO: Handle edge cases that trip/handle an exception. This includes
+    // reversing on an inactive timeline and cases where play would normally
+    // throw an exception.
     this.updatePlaybackRate(-effectivePlaybackRate(details));
     this.play();
   }
@@ -474,7 +513,7 @@ export class ProxyAnimation {
       details.playState = 'idle';
       removeAnimation(details.timeline, details.animation);
       if (details.readyPromise) {
-        details.aborted.add(proxy.sequence);
+        details.aborted.add(details.sequence);
         details.readyPromise = null;
       }
     }
