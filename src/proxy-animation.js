@@ -123,9 +123,6 @@ function hasActiveTimeline(details) {
 // fetched from Animation.
 let proxyAnimations = new WeakMap();
 
-// Hack for testing / debugging
-window.proxyAnimations = proxyAnimations;
-
 export class ProxyAnimation {
   constructor(effect, timeline) {
     const animation =
@@ -177,10 +174,10 @@ export class ProxyAnimation {
   // -----------------------------------------
 
   get effect() {
-    return getAnimationProperty(proxyAnimations.get(this), 'effect');
+    return proxyAnimations.get(this).animation.effect;
   }
   set effect(newEffect) {
-    setAnimationProperty(proxyAnimations.get(this), 'effect', newEffect);
+    proxyAnimations.get(this).animation.effect = newEffect;
   }
 
   get timeline() {
@@ -291,11 +288,11 @@ export class ProxyAnimation {
           details.timeline.phase == 'inactive')
         return null;
     }
-    return getAnimationProperty(details, 'currentTime');
+    return details.animation.currentTime;
   }
   set currentTime(value) {
     const details = proxyAnimations.get(this);
-    setAnimationProperty(details, 'currentTime', value);
+    details.animation.currentTime = value;
     details.resetCurrentTimeOnResume = false;
     if (details.timeline) {
        // Update the start or the hold time of the proxy animation depending
@@ -326,10 +323,9 @@ export class ProxyAnimation {
   set playbackRate(value) {
     const details = proxyAnimations.get(this);
     details.animation.playbackRate = value;
-    if (details.timeline) {
-      details.pendingPlaybackRate = null;
+    details.pendingPlaybackRate = null;
+    if (details.timeline)
       updateFinishedState(details);
-    }
   }
 
   get playState() {
@@ -411,7 +407,7 @@ export class ProxyAnimation {
       // TODO: throw exception if duration == Infinity.
       seekTime = 0;
     } else if (playbackRate < 0 && (previousCurrentTime == null ||
-                                    previousCurrentTime < 0 ||
+                                    previousCurrentTime <= 0 ||
                                     previousCurrentTime > duration)) {
       seekTime = duration;
     } else if (playbackRate == 0 && previousCurrentTime == null) {
@@ -433,10 +429,9 @@ export class ProxyAnimation {
 
   pause() {
     const details = proxyAnimations.get(this);
-    if (!details.timeline) {
-      details.animation.pause();
+    details.animation.pause();
+    if (!details.timeline)
       return;
-    }
 
     if (details.playState == "paused")
       return;
@@ -462,10 +457,15 @@ export class ProxyAnimation {
       return;
     }
 
-    // TODO: Handle edge cases that trip/handle an exception. This includes
-    // reversing on an inactive timeline and cases where play would normally
-    // throw an exception.
-    this.updatePlaybackRate(-effectivePlaybackRate(details));
+    const playbackRate = effectivePlaybackRate(details);
+    const duration = details.animation.effect.getTiming().duration;
+    if (playbackRate == 0 || (playbackRate > 0 && duration == Infinity)) {
+      // Let native implementation handle throwing the exception.
+      details.animation.reverse();
+      return;
+    }
+
+    this.updatePlaybackRate(-playbackRate);
     this.play();
   }
 

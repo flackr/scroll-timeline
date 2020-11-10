@@ -35,17 +35,6 @@ function updateInternal(scrollTimelineInstance) {
 
   for (let i = 0; i < animations.length; i++) {
     animations[i].tick(timelineTime);
-
-    // const animation = animations[i];
-    // // The web-animations spec says to throw a TypeError if you try to seek to
-    // // an unresolved time value from a resolved time value, so to polyfill the
-    // // expected behavior we cancel the underlying animation.
-    // if (timelineCurrentTime == null) {
-    //   if (animation.playState === "paused") animation.cancel();
-    // } else if (animation.playState == 'running') {
-    //   animation.currentTime =
-    //       (timelineCurrentTime - animation.startTime) * animation.playbackRate;
-    // }
   }
 }
 
