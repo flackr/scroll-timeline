@@ -29,44 +29,38 @@ function createReadyPromise(details) {
         details.aborted.delete(sequence);
         // Reject with a non-visible AbortError.
         reject(new DOMException("Animation aborted", "AbortError"));
-      } else {
-        // Apply pending playbackRate
-        if (typeof details.pendingPlaybackRate == 'number') {
-          const previousCurrentTime = details.animation.currentTime;
-          details.animation.playbackRate = details.pendingPlaybackRate;
-          const timelineTime = details.timeline.currentTime;
-          details.startTime = details.pendingPlaybackRate ?
-              timelineTime - previousCurrentTime / details.pendingPlaybackRate :
-              previousCurrentTime;
-          details.pendingPlaybackRate = null;
-        }
-        switch(details.playState) {
-          case 'paused':
-            details.startTime = null;
-            break;
-
-          case 'running':
-          case 'finished':
-            details.holdTime = null;
-        }
-        resolve();
+        return;
       }
+
+      // See pending play and pause tasks in:
+      // https://www.w3.org/TR/web-animations-1/#playing-an-animation-section
+      // https://www.w3.org/TR/web-animations-1/#pausing-an-animation-section
+
+      // TODO: Consider implementing commitPendingPlay and commitPendingPause
+      // functions with closer adherence to the spec.
+
+      // Apply pending playbackRate
+      if (typeof details.pendingPlaybackRate == 'number') {
+        const previousCurrentTime = details.animation.currentTime;
+        details.animation.playbackRate = details.pendingPlaybackRate;
+        const timelineTime = details.timeline.currentTime;
+        details.startTime = details.pendingPlaybackRate ?
+            timelineTime - previousCurrentTime / details.pendingPlaybackRate :
+            previousCurrentTime;
+        details.pendingPlaybackRate = null;
+      }
+      switch(details.playState) {
+        case 'paused':
+          details.startTime = null;
+          break;
+
+        case 'running':
+        case 'finished':
+          details.holdTime = null;
+      }
+      resolve();
     });
   });
-}
-
-function getAnimationProperty(details, name) {
-  if (details.timeline && (name in details))
-    return details[name];
-  else
-    return details.animation[name];
-}
-
-function setAnimationProperty(details, name, value) {
-  if (details.timeline && (name in details))
-    details[name] = value;
-  else
-    details.animation[name] = value;
 }
 
 function effectivePlaybackRate(details) {
@@ -86,10 +80,11 @@ function updateFinishedState(details) {
   if (!details.timeline)
     return;
 
-  const isFinished = () => {
-    if (details.playState == 'paused')
-      return false;
+  // No change in play state if idle or paused.
+  if (details.playState != 'running' && details.playState != 'finished')
+    return;
 
+  const isFinished = () => {
     const playbackRate = effectivePlaybackRate(details);
     const currentTime = details.animation.currentTime;
     if (playbackRate < 0 && currentTime <= 0)
@@ -101,21 +96,47 @@ function updateFinishedState(details) {
     return false;
   };
 
-  if (isFinished()) {
-    if (details.playState != 'finished') {
-      details.playState = 'finished';
-      // TODO: Ensure that finished promise and events fire.
-      // Possibly best to call finish after rAF though that would force a snap
-      // to the boundary, which is not quite correct.
-    }
-  } else if (details.playState == 'finished') {
-    details.playState = 'running';
-    addAnimation(details.timeline, details.proxy);
+  const newPlayState = isFinished() ? 'finished' : 'running';
+  if (newPlayState == details.playSAtate)
+    return;
+
+  details.playState = newPlayState;
+  if (newPlayState == 'finished') {
+    requestAnimationFrame(() => {
+      // Finished state may have been temporary. Ensure that we are still in the
+      // 'finished' state.
+      if (details.playState == 'finished') {
+        // Resolve the finished promise and queue the onfinished event.
+        // Finish snaps to the boundary. Restore current time after the finish
+        // call.
+        const previousCurrentTime = details.aniamtion.currentTime;
+        details.animation.finish();
+        details.animation.pause();
+        details.animation.currentTime = previousCurrentTime;
+      }
+    });
   }
 }
 
 function hasActiveTimeline(details) {
   return !details.timeline || details.timeline.phase != 'inactive';
+}
+
+function tickAnimation(timelineTime) {
+  const details = proxyAnimations.get(this);
+  if (timelineTime == null) {
+    // While the timeline is inactive, it's effect should not be applied.
+    // To polyfill this behavior, we cancel the underlying animation.
+    if (details.animation.playState != 'idle')
+      details.animation.cancel();
+    return;
+  }
+
+  if (this.playState == 'running') {
+    details.animation.currentTime =
+        (timelineTime - this.startTime) * this.playbackRate;
+    updateFinishedState(details);
+  }
 }
 
 // Create an alternate Animation class which proxies API requests.
@@ -158,18 +179,6 @@ export class ProxyAnimation {
   }
 
   // -----------------------------------------
-  // Helper method
-  // -----------------------------------------
-
-  tick(timelineTime) {
-    if (timelineTime != null && this.playState == 'running') {
-      proxyAnimations.get(this).animation.currentTime =
-          (timelineTime - this.startTime) * this.playbackRate;
-      updateFinishedState(proxyAnimations.get(this));
-    }
-  }
-
-  // -----------------------------------------
   // Web animation API
   // -----------------------------------------
 
@@ -182,6 +191,8 @@ export class ProxyAnimation {
 
   get timeline() {
     const details = proxyAnimations.get(this);
+    // If we explicitly set a null timeline we will return the underlying
+    // animation's timeline.
     return details.timeline || details.animation.timeline;
   }
   set timeline(newTimeline) {
@@ -204,9 +215,6 @@ export class ProxyAnimation {
 
     details.resetCurrentTimeOnResume = false;
     if (toScrollTimeline) {
-      // Cannot assume that the underlying native implementation supports
-      // mutable timelines. Thus, we leave its timeline untouched, and simply
-      // ensure that it is in the paused state.
       details.timeline = newTimeline;
       applyPendingPlaybackRate(details);
       details.animation.pause();
@@ -221,35 +229,51 @@ export class ProxyAnimation {
           details.playState = 'paused';
           details.resetCurrentTimeOnResume = true;
           details.animation.currentTime = previousCurrentTime;
+          removeAnimation(details.timeline, details.animation);
           break;
 
         case 'running':
         case 'finished':
-          details.playState = 'running';
+          details.playState = previousPlayState;
           details.startTime =
               playbackRate < 0 ? details.animation.effect.getTiming().duration
                                : 0;
-          details.holdTime = null;
+          details.holdTime =
+              previousPlayState == 'finished' ? previousCurrentTime : null;
+          addAnimation(details.timeline, details.animation,
+              tickAnimation.bind(this));
           break;
       }
-      addAnimation(details.timeline, this);
       if (pending)
         createReadyPromise(details);
-    } else {
-      // TODO: polyfill mutable timeline support. Cannot assume the native
-      // animation supports mutable timelines. Could keep a list of detached
-      // timelines and pump updates to current time via rAF.
-      details.animation.timeline = newTimeline;
+      return;
+    }
+
+    if (details.animation.timeline == newTimeline) {
       if (fromScrollTimeline) {
-        // TODO: sync pending status & play state (ready promise).
         details.timeline = null;
         details.animation.currentTime = previousCurrentTime;
+        switch (details.playbackRate) {
+          case 'paused':
+            details.animation.pause();
+            break;
+
+          case 'running':
+          case 'finished':
+            details.animation.play();
+        }
       }
+    } else {
+      throw TypeError("Unsupported timeilne: " + newTimeline);
     }
   }
 
   get startTime() {
-    return getAnimationProperty(proxyAnimations.get(this), 'startTime');
+    const details = proxyAnimations.get(this);
+    if (details.timeline)
+      return details.startTime;
+
+    return details.animation.startTime;
   }
   set startTime(value) {
     const previousCurrentTime = this.currentTime;
@@ -329,7 +353,11 @@ export class ProxyAnimation {
   }
 
   get playState() {
-    return getAnimationProperty(proxyAnimations.get(this), 'playState');
+    proxy = proxyAnimations.get(this);
+    if (proxy.timeline)
+      return proxy.playState;
+
+    return proxy.animation.playState;
   }
 
   get replaceState() {
@@ -422,7 +450,8 @@ export class ProxyAnimation {
       this.currentTime = previousCurrentTime;
     }
 
-    addAnimation(details.timeline, this);
+    addAnimation(details.timeline, details.animation,
+                 tickAnimation.bind(this));
     if (!details.readyPromise)
       createReadyPromise(details);
   }
@@ -551,7 +580,10 @@ export class ProxyAnimation {
       // TODO: If not waiting on a pending task, we still need to return a ready
       // promise; however, the promise can be immediately resolved. Cannot use
       // the underlying animation as it is intentionally locked in a
-      // pause-pending state.
+      // paused state. Update the proxy's ready promise to make it's state
+      // (pending/resolved) observable.  Currently, we reset the promise to
+      // null when resolved.
+      return null;
     }
 
     return details.animation.ready;

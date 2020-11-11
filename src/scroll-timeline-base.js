@@ -34,7 +34,7 @@ function updateInternal(scrollTimelineInstance) {
   let timelineTime = scrollTimelineInstance.currentTime;
 
   for (let i = 0; i < animations.length; i++) {
-    animations[i].tick(timelineTime);
+    animations[i].tickAnimation(timelineTime);
   }
 }
 
@@ -50,7 +50,8 @@ function calculateTimeRange(scrollTimeline) {
     timeRange = 0;
     let animations = scrollTimelineOptions.get(scrollTimeline).animations;
     for (let i = 0; i < animations.length; i++) {
-      timeRange = Math.max(timeRange, calculateTargetEffectEnd(animations[i]));
+      timeRange = Math.max(timeRange,
+                           calculateTargetEffectEnd(animations[i].animation));
     }
     if (timeRange === Infinity) timeRange = 0;
   }
@@ -149,28 +150,30 @@ export function calculateScrollOffset(
  */
 export function removeAnimation(scrollTimeline, animation) {
   let animations = scrollTimelineOptions.get(scrollTimeline).animations;
-  let index = animations.indexOf(animation);
-  if (index === -1) return;
-  animations.splice(index, 1);
-}
-
-function find(scrollTimeline, animation) {
-  const animations = scrollTimelineOptions.get(scrollTimeline).animations;
-  let index = animations.indexOf(animation);
-  return (index === -1) ? null : animations[index];
+  for (let i = 0; i < animations.length; i++) {
+    if (animations[i].animation == animation) {
+      animations.splice(i, 1);
+    }
+  }
 }
 
 /**
  * Attaches a Web Animation instance to ScrollTimeline.
  * @param scrollTimeline {ScrollTimeline}
  * @param animation {Animation}
- * @param options {Object}
+ * @param tickAnimation {function(number)}
  */
-export function addAnimation(scrollTimeline, animation, options) {
-  if (!find(scrollTimeline, animation)) {
-    let animations = scrollTimelineOptions.get(scrollTimeline).animations;
-    animations.push(animation);
+export function addAnimation(scrollTimeline, animation, tickAnimation) {
+  let animations = scrollTimelineOptions.get(scrollTimeline).animations;
+  for (let i = 0; i < animations.length; i++) {
+    if (animations[i].animation == animation)
+      return;
   }
+
+  animations.push({
+    animation: animation,
+    tickAnimation: tickAnimation
+  });
   updateInternal(scrollTimeline);
 }
 
