@@ -40,7 +40,7 @@ function createReadyPromise(details) {
       // functions with closer adherence to the spec.
 
       // Apply pending playbackRate
-      if (typeof details.pendingPlaybackRate == 'number') {
+      if (details.pendingPlaybackRate !== null) {
         const previousCurrentTime = details.animation.currentTime;
         details.animation.playbackRate = details.pendingPlaybackRate;
         const timelineTime = details.timeline.currentTime;
@@ -249,6 +249,8 @@ export class ProxyAnimation {
       return;
     }
 
+
+
     if (details.animation.timeline == newTimeline) {
       if (fromScrollTimeline) {
         details.timeline = null;
@@ -287,7 +289,7 @@ export class ProxyAnimation {
     details.resetCurrentTimeOnResume = false;
     applyPendingPlaybackRate(details);
     details.readyPromise = null;
-    if (typeof value == 'number') {
+    if (value !== null) {
       details.holdTime = null;
       details.startTime = value;
       details.playState = 'running';
@@ -298,8 +300,7 @@ export class ProxyAnimation {
     } else {
       details.holdTime = previousCurrentTime;
       details.startTime = null;
-      details.playState =
-          (typeof previousCurrentTime == 'number') ? 'paused' : 'idle';
+      details.playState = (previousCurrentTime === null) ? 'idle' : 'paused';
     }
   }
 
