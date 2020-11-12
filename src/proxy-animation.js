@@ -278,42 +278,49 @@ export class ProxyAnimation {
     return details.animation.startTime;
   }
   set startTime(value) {
-    const previousCurrentTime = this.currentTime;
+    // https://drafts.csswg.org/web-animations/#setting-the-start-time-of-an-animation
     const details = proxyAnimations.get(this);
-
     if (!details.timeline) {
       details.animation.startTime = value;
       return;
     }
 
-    details.resetCurrentTimeOnResume = false;
-    applyPendingPlaybackRate(details);
-    details.readyPromise = null;
-    if (value !== null) {
+    // TODO: handle hold phase.
+    const timelineTime = details.timeline.currentTime;
+    if (timelineTime === null && value !== null)
       details.holdTime = null;
-      details.startTime = value;
-      details.playState = 'running';
-      const timelineTime = details.timeline.currentTime;
-      details.animation.currentTime =
-          (timelineTime - details.startTime) * this.playbackRate;
-      updateFinishedState(details);
-    } else {
+
+    const previousCurrentTime = this.currentTime;
+    applyPendingPlaybackRate(details);
+    details.startTime = value;
+    details.resetCurrentTimeOnResume = false;
+    details.readyPromise = null;
+
+    if (value === null) {
       details.holdTime = previousCurrentTime;
-      details.startTime = null;
       details.playState = (previousCurrentTime === null) ? 'idle' : 'paused';
+    } else {
+      details.playState = 'running';
+      if (timelineTime !== null) {
+        details.animation.currentTime =
+            (timelineTime - value) * this.playbackRate;
+        updateFinishedState(details);
+      }
     }
   }
 
   get currentTime() {
     const details = proxyAnimations.get(this);
-    if (details.timeline) {
-      if (!details.playState || details.playState == 'idle')
-        return null;
-      if (details.playState == 'running' &&
-          details.timeline.phase == 'inactive')
-        return null;
-    }
-    return details.animation.currentTime;
+    if (!details.timeline)
+      return details.animation.currentTime;
+
+    if (!details.playState || details.playState == 'idle')
+      return null;
+    if (details.playState == 'running' &&
+        details.timeline.phase == 'inactive')
+      return null;
+
+   return details.animation.currentTime;
   }
   set currentTime(value) {
     const details = proxyAnimations.get(this);
@@ -349,8 +356,7 @@ export class ProxyAnimation {
     const details = proxyAnimations.get(this);
     details.animation.playbackRate = value;
     details.pendingPlaybackRate = null;
-    if (details.timeline)
-      updateFinishedState(details);
+    updateFinishedState(details);
   }
 
   get playState() {
@@ -593,20 +599,17 @@ export class ProxyAnimation {
 };
 
 export function animate(keyframes, options) {
-  let timeline = options.timeline;
-  if (!timeline || !(timeline instanceof ScrollTimeline)) {
-    let animation = nativeElementAnimate.apply(this, [keyframes, options]);
-    // Even through this animation runs as a native animation, we still wrap
-    // it in a proxy animation to allow changing of the animation's timeline.
-    let proxyAnimation = new ProxyAnimation(animation, timeline);
-    return proxyAnimation;
+  const timeline = options.timeline;
+  if (timeline instanceof ScrollTimeline)
+    delete options.timeline;
+
+  const animation = nativeElementAnimate.apply(this, [keyframes, options]);
+  const proxyAnimation = new ProxyAnimation(animation, timeline);
+
+  if (timeline instanceof ScrollTimeline) {
+    animation.pause();
+    proxyAniamtion.play();
   }
-  delete options.timeline;
-  let animation = nativeElementAnimate.apply(this, [keyframes, options]);
-  animation.pause();
-  let proxyAnimation = new ProxyAnimation(animation, timeline);
-  proxyAnimation.play();
+
   return proxyAnimation;
 };
-
-
