@@ -8,59 +8,66 @@ import {
 const nativeElementAnimate = window.Element.prototype.animate;
 const nativeAnimation = window.Animation;
 
+
 /**
- * Decides whether to use native Element.prototype.animate function in regular fashion or pass it to our polyfill
- *  so its current time is driven by scroll event
- * @param keyframes {Object} array of keyframe objects
- * @param options {Object} WAAPI options object
- * @returns {Function}
+ * Creates a ready promise with a pending task, to be executed at the time
+ * the promise is resolved. The promise will auto-resolve in the next animation
+ * frame, but may be resolved or rejected earlier as a result of API calls that
+ * change the state of the animation. The state of the promise
+ * (pending|resolved|rejected) may be queried to determine when a replacement
+ * promise is needed.
+ * @param details {Ojbect}
+ * @param task {function}
  */
-
-function createReadyPromise(details) {
-  let sequence = ++details.sequence;
-  let promise = details.readyPromise = new Promise((resolve, reject) => {
-    // TODO: We should actually not apply the animation until this is
-    // resolved.
-    requestAnimationFrame(() => {
-      // If this promise was replaced, this animation was aborted.
-      if (details.readyPromise == promise)
-        details.readyPromise = null;
-      if (details.aborted.has(sequence)) {
-        details.aborted.delete(sequence);
-        // Reject with a non-visible AbortError.
-        reject(new DOMException("Animation aborted", "AbortError"));
-        return;
-      }
-
-      // See pending play and pause tasks in:
-      // https://www.w3.org/TR/web-animations-1/#playing-an-animation-section
-      // https://www.w3.org/TR/web-animations-1/#pausing-an-animation-section
-
-      // TODO: Consider implementing commitPendingPlay and commitPendingPause
-      // functions with closer adherence to the spec.
-
-      // Apply pending playbackRate
-      if (details.pendingPlaybackRate !== null) {
-        const previousCurrentTime = details.animation.currentTime;
-        details.animation.playbackRate = details.pendingPlaybackRate;
-        const timelineTime = details.timeline.currentTime;
-        details.startTime = details.pendingPlaybackRate ?
-            timelineTime - previousCurrentTime / details.pendingPlaybackRate :
-            previousCurrentTime;
-        details.pendingPlaybackRate = null;
-      }
-      switch(details.playState) {
-        case 'paused':
-          details.startTime = null;
-          break;
-
-        case 'running':
-        case 'finished':
-          details.holdTime = null;
-      }
-      resolve();
-    });
+function createReadyPromise(details, task) {
+  let nativeResolve = undefined;
+  let nativeReject = undefined;
+  let pendingTask = task;
+  let state = 'pending';
+  const p = new Promise((resolve, reject) => {
+    nativeResolve = resolve;
+    nativeReject = reject;
   });
+
+  p.resolve = () => {
+    state = 'resolved';
+    pendingTask = null;
+    nativeResolve(details.proxy);
+  }
+  p.reject = () => {
+    state = 'rejected';
+    pendingTask = null;
+    nativeReject(details.proxy);
+  }
+  p.cancelTask = () => {
+    pendingTask = null;
+  }
+  p.queueTask = (task) => {
+    pendingTask = task;
+  }
+  p.state = () => {
+    return state;
+  }
+
+  const runOrRequeueTask = () => {
+    if (!pendingTask)
+      return;
+
+    if (details.timeline.currentTime !== null) {
+      pendingTask();
+      pendingTask = null;
+      return;
+    }
+    requestAnimationFrame(runOrRequeueTask);
+  }
+
+  // Run the pending task in the next animation frame. The task is responsible
+  // for resolving the promise. The pending task will not run while the timeline
+  // is inactive.
+  requestAnimationFrame(runOrRequeueTask);
+
+  details.readyPromise = p;
+  return p;
 }
 
 function effectivePlaybackRate(details) {
@@ -120,6 +127,43 @@ function updateFinishedState(details) {
 
 function hasActiveTimeline(details) {
   return !details.timeline || details.timeline.phase != 'inactive';
+}
+
+function syncCurrentTime(details) {
+  if (!details.timeline)
+    return;
+
+  if (details.startTime !== null) {
+    const timelineTime = details.timeline.currentTime;
+    details.animation.currentTime =
+        (timelineTime - details.startTime) * details.animation.playbackRate;
+  } else if (details.holdTime !== null) {
+    details.animation.currentTime = details.holdTime;
+  }
+}
+
+function resetPendingTasks(details) {
+  // https://www.w3.org/TR/web-animations-1/#reset-an-animations-pending-tasks
+
+  // 1. If animation does not have a pending play task or a pending pause task,
+  //    abort this procedure.
+  if (!details.readyPromise || !details.readyPromise.state() == 'pending')
+    return;
+
+  // 2. If animation has a pending play task, cancel that task.
+  // 3. If animation has a pending pause task, cancel that task.
+  details.readyPromise.cancelTask();
+
+  // 4. Apply any pending playback rate on animation.
+  applyPendingPlaybackRate(details);
+
+  // 5. Reject animation’s current ready promise with a DOMException named
+  //    "AbortError".
+  details.readyPromise.reject();
+
+  // 6. Let animation’s current ready promise be the result of creating a new
+  //    resolved Promise object.
+  details.readyPromise = null;
 }
 
 function tickAnimation(timelineTime) {
@@ -249,8 +293,6 @@ export class ProxyAnimation {
       return;
     }
 
-
-
     if (details.animation.timeline == newTimeline) {
       if (fromScrollTimeline) {
         details.timeline = null;
@@ -375,7 +417,7 @@ export class ProxyAnimation {
   get pending() {
     const details = proxyAnimations.get(this);
     if (details.timeline)
-      return !!details.readyPromise;
+      return details.readyPromise && details.readyPromise.state() == 'pending';
 
     return details.animation.pending;
   }
@@ -403,10 +445,11 @@ export class ProxyAnimation {
 
     if (hasActiveTimeline(details)) {
       details.startTime = timelineTime - seekTime / playbackRate;
-      details.holdTime = null;
+      details.holdTime = seekTime;
       details.playState = 'finished';
       removeAnimation(details.timeline, details.animation);
-      details.readyPromise = null;
+      if (details.readyPromise && details.readyPromise.state() == 'pending')
+        details.readyPromise.resolve();
       // Resolve the finished promise and fire the finished event.
       details.animation.finish();
     } else {
@@ -423,67 +466,306 @@ export class ProxyAnimation {
       return;
     }
 
+    // https://drafts.csswg.org/web-animations/#playing-an-animation-section.
+    // 1. Let aborted pause be a boolean flag that is true if animation has a
+    //    pending pause task, and false otherwise.
+    // 2. Let has pending ready promise be a boolean flag that is initially
+    //    false.
+    // 3. Let seek time be a time value that is initially unresolved.
+    // 4. Let has finite timeline be true if animation has an associated
+    //    timeline that is not monotonically increasing.
+    //    Note: this value will always true at this point in the polyfill.
+    //    Following steps are pruned based on the procedure for scroll
+    //    timelines.
+    const abortedPause = details.playState == 'paused' && this.pending;
+
+    let hasPendingReadyPromise = false;
+    let seekTime = null;
+
+    // 5. Perform the steps corresponding to the first matching condition from
+    //    the following, if any:
+    //
+    // 5a If animation’s effective playback rate > 0, the auto-rewind flag is
+    //    true and either animation’s:
+    //      current time is unresolved, or
+    //      current time < zero, or
+    //      current time >= target effect end,
+    //    5a1. Set seek time to zero.
+    //
+    // 5b If animation’s effective playback rate < 0, the auto-rewind flag is
+    //    true and either animation’s:
+    //      current time is unresolved, or
+    //      current time ≤ zero, or
+    //      current time > target effect end,
+    //    5b1. If associated effect end is positive infinity,
+    //         throw an "InvalidStateError" DOMException and abort these steps.
+    //    5b2. Otherwise,
+    //         5b2a Set seek time to animation's associated effect end.
+    //
+    // 5c If animation’s effective playback rate = 0 and animation’s current time
+    //    is unresolved,
+    //    5c1. Set seek time to zero.
+    // Note: the auto-rewind flag is always true if directly calling play.
+
     let previousCurrentTime = details.animation.currentTime;
 
-    // Resume of a paused animation after a timeline change snaps to
-    // the scroll position.
+    // Resume of a paused animation after a timeline change snaps to the scroll
+    // position.
     if (details.resetCurrentTimeOnResume) {
       previousCurrentTime = null;
       details.resetCurrentTimeOnResume = false;
     }
 
-    // Snap to boundary if currently out of bounds.
     const playbackRate = effectivePlaybackRate(details);
     const duration = details.animation.effect.getTiming().duration;
-    let seekTime = null;
     if (playbackRate > 0 && (previousCurrentTime == null ||
                              previousCurrentTime < 0 ||
                              previousCurrentTime >= duration)) {
-      // TODO: throw exception if duration == Infinity.
       seekTime = 0;
     } else if (playbackRate < 0 && (previousCurrentTime == null ||
                                     previousCurrentTime <= 0 ||
                                     previousCurrentTime > duration)) {
+      if (duration == Infinity) {
+        // Defer to native implementation to handle throwing the exception.
+        details.animation.play();
+        return;
+      }
       seekTime = duration;
     } else if (playbackRate == 0 && previousCurrentTime == null) {
       seekTime = 0;
     }
 
-    details.playState = "running";
+    // 6. If seek time is resolved,
+    //        6a1. Set animation's start time to seek time.
+    //        6a2. Let animation's hold time be unresolved.
+    //        6a3. Apply any pending playback rate on animation.
     if (seekTime != null) {
-      this.startTime = seekTime;
-    } else {
-      // Force recalculation of the start time.
-      this.currentTime = previousCurrentTime;
+      details.startTime = seekTime;
+      details.holdTime = null;
+      applyPendingPlaybackRate(details);
     }
 
+    // Additional steps for the polyfill.
+    details.playState = "running";
     addAnimation(details.timeline, details.animation,
                  tickAnimation.bind(this));
-    if (!details.readyPromise)
-      createReadyPromise(details);
+
+    // 7. If animation's hold time is resolved, let its start time be
+    //    unresolved.
+    if (details.holdTime) {
+      details.startTime = null;
+    }
+
+    // 8. If animation has a pending play task or a pending pause task,
+    //   8.1 Cancel that task.
+    //   8.2 Set has pending ready promise to true.
+    if (details.readyPromise && this.pending) {
+      details.readyPromise.cancelTask();
+      hasPendingReadyPromise = true;
+    }
+
+    // 9. If the following three conditions are all satisfied:
+    //      animation’s hold time is unresolved, and
+    //      seek time is unresolved, and
+    //      aborted pause is false, and
+    //      animation does not have a pending playback rate,
+    //    abort this procedure.
+    if (details.holdTime === null && seekTime === null &&
+        !abortedPause && details.pendingPlaybackRate === null)
+    return;
+
+    // 10. If has pending ready promise is false, let animation’s current ready
+    //    promise be a new promise in the relevant Realm of animation.
+    if (details.readyPromise && !hasPendingReadyPromise)
+      details.readyPromise = null;
+
+    // Additional polyfill step to ensure that the native animation has the
+    // correct value for current time.
+    syncCurrentTime(details);
+
+    // 11. Schedule a task to run as soon as animation is ready.
+    const commitPendingPlay = () => {
+      const timelineTime = details.timeline.currentTime;
+      if (details.holdTime != null) {
+        // A: If animation’s hold time is resolved,
+        // A.1. Apply any pending playback rate on animation.
+        // A.2. Let new start time be the result of evaluating:
+        //        ready time - hold time / playback rate for animation.
+        //      If the playback rate is zero, let new start time be simply ready
+        //      time.
+        // A.3. Set the start time of animation to new start time.
+        // A.4. If animation’s playback rate is not 0, make animation’s hold
+        //      time unresolved.
+        applyPendingPlaybackRate(details);
+        if (playbackRate == 0) {
+          details.startTime = timelineTime;
+        } else {
+          details.startTime
+              = timelineTime -
+                  details.holdTime / details.animation.playbackRate;
+          details.holdTime = null;
+        }
+      } else if (details.startTime !== null &&
+                 details.pendingPlaybackRate !== null) {
+        // B: If animation’s start time is resolved and animation has a pending
+        //    playback rate,
+        // B.1. Let current time to match be the result of evaluating:
+        //        (ready time - start time) × playback rate for animation.
+        // B.2 Apply any pending playback rate on animation.
+        // B.3 If animation’s playback rate is zero, let animation’s hold time
+        //     be current time to match.
+        // B.4 Let new start time be the result of evaluating:
+        //       ready time - current time to match / playback rate
+        //     for animation.
+        //     If the playback rate is zero, let new start time be simply ready
+        //     time.
+        // B.5 Set the start time of animation to new start time.
+        const currentTimeToMatch =
+            (timelineTime - details.startTime) * details.animation.playbackRate;
+        applyPendingPlaybackRate(details);
+        const playbackRate = details.animation.playbackRate;
+        if (playbackRate == 0) {
+          details.holdTime = null;
+          details.startTime = timelineTime;
+        } else {
+          details.startTime = timelineTime - currentTimeToMatch / playbackRate;
+        }
+      }
+
+      // 8.4 Resolve animation’s current ready promise with animation.
+      if (details.readyPromise && details.readyPromise.state() == 'pending')
+         details.readyPromise.resolve();
+
+      // 8.5 Run the procedure to update an animation’s finished state for
+      //     animation with the did seek flag set to false, and the
+      //     synchronously notify flag set to false.
+      updateFinishedState(details);
+
+      // Additional polyfill step to update the native animation's current time.
+      syncCurrentTime(details);
+    };
+
+    if (!details.readyPromise) {
+      createReadyPromise(details, commitPendingPlay);
+    } else {
+      details.readyPromise.queueTask(commitPendingPlay);
+    }
   }
 
   pause() {
     const details = proxyAnimations.get(this);
-    details.animation.pause();
-    if (!details.timeline)
+    if (!details.timeline) {
+      details.animation.pause();
       return;
+    }
 
+    // https://www.w3.org/TR/web-animations-1/#pausing-an-animation-section
+
+    // 1. If animation has a pending pause task, abort these steps.
+    // 2. If the play state of animation is paused, abort these steps.
     if (details.playState == "paused")
       return;
 
-    const previousCurrentTime = details.animation.currentTime;
-    if (!previousCurrentTime) {
-      details.startTime =
-          effectivePlaybackRate(details) < 0 ?
-              details.animation.effect.getTiming().duration : 0;
-    } else {
-       details.holdTime = previousCurrentTime;
+    // 3. Let seek time be a time value that is initially unresolved.
+    // 4. Let has finite timeline be true if animation has an associated
+    //    timeline that is not monotonically increasing.
+    //    Note: always true if we have reached this point in the polyfill.
+    //    Pruning following steps to be specific to scroll timelines.
+    let seekTime = null;
+
+    // 5.  If the animation’s current time is unresolved, perform the steps
+    //     according to the first matching condition from below:
+    // 5a. If animation’s playback rate is ≥ 0,
+    //       Set seek time to zero.
+    // 5b. Otherwise,
+    //         If associated effect end for animation is positive infinity,
+    //             throw an "InvalidStateError" DOMException and abort these
+    //             steps.
+    //         Otherwise,
+    //             Set seek time to animation's associated effect end.
+
+    const playbackRate = details.animation.playbackRate;
+    const duration = details.animation.effect.getTiming().duration;
+
+    if (details.animation.currentTime === null) {
+      if (playbackRate >= 0) {
+        seekTime = 0;
+      } else if (duration == Infinity) {
+        // Let native implementation take care of throwing the exception.
+        details.animation.pause();
+        return;
+      } else {
+        seekTime = duration;
+      }
     }
-    details.playState = "paused";
-    removeAnimation(details.timeline, details.animation);
-    if (!details.readyPromise)
-      createReadyPromise(details);
+
+    // 6. If seek time is resolved,
+    //        If has finite timeline is true,
+    //            Set animation's start time to seek time.
+    if (seekTime !== null)
+      details.startTime = seekTime;
+
+    // 7. Let has pending ready promise be a boolean flag that is initially
+    //    false.
+    // 8. If animation has a pending play task, cancel that task and let has
+    //    pending ready promise be true.
+    // 9. If has pending ready promise is false, set animation’s current ready
+    //    promise to a new promise in the relevant Realm of animation.
+    if (details.playState == 'running' && details.readyPromise &&
+        details.readyPromise.state() == 'pending') {
+      details.readyPromise.cancelTask();
+    } else {
+      details.readyPromise = null;
+    }
+
+    // Extra step for the polyfill.
+    details.playState = 'paused';
+
+    // 10. Schedule a task to be executed at the first possible moment after the
+    //     user agent has performed any processing necessary to suspend the
+    //     playback of animation’s target effect, if any. The task shall perform
+    //     the following steps:
+    const commitPendingPause = () => {
+      // 1. Let ready time be the time value of the timeline associated with
+      //    animation at the moment when the user agent completed processing
+      //    necessary to suspend playback of animation’s target effect.
+      const readyTime = details.timeline.currentTime;
+
+      console.log('commitPendingPause');
+      console.log('readyTime: ' + readyTime);
+      console.log('startTime: ' + details.startTime);
+      console.log('holdTime: ' + details.holdTime);
+
+      // 2. If animation’s start time is resolved and its hold time is not
+      //    resolved, let animation’s hold time be the result of evaluating
+      //    (ready time - start time) × playback rate.
+      if (details.startTime != null && details.holdTime == null) {
+        details.holdTime =
+            (readyTime - details.startTime) * details.animation.playbackRate;
+      }
+
+      // 3. Apply any pending playback rate on animation.
+      applyPendingPlaybackRate(details);
+
+      // 4. Make animation’s start time unresolved.
+      details.startTime = null;
+
+      // 5. Resolve animation’s current ready promise with animation.
+      details.readyPromise.resolve();
+
+      // 6. Run the procedure to update an animation’s finished state for
+      // animation with the did seek flag set to false, and the synchronously
+      //  notify flag set to false.
+      updateFinishedState(details);
+
+      // Additional polyfill step to update the native animation's current time.
+      syncCurrentTime(details);
+    };
+
+    if (details.readyPromise)
+      details.readyPromise.queueTask(commitPendingPause);
+    else
+      createReadyPromise(details, commitPendingPause);
   }
 
   reverse() {
@@ -513,22 +795,66 @@ export class ProxyAnimation {
       return;
     }
 
-    const previousCurrentTime = this.currentTime;
+    // https://drafts.csswg.org/web-animations/#setting-the-playback-rate-of-an-animation
 
-    // We do not update the playback rate of the underlaying animation since
-    // timing of when the playback rate takes effect depends on the play state.
-    switch(details.playState) {
+    // 1. Let previous play state be animation’s play state.
+    // 2. Let animation’s pending playback rate be new playback rate.
+    const previousPlayState = details.playState;
+
+    // 3. Perform the steps corresponding to the first matching condition from
+    //    below:
+    //
+    // 3a If animation has a pending play task or a pending pause task,
+    //    Abort these steps.
+    if (details.readyPromise && details.readyPromise.state() == 'pending')
+      return;
+
+    switch(previousPlayState) {
+      // 3b If previous play state is idle or paused,
+      //    Apply any pending playback rate on animation.
       case 'idle':
       case 'paused':
         applyPendingPlaybackRate(details);
         break;
 
+      // 3c If previous play state is finished,
+      //    3c.1 Let the unconstrained current time be the result of calculating
+      //         the current time of animation substituting an unresolved time
+      //          value for the hold time.
+      //    3c.2 Let animation’s start time be the result of evaluating the
+      //         following expression:
+      //    timeline time - (unconstrained current time / pending playback rate)
+      // Where timeline time is the current time value of the timeline
+      // associated with animation.
+      //    3c.3 If pending playback rate is zero, let animation’s start time be
+      //         timeline time.
+      //    3c.4 Apply any pending playback rate on animation.
+      //    3c.5 Run the procedure to update an animation’s finished state for
+      //         animation with the did seek flag set to false, and the
+      //         synchronously notify flag set to false.
+
       case 'finished':
-      case 'running':
-        // pending playback rate is applied when the pending ready promise is
-        // resolved.
-        createReadyPromise(details);
+        const timelineTime = details.timeline.currentTime;
+        const unconstrainedCurrentTime = timelineTime !== null ?
+            (timelineTime - details.startTime) * details.animation.playbackRate
+            : null;
+        if (value == 0) {
+          details.startTime = timelineTime;
+        } else {
+          details.startTime =
+              timelineTime != null && unconstrainedCurrentTime != null ?
+                  (timelineTime - unconstrainedCurrentTime) / value : null;
+        }
+        applyPendingPlaybackRate(details);
         updateFinishedState(details);
+        syncCurrentTime(details);
+        break;
+
+      // 3d Otherwise,
+      // Run the procedure to play an animation for animation with the
+      // auto-rewind flag set to false.
+      default:
+        this.play();
     }
   }
 
@@ -543,16 +869,27 @@ export class ProxyAnimation {
   cancel() {
     const details = proxyAnimations.get(this);
     details.animation.cancel();
-    if (details.timeline) {
-      details.startTime = null;
-      details.holdTime = null;
-      details.playState = 'idle';
-      removeAnimation(details.timeline, details.animation);
-      if (details.readyPromise) {
-        details.aborted.add(details.sequence);
-        details.readyPromise = null;
-      }
-    }
+
+    if (!details.timeline)
+      return;
+
+    // https://www.w3.org/TR/web-animations-1/#canceling-an-animation-section
+    // 1. If animation’s play state is not idle, perform the following steps:
+    //    1.1  Run the procedure to reset an animation’s pending tasks on
+    //         animation.
+    //    1.2+ Handled by native implementation.
+    if (details.playState == 'idle')
+      return;
+    resetPendingTasks(details);
+
+    // 2. Make animation’s hold time unresolved.
+    // 3. Make animation’s start time unresolved.
+    details.startTime = null;
+    details.holdTime = null;
+    details.playState = 'idle';
+
+    // Extra step in the polyfill the ensure the animation stops ticking.
+    removeAnimation(details.timeline, details.animation);
   }
 
   get onfinish() {
@@ -581,18 +918,12 @@ export class ProxyAnimation {
   get ready() {
     const details = proxyAnimations.get(this);
     if (details.timeline) {
-      if (details.readyPromise)
-        return details.readyPromise;
-
-      // TODO: If not waiting on a pending task, we still need to return a ready
-      // promise; however, the promise can be immediately resolved. Cannot use
-      // the underlying animation as it is intentionally locked in a
-      // paused state. Update the proxy's ready promise to make it's state
-      // (pending/resolved) observable.  Currently, we reset the promise to
-      // null when resolved.
-      return null;
+      if (!details.readyPromise) {
+        createReadyPromise(details, /* pendingTask */ null);
+        details.readyPromise.resolve(details.proxy);
+      }
+      return details.readyPromise;
     }
-
     return details.animation.ready;
   }
 
