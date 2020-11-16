@@ -97,7 +97,7 @@ function updateFinishedState(details) {
   };
 
   const newPlayState = isFinished() ? 'finished' : 'running';
-  if (newPlayState == details.playSAtate)
+  if (newPlayState == details.playState)
     return;
 
   details.playState = newPlayState;
@@ -266,7 +266,7 @@ export class ProxyAnimation {
         }
       }
     } else {
-      throw TypeError("Unsupported timeilne: " + newTimeline);
+      throw TypeError("Unsupported timeline: " + newTimeline);
     }
   }
 
@@ -608,7 +608,7 @@ export function animate(keyframes, options) {
 
   if (timeline instanceof ScrollTimeline) {
     animation.pause();
-    proxyAniamtion.play();
+    proxyAnimation.play();
   }
 
   return proxyAnimation;
