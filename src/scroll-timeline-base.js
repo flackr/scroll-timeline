@@ -355,12 +355,18 @@ export class ScrollTimeline {
     //   if source is null
     if (!this.scrollSource) return "inactive";
     let scrollerStyle = getComputedStyle(this.scrollSource);
+
     //   if source does not currently have a CSS layout box
     if (scrollerStyle.display == "none")
       return "inactive";
+
     //   if source's layout box is not a scroll container"
-    if (scrollerStyle.overflow == "visible" || scrollerStyle.overflow == "clip")
-      return "inactive";
+    if (this.scrollSource != document.scrollingElement &&
+        (scrollerStyle.overflow == 'visible' ||
+         scrollerStyle.overflow == "clip")) {
+        return "inactive";
+    }
+
     let startOffset = calculateScrollOffset(
       new CSSUnitValue(0, 'percent'),
       this.scrollSource,
@@ -382,6 +388,7 @@ export class ScrollTimeline {
       new CSSUnitValue(100, 'percent'),
       null
     );
+
     //   if source's effective scroll range is null
     if (startOffset === null || endOffset === null)
       return "inactive";

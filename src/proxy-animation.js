@@ -419,7 +419,7 @@ export class ProxyAnimation {
         }
       }
     } else {
-      throw TypeError("Unsupported timeilne: " + newTimeline);
+      throw TypeError("Unsupported timeline: " + newTimeline);
     }
   }
 
@@ -1159,6 +1159,7 @@ export class ProxyAnimation {
 
 export function animate(keyframes, options) {
   const timeline = options.timeline;
+
   if (timeline instanceof ScrollTimeline)
     delete options.timeline;
 
