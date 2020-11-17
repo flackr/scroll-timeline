@@ -109,7 +109,7 @@ function updateFinishedState(details) {
         // Resolve the finished promise and queue the onfinished event.
         // Finish snaps to the boundary. Restore current time after the finish
         // call.
-        const previousCurrentTime = details.aniamtion.currentTime;
+        const previousCurrentTime = details.animation.currentTime;
         details.animation.finish();
         details.animation.pause();
         details.animation.currentTime = previousCurrentTime;
@@ -123,6 +123,7 @@ function hasActiveTimeline(details) {
 }
 
 function tickAnimation(timelineTime) {
+  console.log('tickAnimation(' + timelineTime + ')');
   const details = proxyAnimations.get(this);
   if (timelineTime == null) {
     // While the timeline is inactive, it's effect should not be applied.
@@ -600,6 +601,7 @@ export class ProxyAnimation {
 
 export function animate(keyframes, options) {
   const timeline = options.timeline;
+
   if (timeline instanceof ScrollTimeline)
     delete options.timeline;
 
