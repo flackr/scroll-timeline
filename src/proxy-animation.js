@@ -61,7 +61,7 @@ function createReadyPromise(details) {
       return;
 
     if (details.timeline.currentTime !== null) {
-      pendingTask();
+      pendingTask(details);
       pendingTask = null;
       return;
     }
@@ -89,6 +89,99 @@ function pendingPause(details) {
   return details.readyPromise.taskName() == 'pause';
 }
 
+function commitPendingPlay(details)  {
+  const timelineTime = details.timeline.currentTime;
+  if (details.holdTime != null) {
+    // A: If animation’s hold time is resolved,
+    // A.1. Apply any pending playback rate on animation.
+    // A.2. Let new start time be the result of evaluating:
+    //        ready time - hold time / playback rate for animation.
+    //      If the playback rate is zero, let new start time be simply ready
+    //      time.
+    // A.3. Set the start time of animation to new start time.
+    // A.4. If animation’s playback rate is not 0, make animation’s hold
+    //      time unresolved.
+    applyPendingPlaybackRate(details);
+    if (details.animation.playbackRate == 0) {
+      details.startTime = timelineTime;
+    } else {
+      details.startTime
+          = timelineTime -
+              details.holdTime / details.animation.playbackRate;
+      details.holdTime = null;
+    }
+  } else if (details.startTime !== null &&
+             details.pendingPlaybackRate !== null) {
+    // B: If animation’s start time is resolved and animation has a pending
+    //    playback rate,
+    // B.1. Let current time to match be the result of evaluating:
+    //        (ready time - start time) × playback rate for animation.
+    // B.2 Apply any pending playback rate on animation.
+    // B.3 If animation’s playback rate is zero, let animation’s hold time
+    //     be current time to match.
+    // B.4 Let new start time be the result of evaluating:
+    //       ready time - current time to match / playback rate
+    //     for animation.
+    //     If the playback rate is zero, let new start time be simply ready
+    //     time.
+    // B.5 Set the start time of animation to new start time.
+    const currentTimeToMatch =
+        (timelineTime - details.startTime) * details.animation.playbackRate;
+    applyPendingPlaybackRate(details);
+    const playbackRate = details.animation.playbackRate;
+    if (playbackRate == 0) {
+      details.holdTime = null;
+      details.startTime = timelineTime;
+    } else {
+      details.startTime = timelineTime - currentTimeToMatch / playbackRate;
+    }
+  }
+
+  // 8.4 Resolve animation’s current ready promise with animation.
+  if (details.readyPromise && details.readyPromise.state() == 'pending')
+     details.readyPromise.resolve();
+
+  // 8.5 Run the procedure to update an animation’s finished state for
+  //     animation with the did seek flag set to false, and the
+  //     synchronously notify flag set to false.
+  updateFinishedState(details, false, false);
+
+  // Additional polyfill step to update the native animation's current time.
+  syncCurrentTime(details);
+};
+
+function commitPendingPause(details) {
+  // 1. Let ready time be the time value of the timeline associated with
+  //    animation at the moment when the user agent completed processing
+  //    necessary to suspend playback of animation’s target effect.
+  const readyTime = details.timeline.currentTime;
+
+  // 2. If animation’s start time is resolved and its hold time is not
+  //    resolved, let animation’s hold time be the result of evaluating
+  //    (ready time - start time) × playback rate.
+  if (details.startTime != null && details.holdTime == null) {
+    details.holdTime =
+        (readyTime - details.startTime) * details.animation.playbackRate;
+  }
+
+  // 3. Apply any pending playback rate on animation.
+  applyPendingPlaybackRate(details);
+
+  // 4. Make animation’s start time unresolved.
+  details.startTime = null;
+
+  // 5. Resolve animation’s current ready promise with animation.
+  details.readyPromise.resolve();
+
+  // 6. Run the procedure to update an animation’s finished state for
+  // animation with the did seek flag set to false, and the synchronously
+  //  notify flag set to false.
+  updateFinishedState(details, false, false);
+
+  // Additional polyfill step to update the native animation's current time.
+  syncCurrentTime(details);
+};
+
 /**
  * Creates a finished promise that can be synchronously resolved or scheduled to
  * resolve on the next animation frame after entering the finished state.
@@ -104,12 +197,15 @@ function createFinishedPromise(details) {
   p.resolve = () => {
     state = 'resolved';
     nativeResolve(details.proxy);
-  }
+  };
   p.reject = () => {
     state = 'rejected';
     nativeReject(new DOMException("The user aborted a request", "AbortError"));
-  }
-  p.ScheduleAsyncFinish = () => {
+  };
+  p.state = () => {
+    return state;
+  };
+  p.scheduleAsyncFinish = () => {
     requestAnimationFrame(() => {
       // Ensure that we are still in the finished state as it may have been a
       // temporary state.
@@ -120,6 +216,7 @@ function createFinishedPromise(details) {
     });
   };
   details.finishedPromise = p;
+  console.log('finishedPromise ' + details.finishedPromise);
   return p;
 }
 
@@ -141,14 +238,21 @@ function calculateCurrentTime(details) {
   if (!details.timeline)
     return null;
 
-  const timelineTime = details.timeline.curentTime;
+  const timelineTime = details.timeline.currentTime;
   if (timelineTime === null)
     return null;
 
   if (details.startTime === null)
     return null;
 
-  return (timelineTime - details.startTime) * details.animation.playbackRate;
+  let currentTime =
+      (timelineTime - details.startTime) * details.animation.playbackRate;
+
+  // Handle special case.
+  if (currentTime == -0)
+    currentTime = 0;
+
+  return currentTime;
 }
 
 function calculateStartTime(details, currentTime) {
@@ -208,10 +312,11 @@ function updateFinishedState(details, didSeek, synchronouslyNotify) {
   syncCurrentTime(details);
 
   // 3. Set the previous current time.
-  details.previousCurrentTime = details.animation.currentTime;
+  details.previousCurrentTime = details.proxy.currentTime;
 
   // 4. Set the current finished state.
-  const playState = this.playState;
+  const playState = details.proxy.playState;
+
   if (playState == 'finished') {
     if (!details.finishedPromise)
       createFinishedPromise(details);
@@ -219,10 +324,11 @@ function updateFinishedState(details, didSeek, synchronouslyNotify) {
     if (details.finishedPromise.state() == 'pending') {
       // 5. Setup finished notification.
       if (synchronouslyNotify) {
-        details.resolve();
+        details.finishedPromise.resolve();
+        // Handle finished event and remove animation effect if not filled.
         details.animation.finish();
       } else {
-        details.finishdPromise.ScheduleAsyncFinish();
+        details.finishedPromise.scheduleAsyncFinish();
       }
     }
   } else {
@@ -288,7 +394,7 @@ function tickAnimation(timelineTime) {
     return;
   }
 
-  if (this.playState == 'running') {
+  if (details.proxy.playState == 'running') {
     details.animation.currentTime =
         (timelineTime - this.startTime) * this.playbackRate;
     updateFinishedState(details, false, false);
@@ -367,6 +473,8 @@ export class ProxyAnimation {
     const playbackRate = effectivePlaybackRate(details);
     const pending = this.pending;
 
+    console.log('pending: ' + pending);
+
     if (fromScrollTimeline) {
       removeAnimation(details.timeline, details.animation);
     }
@@ -385,6 +493,8 @@ export class ProxyAnimation {
         case 'paused':
           details.resetCurrentTimeOnResume = true;
           details.animation.currentTime = previousCurrentTime;
+          details.holdTime = previousCurrentTime;
+          details.startTime = null;
           removeAnimation(details.timeline, details.animation);
           break;
 
@@ -399,8 +509,19 @@ export class ProxyAnimation {
               tickAnimation.bind(this));
           break;
       }
-      if (pending)
-        createReadyPromise(details); // TODO: Need to queue up a task.
+      if (pending) {
+        if (!details.readyPromise || details.readyPromise.state() == 'resolved') {
+          console.log('create ready promise');
+          createReadyPromise(details);
+        }
+        if (previousPlayState == 'paused') {
+          console.log('queue pending pause');
+          details.readyPromise.queueTask(commitPendingPause, 'pause');
+        } else {
+          console.log('queue pending play');
+          details.readyPromise.queueTask(commitPendingPlay, 'play');
+        }
+      }
       return;
     }
 
@@ -475,9 +596,10 @@ export class ProxyAnimation {
   }
   set currentTime(value) {
     const details = proxyAnimations.get(this);
-    details.animation.currentTime = value;
-    if (!details.timeline || value == null)
+    if (!details.timeline || value == null) {
+      details.animation.currentTime = value;
       return;
+    }
 
     // https://drafts.csswg.org/web-animations/#setting-the-current-time-of-an-animation
     const previouStartTime = details.startTime;
@@ -520,9 +642,26 @@ export class ProxyAnimation {
   }
   set playbackRate(value) {
     const details = proxyAnimations.get(this);
-    details.animation.playbackRate = value;
+
+    if (!details.timeline) {
+      details.animation.playbackRate = value;
+      return;
+    }
+
+    // 1. Clear any pending playback rate on animation.
     details.pendingPlaybackRate = null;
-    updateFinishedState(details, false, false);
+
+    // 2. Let previous time be the value of the current time of animation before
+    //    changing the playback rate.
+    const previousCurrentTime = this.currentTime;
+
+    // 3. Set the playback rate to new playback rate.
+    details.animation.playbackRate = value;
+
+    // 4. If previous time is resolved, set the current time of animation to
+    //    previous time
+   if (previousCurrentTime !== null)
+      this.currentTime = previousCurrentTime;
   }
 
   get playState() {
@@ -550,7 +689,7 @@ export class ProxyAnimation {
     //      pending play task,
     //    then paused.
     if (pendingTask == 'pause' ||
-        (details.startTime === null && pendingTask == 'play'))
+        (details.startTime === null && pendingTask != 'play'))
       return 'paused';
 
     // 3.  For animation, current time is resolved and either of the following
@@ -570,7 +709,6 @@ export class ProxyAnimation {
     // 4.  Otherwise
     return 'running';
   }
-
   get replaceState() {
     // TODO: Fix me. Replace state is not a boolean.
     return proxyAnimations.get(this).animation.pending;
@@ -578,8 +716,10 @@ export class ProxyAnimation {
 
   get pending() {
     const details = proxyAnimations.get(this);
-    if (details.timeline)
-      return details.readyPromise && details.readyPromise.state() == 'pending';
+    if (details.timeline) {
+      return !!details.readyPromise &&
+             details.readyPromise.state() == 'pending';
+    }
 
     return details.animation.pending;
   }
@@ -623,6 +763,7 @@ export class ProxyAnimation {
     //    where timeline time is the current time value of the associated
     //    timeline.
     const timelineTime = details.timeline.currentTime;
+
     if (details.startTime === null && timelineTime !== null) {
        details.startTime =
            timelineTime - (limit / details.animation.playbackRate);
@@ -650,41 +791,7 @@ export class ProxyAnimation {
     //    animation with the did seek flag set to true, and the synchronously
     //    notify flag set to true.
     updateFinishedState(details, true, true);
-
-    // // Additional step to update the play state.
-    // // TODO: Calculate the play state rather than storing it to better align
-    // //       with the spec.
-    // const currentTime = this.currentTime;
-    // if (currentTime) {
-    //   details.holdTime = currentTime;
-    //   details.playState =
-    //       (details.startTime != null) ? 'finished' : 'paused';
-    // } else {
-    //   if (details.startTime != null || details.holdTime != null) {
-    //     details.playState = 'paused';
-    //   } else {
-    //     details.playState = 'idle';
-    //   }
-    // }
-    // syncCurrentTime(details);
-    // details.animation.finish();
   }
-
-    // if (hasActiveTimeline(details)) {
-    //   details.startTime = timelineTime - seekTime / playbackRate;
-    //   details.holdTime = seekTime;
-    //   details.playState = 'finished';
-    //   removeAnimation(details.timeline, details.animation);
-    //   if (details.readyPromise && details.readyPromise.state() == 'pending')
-    //     details.readyPromise.resolve();
-    // } else {
-    //   details.startTime = null;
-    //   details.holdTime = seekTime;
-    //   details.playState = 'paused';
-    // }
-    // // Resolve the finished promise and fire the finished event.
-    // details.animation.finish();
-  // }
 
   play() {
     const details = proxyAnimations.get(this);
@@ -734,7 +841,7 @@ export class ProxyAnimation {
     //    5c1. Set seek time to zero.
     // Note: the auto-rewind flag is always true if directly calling play.
 
-    let previousCurrentTime = details.animation.currentTime;
+    let previousCurrentTime = this.currentTime;
 
     // Resume of a paused animation after a timeline change snaps to the scroll
     // position.
@@ -811,67 +918,6 @@ export class ProxyAnimation {
     syncCurrentTime(details);
 
     // 11. Schedule a task to run as soon as animation is ready.
-    const commitPendingPlay = () => {
-      const timelineTime = details.timeline.currentTime;
-      if (details.holdTime != null) {
-        // A: If animation’s hold time is resolved,
-        // A.1. Apply any pending playback rate on animation.
-        // A.2. Let new start time be the result of evaluating:
-        //        ready time - hold time / playback rate for animation.
-        //      If the playback rate is zero, let new start time be simply ready
-        //      time.
-        // A.3. Set the start time of animation to new start time.
-        // A.4. If animation’s playback rate is not 0, make animation’s hold
-        //      time unresolved.
-        applyPendingPlaybackRate(details);
-        if (playbackRate == 0) {
-          details.startTime = timelineTime;
-        } else {
-          details.startTime
-              = timelineTime -
-                  details.holdTime / details.animation.playbackRate;
-          details.holdTime = null;
-        }
-      } else if (details.startTime !== null &&
-                 details.pendingPlaybackRate !== null) {
-        // B: If animation’s start time is resolved and animation has a pending
-        //    playback rate,
-        // B.1. Let current time to match be the result of evaluating:
-        //        (ready time - start time) × playback rate for animation.
-        // B.2 Apply any pending playback rate on animation.
-        // B.3 If animation’s playback rate is zero, let animation’s hold time
-        //     be current time to match.
-        // B.4 Let new start time be the result of evaluating:
-        //       ready time - current time to match / playback rate
-        //     for animation.
-        //     If the playback rate is zero, let new start time be simply ready
-        //     time.
-        // B.5 Set the start time of animation to new start time.
-        const currentTimeToMatch =
-            (timelineTime - details.startTime) * details.animation.playbackRate;
-        applyPendingPlaybackRate(details);
-        const playbackRate = details.animation.playbackRate;
-        if (playbackRate == 0) {
-          details.holdTime = null;
-          details.startTime = timelineTime;
-        } else {
-          details.startTime = timelineTime - currentTimeToMatch / playbackRate;
-        }
-      }
-
-      // 8.4 Resolve animation’s current ready promise with animation.
-      if (details.readyPromise && details.readyPromise.state() == 'pending')
-         details.readyPromise.resolve();
-
-      // 8.5 Run the procedure to update an animation’s finished state for
-      //     animation with the did seek flag set to false, and the
-      //     synchronously notify flag set to false.
-      updateFinishedState(details, false, false);
-
-      // Additional polyfill step to update the native animation's current time.
-      syncCurrentTime(details);
-    };
-
     if (!details.readyPromise)
       createReadyPromise(details);
     details.readyPromise.queueTask(commitPendingPlay, 'play');
@@ -948,40 +994,7 @@ export class ProxyAnimation {
 
     // 10. Schedule a task to be executed at the first possible moment after the
     //     user agent has performed any processing necessary to suspend the
-    //     playback of animation’s target effect, if any. The task shall perform
-    //     the following steps:
-    const commitPendingPause = () => {
-      // 1. Let ready time be the time value of the timeline associated with
-      //    animation at the moment when the user agent completed processing
-      //    necessary to suspend playback of animation’s target effect.
-      const readyTime = details.timeline.currentTime;
-
-      // 2. If animation’s start time is resolved and its hold time is not
-      //    resolved, let animation’s hold time be the result of evaluating
-      //    (ready time - start time) × playback rate.
-      if (details.startTime != null && details.holdTime == null) {
-        details.holdTime =
-            (readyTime - details.startTime) * details.animation.playbackRate;
-      }
-
-      // 3. Apply any pending playback rate on animation.
-      applyPendingPlaybackRate(details);
-
-      // 4. Make animation’s start time unresolved.
-      details.startTime = null;
-
-      // 5. Resolve animation’s current ready promise with animation.
-      details.readyPromise.resolve();
-
-      // 6. Run the procedure to update an animation’s finished state for
-      // animation with the did seek flag set to false, and the synchronously
-      //  notify flag set to false.
-      updateFinishedState(details, false, false);
-
-      // Additional polyfill step to update the native animation's current time.
-      syncCurrentTime(details);
-    };
-
+    //     playback of animation’s target effect, if any.
     if (!details.readyPromise)
       createReadyPromise(details);
     details.readyPromise.queueTask(commitPendingPause, 'pause');
@@ -1018,7 +1031,7 @@ export class ProxyAnimation {
 
     // 1. Let previous play state be animation’s play state.
     // 2. Let animation’s pending playback rate be new playback rate.
-    const previousPlayState = details.playState;
+    const previousPlayState = this.playState;
 
     // 3. Perform the steps corresponding to the first matching condition from
     //    below:
@@ -1139,7 +1152,7 @@ export class ProxyAnimation {
     if (!details.finishedPromise) {
       createFinishedPromise(details);
       if (this.playState == 'finished')
-        details.finishedPromsie.resolve();
+        details.finishedPromise.resolve();
     }
     return details.finishedPromise;
   }
