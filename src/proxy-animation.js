@@ -123,7 +123,6 @@ function hasActiveTimeline(details) {
 }
 
 function tickAnimation(timelineTime) {
-  console.log('tickAnimation(' + timelineTime + ')');
   const details = proxyAnimations.get(this);
   if (timelineTime == null) {
     // While the timeline is inactive, it's effect should not be applied.
@@ -409,6 +408,9 @@ export class ProxyAnimation {
       removeAnimation(details.timeline, details.animation);
       details.readyPromise = null;
       // Resolve the finished promise and fire the finished event.
+      // TODO: polyfill the finished promise.  Otherwise, toggling an inactive
+      // timeline and back will cancel the underlying aniomation, which in turn,
+      // rejects a pending finished promise.
       details.animation.finish();
     } else {
       details.startTime = null;
