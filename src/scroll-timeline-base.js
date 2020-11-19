@@ -31,16 +31,10 @@ function scrollEventSource(scrollSource) {
 function updateInternal(scrollTimelineInstance) {
   let animations = scrollTimelineOptions.get(scrollTimelineInstance).animations;
   if (animations.length === 0) return;
-  let currentTime = scrollTimelineInstance.currentTime;
+  let timelineTime = scrollTimelineInstance.currentTime;
+
   for (let i = 0; i < animations.length; i++) {
-    // The web-animations spec says to throw a TypeError if you try to seek to
-    // an unresolved time value from a resolved time value, so to polyfill the
-    // expected behavior we cancel the underlying animation.
-    if (currentTime == null) {
-      if (animations[i].playState === "paused") animations[i].cancel();
-    } else {
-      animations[i].currentTime = currentTime;
-    }
+    animations[i].tickAnimation(timelineTime);
   }
 }
 
@@ -56,7 +50,8 @@ function calculateTimeRange(scrollTimeline) {
     timeRange = 0;
     let animations = scrollTimelineOptions.get(scrollTimeline).animations;
     for (let i = 0; i < animations.length; i++) {
-      timeRange = Math.max(timeRange, calculateTargetEffectEnd(animations[i]));
+      timeRange = Math.max(timeRange,
+                           calculateTargetEffectEnd(animations[i].animation));
     }
     if (timeRange === Infinity) timeRange = 0;
   }
@@ -155,20 +150,30 @@ export function calculateScrollOffset(
  */
 export function removeAnimation(scrollTimeline, animation) {
   let animations = scrollTimelineOptions.get(scrollTimeline).animations;
-  let index = animations.indexOf(animation);
-  if (index === -1) return;
-  animations.splice(index, 1);
+  for (let i = 0; i < animations.length; i++) {
+    if (animations[i].animation == animation) {
+      animations.splice(i, 1);
+    }
+  }
 }
 
 /**
- * Attaches a Web Animation instance to ScrollTimeline
+ * Attaches a Web Animation instance to ScrollTimeline.
  * @param scrollTimeline {ScrollTimeline}
  * @param animation {Animation}
- * @param options {Object}
+ * @param tickAnimation {function(number)}
  */
-export function addAnimation(scrollTimeline, animation, options) {
+export function addAnimation(scrollTimeline, animation, tickAnimation) {
   let animations = scrollTimelineOptions.get(scrollTimeline).animations;
-  animations.push(animation);
+  for (let i = 0; i < animations.length; i++) {
+    if (animations[i].animation == animation)
+      return;
+  }
+
+  animations.push({
+    animation: animation,
+    tickAnimation: tickAnimation
+  });
   updateInternal(scrollTimeline);
 }
 
@@ -350,12 +355,18 @@ export class ScrollTimeline {
     //   if source is null
     if (!this.scrollSource) return "inactive";
     let scrollerStyle = getComputedStyle(this.scrollSource);
+
     //   if source does not currently have a CSS layout box
     if (scrollerStyle.display == "none")
       return "inactive";
+
     //   if source's layout box is not a scroll container"
-    if (scrollerStyle.overflow == "visible" || scrollerStyle.overflow == "clip")
-      return "inactive";
+    if (this.scrollSource != document.scrollingElement &&
+        (scrollerStyle.overflow == 'visible' ||
+         scrollerStyle.overflow == "clip")) {
+        return "inactive";
+    }
+
     let startOffset = calculateScrollOffset(
       new CSSUnitValue(0, 'percent'),
       this.scrollSource,
@@ -377,6 +388,7 @@ export class ScrollTimeline {
       new CSSUnitValue(100, 'percent'),
       null
     );
+
     //   if source's effective scroll range is null
     if (startOffset === null || endOffset === null)
       return "inactive";
@@ -401,6 +413,9 @@ export class ScrollTimeline {
     // Step 1
     let unresolved = null;
     if (!this.scrollSource) return unresolved;
+    if (this.phase == 'inactive')
+      return unresolved;
+
     let startOffset = calculateScrollOffset(
       new CSSUnitValue(0, 'percent'),
       this.scrollSource,
