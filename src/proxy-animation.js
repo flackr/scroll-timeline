@@ -90,7 +90,7 @@ function updateFinishedState(details) {
     if (playbackRate < 0 && currentTime <= 0)
       return true;
     if (playbackRate > 0 &&
-        currentTime >= details.animation.effect.getTiming().duration)
+        currentTime >= effectEnd(details))
       return true;
 
     return false;
@@ -109,6 +109,9 @@ function updateFinishedState(details) {
         // Resolve the finished promise and queue the onfinished event.
         // Finish snaps to the boundary. Restore current time after the finish
         // call.
+        // TODO: Polyfill the finished promise.  If the timeline goes inactive
+        // during the lifetime of the animation then the finished promise for
+        // the underlying animation will be rejected.
         const previousCurrentTime = details.animation.currentTime;
         details.animation.finish();
         details.animation.pause();
@@ -117,6 +120,14 @@ function updateFinishedState(details) {
     });
   }
 }
+
+function effectEnd(details) {
+  const timing = details.animation.effect.getTiming();
+  const totalDuration =
+     timing.delay + timing.endDelay + timing.iterations * timing.duration;
+  return Math.max(0, totalDuration);
+}
+
 
 function hasActiveTimeline(details) {
   return !details.timeline || details.timeline.phase != 'inactive';
@@ -132,7 +143,7 @@ function tickAnimation(timelineTime) {
     return;
   }
 
-  if (this.playState == 'running') {
+  if (this.playState == 'running' || this.playState == 'finished') {
     details.animation.currentTime =
         (timelineTime - this.startTime) * this.playbackRate;
     updateFinishedState(details);
@@ -236,8 +247,7 @@ export class ProxyAnimation {
         case 'finished':
           details.playState = previousPlayState;
           details.startTime =
-              playbackRate < 0 ? details.animation.effect.getTiming().duration
-                               : 0;
+              playbackRate < 0 ? effectEnd(details) : 0;
           details.holdTime =
               previousPlayState == 'finished' ? previousCurrentTime : null;
           addAnimation(details.timeline, details.animation,
@@ -388,14 +398,13 @@ export class ProxyAnimation {
     }
 
     const playbackRate = effectivePlaybackRate(details);
-    const duration = details.animation.effect.getTiming().duration;
+    const duration = effectEnd(details);
     if (playbackRate == 0 || (playbackRate < 0 && duration == Infinity)) {
       // Let native implementation handle throwing the exception. This should
       // not affect the state of the native animation.
       details.animation.finish();
       return;
     }
-
     applyPendingPlaybackRate(details);
     const seekTime = playbackRate < 0 ? 0 : duration;
     const timelineTime = details.timeline.currentTime;
@@ -437,7 +446,7 @@ export class ProxyAnimation {
 
     // Snap to boundary if currently out of bounds.
     const playbackRate = effectivePlaybackRate(details);
-    const duration = details.animation.effect.getTiming().duration;
+    const duration = effectEnd(details);
     let seekTime = null;
     if (playbackRate > 0 && (previousCurrentTime == null ||
                              previousCurrentTime < 0 ||
@@ -478,8 +487,7 @@ export class ProxyAnimation {
     const previousCurrentTime = details.animation.currentTime;
     if (!previousCurrentTime) {
       details.startTime =
-          effectivePlaybackRate(details) < 0 ?
-              details.animation.effect.getTiming().duration : 0;
+          effectivePlaybackRate(details) < 0 ? effectEnd(details) : 0;
     } else {
        details.holdTime = previousCurrentTime;
     }
@@ -497,7 +505,7 @@ export class ProxyAnimation {
     }
 
     const playbackRate = effectivePlaybackRate(details);
-    const duration = details.animation.effect.getTiming().duration;
+    const duration = effectEnd(details);
     if (playbackRate == 0 || (playbackRate > 0 && duration == Infinity)) {
       // Let native implementation handle throwing the exception.
       details.animation.reverse();
