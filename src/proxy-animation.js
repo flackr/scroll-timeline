@@ -779,26 +779,63 @@ export class ProxyAnimation {
       return;
     }
 
-    // TODO: handle hold phase.
+    // 1. Let timeline time be the current time value of the timeline that
+    //    animation is associated with. If there is no timeline associated with
+    //    animation or the associated timeline is inactive, let the timeline
+    //    time be unresolved.
     const timelineTime = details.timeline.currentTime;
-    if (timelineTime === null && value !== null)
+
+    // 2. If timeline time is unresolved and new start time is resolved, make
+    //    animation’s hold time unresolved.
+    if (timelineTime == null && details.startTime != null) {
       details.holdTime = null;
-
-    const previousCurrentTime = this.currentTime;
-    applyPendingPlaybackRate(details);
-    details.startTime = value;
-    details.resetCurrentTimeOnResume = false;
-    details.readyPromise = null;
-
-    if (value === null) {
-      details.holdTime = previousCurrentTime;
-    } else {
-      if (timelineTime !== null) {
-        details.animation.currentTime =
-            (timelineTime - value) * this.playbackRate;
-        updateFinishedState(details, true, false);
-      }
+      // Clearing the hold time may have altered the value of current time.
+      // Ensure that the underlying animations has the correct value.
+      syncCurrentTime(details);
     }
+
+    // 3. Let previous current time be animation’s current time.
+    // Note: This is the current time after applying the changes from the
+    // previous step which may cause the current time to become unresolved.
+    const previousCurrentTime = this.currentTime;
+
+    // 4. Apply any pending playback rate on animation.
+    applyPendingPlaybackRate(details);
+
+    // 5. Set animation’s start time to new start time.
+    details.startTime = value;
+
+    // 6. Set the reset current time on resume flag to false.
+    details.resetCurrentTimeOnResume = false;
+
+    // 7. Update animation’s hold time based on the first matching condition
+    //    from the following,
+
+    //    If new start time is resolved,
+    //    If animation’s playback rate is not zero,
+    //       make animation’s hold time unresolved.
+
+    //    Otherwise (new start time is unresolved),
+    //        Set animation’s hold time to previous current time even if
+    //        previous current time is unresolved.
+
+    if (details.startTime !== null && details.animation.playbackRate != 0)
+      details.holdTime = null;
+    else
+      details.holdTime = previousCurrentTime;
+
+    // 7. If animation has a pending play task or a pending pause task, cancel
+    //    that task and resolve animation’s current ready promise with
+    //    animation.
+    if (pendingPlay(details) || pendingPause(details)) {
+      details.readyPromise.cancelTask();
+      details.readyPromise.resolve();
+    }
+
+   // 8. Run the procedure to update an animation’s finished state for animation
+   //    with the did seek flag set to true, and the synchronously notify flag
+   //    set to false.
+   updateFinishedState(details, true, false);
 
     // Ensure that currentTime is updated for the native animation.
     syncCurrentTime(details);
@@ -1118,6 +1155,12 @@ export class ProxyAnimation {
         details.pendingPlaybackRate = -effectivePlaybackRate(details);
       details.animation.reverse();
       return;
+    }
+
+    if (details.timeline.phase == 'inactive') {
+      throw new DOMException(
+          "Cannot reverse an animation with no active timeline",
+          "InvalidStateError");
     }
 
     this.updatePlaybackRate(-playbackRate);
