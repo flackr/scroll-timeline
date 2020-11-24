@@ -22,7 +22,9 @@ class PromiseWrapper {
     this.nativeResolve(this.details.proxy);
   }
   reject() {
-    this. state = 'rejected';
+    this.state = 'rejected';
+    // Do not report unhandled promise rejections.
+    this.promise.catch(() => {});
     this.nativeReject(new DOMException("The user aborted a request",
                                        "AbortError"));
   }
