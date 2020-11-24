@@ -8,92 +8,40 @@ import {
 const nativeElementAnimate = window.Element.prototype.animate;
 const nativeAnimation = window.Animation;
 
-/**
- * Creates a ready promise with a pending task, to be executed at the time
- * the promise is resolved. The promise will auto-resolve in the next animation
- * frame, but may be resolved or rejected earlier as a result of API calls that
- * change the state of the animation. The state of the promise
- * (pending|resolved|rejected) may be queried to determine when a replacement
- * promise is needed.
- * @param details {Ojbect}
- * @param task {function}
- */
+class PromiseWrapper {
+  constructor(details) {
+    this.state = 'pending';
+    this.details = details;
+    this.promise = new Promise((resolve, reject) => {
+      this.nativeResolve = resolve;
+      this.nativeReject = reject;
+    });
+  }
+  resolve() {
+    this.state = 'resolved';
+    this.nativeResolve(this.details.proxy);
+  }
+  reject() {
+    this. state = 'rejected';
+    this.nativeReject(new DOMException("The user aborted a request",
+                                       "AbortError"));
+  }
+}
+
 function createReadyPromise(details) {
-  let nativeResolve = undefined;
-  let nativeReject = undefined;
-  let pendingTask = undefined;
-  let pendingTaskName = undefined;
-  let state = 'pending';
-  const p = new Promise((resolve, reject) => {
-    nativeResolve = resolve;
-    nativeReject = reject;
+  details.readyPromise = new PromiseWrapper(details);
+  // Trigger the pending task on the next animation frame.
+  requestAnimationFrame(() => {
+    const timelineTime = details.timeline.currentTime;
+    if (timelineTime !== null)
+      notifyReady(details);
   });
-
-  p.resolve = () => {
-    state = 'resolved';
-    pendingTask = null;
-    pendingTaskName = null;
-    nativeResolve(details.proxy);
-  }
-  p.reject = () => {
-    state = 'rejected';
-    pendingTask = null;
-    pendingTaskName = null;
-    nativeReject(new DOMException("The user aborted a request", "AbortError"));
-  }
-  p.cancelTask = () => {
-    pendingTask = null;
-  }
-  p.queueTask = (task, name) => {
-    pendingTask = task;
-    pendingTaskName = name;
-  }
-  p.state = () => {
-    return state;
-  }
-  p.taskName = () => {
-    return pendingTaskName;
-  }
-
-  const runOrRequeueTask = () => {
-    if (!pendingTask)
-      return;
-
-    // Switching from a scroll timeline to a document timeline while pending
-    // casues the timeline to become null.
-    if (details.timeline == null)
-      return;
-
-    if (details.timeline.currentTime !== null) {
-      pendingTask(details);
-      pendingTask = null;
-      return;
-    }
-    requestAnimationFrame(runOrRequeueTask);
-  }
-
-  // Run the pending task in the next animation frame. The task is responsible
-  // for resolving the promise. The pending task will not run while the timeline
-  // is inactive.
-  requestAnimationFrame(runOrRequeueTask);
-
-  details.readyPromise = p;
-  return p;
-}
-
-function pendingPlay(details) {
-  if (!details.readyPromise)
-    return false;
-  return details.readyPromise.taskName() == 'play';
-}
-
-function pendingPause(details) {
-  if (!details.readyPromise)
-    return false;
-  return details.readyPromise.taskName() == 'pause';
 }
 
 function commitPendingPlay(details)  {
+  // https://drafts4.csswg.org/web-animations-2/#playing-an-animation-section
+  // Refer to steps listed under "Schedule a task to run ..."
+
   const timelineTime = details.timeline.currentTime;
   if (details.holdTime != null) {
     // A: If animation’s hold time is resolved,
@@ -142,7 +90,7 @@ function commitPendingPlay(details)  {
   }
 
   // 8.4 Resolve animation’s current ready promise with animation.
-  if (details.readyPromise && details.readyPromise.state() == 'pending')
+  if (details.readyPromise && details.readyPromise.state == 'pending')
      details.readyPromise.resolve();
 
   // 8.5 Run the procedure to update an animation’s finished state for
@@ -152,9 +100,13 @@ function commitPendingPlay(details)  {
 
   // Additional polyfill step to update the native animation's current time.
   syncCurrentTime(details);
+  details.pendingTask = null;
 };
 
 function commitPendingPause(details) {
+  // https://www.w3.org/TR/web-animations-1/#pausing-an-animation-section
+  // Refer to steps listed under "Schedule a task to run ..."
+
   // 1. Let ready time be the time value of the timeline associated with
   //    animation at the moment when the user agent completed processing
   //    necessary to suspend playback of animation’s target effect.
@@ -184,42 +136,11 @@ function commitPendingPause(details) {
 
   // Additional polyfill step to update the native animation's current time.
   syncCurrentTime(details);
+  details.pendingTask = null;
 };
 
-/**
- * Creates a finished promise that can be synchronously resolved or scheduled to
- * resolve on the next animation frame after entering the finished state.
- */
-function createFinishedPromise(details) {
-  let nativeResolve = undefined;
-  let nativeReject = undefined;
-  let state = 'pending';
-  const p = new Promise((resolve, reject) => {
-    nativeResolve = resolve;
-    nativeReject = reject;
-  });
-  p.resolve = () => {
-    state = 'resolved';
-    nativeResolve(details.proxy);
-  };
-  p.reject = () => {
-    state = 'rejected';
-    nativeReject(new DOMException("The user aborted a request", "AbortError"));
-  };
-  p.state = () => {
-    return state;
-  };
-  p.scheduleAsyncFinish = () => {
-    requestAnimationFrame(() => {
-      commitFinishedNotification(details);
-    });
-  };
-  details.finishedPromise = p;
-  return p;
-}
-
 function commitFinishedNotification(details) {
-  if (!details.finishedPromise || details.finishedPromise.state() != 'pending')
+  if (!details.finishedPromise || details.finishedPromise.state != 'pending')
     return;
 
   if (details.proxy.playState != 'finished')
@@ -330,20 +251,24 @@ function updateFinishedState(details, didSeek, synchronouslyNotify) {
 
   if (playState == 'finished') {
     if (!details.finishedPromise)
-      createFinishedPromise(details);
-
-    if (details.finishedPromise.state() == 'pending') {
+      details.finishedPromise = new PromiseWrapper(details);
+    if (details.finishedPromise.state == 'pending') {
       // 5. Setup finished notification.
-      if (synchronouslyNotify)
+      if (synchronouslyNotify) {
         commitFinishedNotification(details);
-      else
-        details.finishedPromise.scheduleAsyncFinish();
+      } else {
+        // TODO: Timing not quite accurate. Should fire at the next microtask
+        // checkpoint.
+        requestAnimationFrame(() => {
+          commitFinishedNotification(details);
+        });
+      }
     }
   } else {
     // 6. If not finished but the current finished promise is already resolved,
     //    create a new promise.
     if (details.finishedPromise &&
-        details.finishedPromise.state() == 'resolved') {
+        details.finishedPromise.state == 'resolved') {
       details.finishedPromise = null;
     }
     if (details.animation.playState != 'paused')
@@ -382,12 +307,12 @@ function resetPendingTasks(details) {
 
   // 1. If animation does not have a pending play task or a pending pause task,
   //    abort this procedure.
-  if (!details.readyPromise || !details.readyPromise.state() == 'pending')
+  if (!details.pendingTask)
     return;
 
   // 2. If animation has a pending play task, cancel that task.
   // 3. If animation has a pending pause task, cancel that task.
-  details.readyPromise.cancelTask();
+  details.pendingTask = null;
 
   // 4. Apply any pending playback rate on animation.
   applyPendingPlaybackRate(details);
@@ -498,8 +423,8 @@ function playInternal(details, autoRewind) {
   // 8. If animation has a pending play task or a pending pause task,
   //   8.1 Cancel that task.
   //   8.2 Set has pending ready promise to true.
-  if (details.readyPromise && details.proxy.pending) {
-    details.readyPromise.cancelTask();
+  if (details.pendingTask) {
+    details.pendingTask = null;
     hasPendingReadyPromise = true;
   }
 
@@ -525,7 +450,7 @@ function playInternal(details, autoRewind) {
   // 11. Schedule a task to run as soon as animation is ready.
   if (!details.readyPromise)
     createReadyPromise(details);
-  details.readyPromise.queueTask(commitPendingPlay, 'play');
+  details.pendingTask = 'play';
 
   // 12. Run the procedure to update an animation’s finished state for animation
   //     with the did seek flag set to false, and the synchronously notify flag
@@ -543,6 +468,10 @@ function tickAnimation(timelineTime) {
     return;
   }
 
+  if (details.pendingTask) {
+    notifyReady(details);
+  }
+
   const playState = this.playState;
   if (playState == 'running' || playState == 'finished') {
     details.animation.currentTime =
@@ -553,6 +482,14 @@ function tickAnimation(timelineTime) {
     if (playState == 'finished' && effectivePlaybackRate(details) != 0)
       details.holdTime = null;
     updateFinishedState(details, false, false);
+  }
+}
+
+function notifyReady(details) {
+  if (details.pendingTask == 'pause') {
+    commitPendingPause(details);
+  } else if (details.pendingTask == 'play') {
+    commitPendingPlay(details);
   }
 }
 
@@ -591,9 +528,8 @@ export class ProxyAnimation {
       // inaccessible via the web animations API and therefore explicitly
       // tracked.
       pendingPlaybackRate: null,
-      proxy: this,
-      sequence: 0, /* Used to track ready promises. */
-      aborted: new Set(), /* Aborted sequences. */
+      pendingTask: null,
+      proxy: this
     });
   }
 
@@ -708,14 +644,14 @@ export class ProxyAnimation {
       // Note: if the native promise already has an associated "then", we will
       // lose this association.
       if (pending) {
-        if (!details.readyPromise || details.readyPromise.state() == 'resolved') {
+        if (!details.readyPromise ||
+            details.readyPromise.state == 'resolved') {
           createReadyPromise(details);
         }
-        if (previousPlayState == 'paused') {
-          details.readyPromise.queueTask(commitPendingPause, 'pause');
-        } else {
-          details.readyPromise.queueTask(commitPendingPlay, 'play');
-        }
+        if (previousPlayState == 'paused')
+          details.pendingTask = 'pause';
+        else
+          details.pendingTask = 'play';
       }
 
       // Note that the following steps should apply when transitioning to
@@ -827,8 +763,8 @@ export class ProxyAnimation {
     // 7. If animation has a pending play task or a pending pause task, cancel
     //    that task and resolve animation’s current ready promise with
     //    animation.
-    if (pendingPlay(details) || pendingPause(details)) {
-      details.readyPromise.cancelTask();
+    if (details.pendingTask) {
+      details.pendingTask = null;
       details.readyPromise.resolve();
     }
 
@@ -882,11 +818,11 @@ export class ProxyAnimation {
     details.previousCurrentTime = null;
 
     // Synchronously resolve pending pause task.
-    if (pendingPause(details)) {
+    if (details.pendingTask == 'pause') {
       details.holdTime = value;
       applyPendingPlaybackRate(details);
       details.startTime = null;
-      details.readyPromise.cancelTask();
+      details.pendingTask = null;
       details.readyPromise.resolve();
     }
 
@@ -927,8 +863,6 @@ export class ProxyAnimation {
       return details.animation.playState;
 
     const currentTime = this.currentTime;
-    const pendingTask =
-        details.readyPromise ? details.readyPromise.taskName() : null;
 
     // 1. All of the following conditions are true:
     //    * The current time of animation is unresolved, and
@@ -937,7 +871,7 @@ export class ProxyAnimation {
     //      task,
     //    then idle.
     if (currentTime === null && details.startTime === null &&
-        pendingTask == null)
+        details.pendingTask == null)
       return 'idle';
 
     // 2. Either of the following conditions are true:
@@ -945,8 +879,8 @@ export class ProxyAnimation {
     //    * both the start time of animation is unresolved and it does not have a
     //      pending play task,
     //    then paused.
-    if (pendingTask == 'pause' ||
-        (details.startTime === null && pendingTask != 'play'))
+    if (details.pendingTask == 'pause' ||
+        (details.startTime === null && details.pendingTask != 'play'))
       return 'paused';
 
     // 3.  For animation, current time is resolved and either of the following
@@ -975,7 +909,7 @@ export class ProxyAnimation {
     const details = proxyAnimations.get(this);
     if (details.timeline) {
       return !!details.readyPromise &&
-             details.readyPromise.state() == 'pending';
+             details.readyPromise.state == 'pending';
     }
 
     return details.animation.pending;
@@ -1034,17 +968,17 @@ export class ProxyAnimation {
     //    6.1 Let the hold time be unresolved.
     //    6.2 Cancel the pending pause task.
     //    6.3 Resolve the current ready promise of animation with animation.
-    if (pendingPause(details) && details.startTime !== null) {
+    if (details.pendingTask == 'pause' && details.startTime !== null) {
       details.holdTime = null;
-      details.readyPromise.cancelTask();
+      details.pendingTask = null;
       details.readyPromise.resolve();
     }
 
     // 7. If there is a pending play task and start time is resolved, cancel
     //    that task and resolve the current ready promise of animation with
     //    animation.
-    if (pendingPlay(details) && details.startTime !== null) {
-      details.readyPromise.cancelTask();
+    if (details.pendingTask == 'play' && details.startTime !== null) {
+      details.pendingTask = null;
       details.readyPromise.resolve();
     }
 
@@ -1123,18 +1057,17 @@ export class ProxyAnimation {
     //    pending ready promise be true.
     // 9. If has pending ready promise is false, set animation’s current ready
     //    promise to a new promise in the relevant Realm of animation.
-    if (pendingPlay(details)) {
-      details.readyPromise.cancelTask();
-    } else {
+    if (details.pendingTask == 'play')
+      details.pendingTask = null;
+    else
       details.readyPromise = null;
-    }
 
     // 10. Schedule a task to be executed at the first possible moment after the
     //     user agent has performed any processing necessary to suspend the
     //     playback of animation’s target effect, if any.
     if (!details.readyPromise)
       createReadyPromise(details);
-    details.readyPromise.queueTask(commitPendingPause, 'pause');
+    details.pendingTask ='pause';
   }
 
   reverse() {
@@ -1188,7 +1121,7 @@ export class ProxyAnimation {
     //
     // 3a If animation has a pending play task or a pending pause task,
     //    Abort these steps.
-    if (details.readyPromise && details.readyPromise.state() == 'pending')
+    if (details.readyPromise && details.readyPromise.state == 'pending')
       return;
 
     switch(previousPlayState) {
@@ -1272,7 +1205,7 @@ export class ProxyAnimation {
     if (this.playState != 'idle') {
       resetPendingTasks(details);
       if (details.finishedPromise &&
-          details.finishedPromise.state() == 'pending') {
+          details.finishedPromise.state == 'pending') {
         details.finishedPromise.reject();
       }
       details.finishedPromise = null;
@@ -1313,11 +1246,11 @@ export class ProxyAnimation {
        return details.animation.finished;
 
     if (!details.finishedPromise) {
-      createFinishedPromise(details);
-      if (this.playState == 'finished')
-        details.finishedPromise.scheduleAsyncFinish();
+      details.finishedPromise = new PromiseWrapper(details);
+      // if (this.playState == 'finished')
+      //   details.finishedPromise.scheduleAsyncFinish();
     }
-    return details.finishedPromise;
+    return details.finishedPromise.promise;
   }
 
   get ready() {
@@ -1326,10 +1259,10 @@ export class ProxyAnimation {
       return details.animation.ready;
 
     if (!details.readyPromise) {
-      createReadyPromise(details);
+      details.readyPromise = new PromiseWrapper(details);
       details.readyPromise.resolve();
     }
-    return details.readyPromise;
+    return details.readyPromise.promise;
   }
 
   // --------------------------------------------------
