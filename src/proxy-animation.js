@@ -263,9 +263,7 @@ function updateFinishedState(details, didSeek, synchronouslyNotify) {
       if (synchronouslyNotify) {
         commitFinishedNotification(details);
       } else {
-        // TODO: Timing not quite accurate. Should fire at the next microtask
-        // checkpoint.
-        requestAnimationFrame(() => {
+        Promise.resolve().then(() => {
           commitFinishedNotification(details);
         });
       }
