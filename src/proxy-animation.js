@@ -9,35 +9,38 @@ const nativeElementAnimate = window.Element.prototype.animate;
 const nativeAnimation = window.Animation;
 
 class PromiseWrapper {
-  constructor(details) {
+  constructor() {
     this.state = 'pending';
-    this.details = details;
+    this.nativeResolve = this.nativeReject = null;
     this.promise = new Promise((resolve, reject) => {
       this.nativeResolve = resolve;
       this.nativeReject = reject;
     });
   }
-  resolve() {
+  resolve(value) {
     this.state = 'resolved';
-    this.nativeResolve(this.details.proxy);
+    this.nativeResolve(value);
   }
-  reject() {
+  reject(reason) {
     this.state = 'rejected';
     // Do not report unhandled promise rejections.
     this.promise.catch(() => {});
-    this.nativeReject(new DOMException("The user aborted a request",
-                                       "AbortError"));
+    this.nativeReject(reason);
   }
 }
 
 function createReadyPromise(details) {
-  details.readyPromise = new PromiseWrapper(details);
+  details.readyPromise = new PromiseWrapper();
   // Trigger the pending task on the next animation frame.
   requestAnimationFrame(() => {
     const timelineTime = details.timeline.currentTime;
     if (timelineTime !== null)
       notifyReady(details);
   });
+}
+
+function createAbortError() {
+  return new DOMException("The user aborted a request", "AbortError");
 }
 
 function commitPendingPlay(details)  {
@@ -93,7 +96,7 @@ function commitPendingPlay(details)  {
 
   // 8.4 Resolve animation’s current ready promise with animation.
   if (details.readyPromise && details.readyPromise.state == 'pending')
-     details.readyPromise.resolve();
+     details.readyPromise.resolve(details.proxy);
 
   // 8.5 Run the procedure to update an animation’s finished state for
   //     animation with the did seek flag set to false, and the
@@ -129,7 +132,7 @@ function commitPendingPause(details) {
   details.startTime = null;
 
   // 5. Resolve animation’s current ready promise with animation.
-  details.readyPromise.resolve();
+  details.readyPromise.resolve(details.proxy);
 
   // 6. Run the procedure to update an animation’s finished state for
   // animation with the did seek flag set to false, and the synchronously
@@ -148,7 +151,7 @@ function commitFinishedNotification(details) {
   if (details.proxy.playState != 'finished')
     return;
 
-  details.finishedPromise.resolve();
+  details.finishedPromise.resolve(details.proxy);
   // Handle the finished event via the native animation.
   // TODO: consider polyfilling queuing the event.
   details.animation.finish();
@@ -204,6 +207,7 @@ function updateFinishedState(details, didSeek, synchronouslyNotify) {
   if (!details.timeline)
     return;
 
+  // https://www.w3.org/TR/web-animations-1/#updating-the-finished-state
   // 1. Calculate the unconstrained current time. The dependency on did_seek is
   // required to accommodate timelines that may change direction. Without this
   // distinction, a once-finished animation would remain finished even when its
@@ -253,7 +257,7 @@ function updateFinishedState(details, didSeek, synchronouslyNotify) {
 
   if (playState == 'finished') {
     if (!details.finishedPromise)
-      details.finishedPromise = new PromiseWrapper(details);
+      details.finishedPromise = new PromiseWrapper();
     if (details.finishedPromise.state == 'pending') {
       // 5. Setup finished notification.
       if (synchronouslyNotify) {
@@ -271,7 +275,7 @@ function updateFinishedState(details, didSeek, synchronouslyNotify) {
     //    create a new promise.
     if (details.finishedPromise &&
         details.finishedPromise.state == 'resolved') {
-      details.finishedPromise = null;
+      details.finishedPromise = new PromiseWrapper();
     }
     if (details.animation.playState != 'paused')
       details.animation.pause();
@@ -321,11 +325,12 @@ function resetPendingTasks(details) {
 
   // 5. Reject animation’s current ready promise with a DOMException named
   //    "AbortError".
-  details.readyPromise.reject();
+  details.readyPromise.reject(createAbortError());
 
   // 6. Let animation’s current ready promise be the result of creating a new
   //    resolved Promise object.
-  details.readyPromise = null;
+  createReadyPromise(details);
+  details.readyPromise.resolve(details.proxy);
 }
 
 function playInternal(details, autoRewind) {
@@ -767,7 +772,7 @@ export class ProxyAnimation {
     //    animation.
     if (details.pendingTask) {
       details.pendingTask = null;
-      details.readyPromise.resolve();
+      details.readyPromise.resolve(this);
     }
 
    // 8. Run the procedure to update an animation’s finished state for animation
@@ -825,7 +830,7 @@ export class ProxyAnimation {
       applyPendingPlaybackRate(details);
       details.startTime = null;
       details.pendingTask = null;
-      details.readyPromise.resolve();
+      details.readyPromise.resolve(this);
     }
 
     // Update the finished state.
@@ -973,7 +978,7 @@ export class ProxyAnimation {
     if (details.pendingTask == 'pause' && details.startTime !== null) {
       details.holdTime = null;
       details.pendingTask = null;
-      details.readyPromise.resolve();
+      details.readyPromise.resolve(this);
     }
 
     // 7. If there is a pending play task and start time is resolved, cancel
@@ -981,7 +986,7 @@ export class ProxyAnimation {
     //    animation.
     if (details.pendingTask == 'play' && details.startTime !== null) {
       details.pendingTask = null;
-      details.readyPromise.resolve();
+      details.readyPromise.resolve(this);
     }
 
     // 8. Run the procedure to update an animation’s finished state for
@@ -1194,7 +1199,7 @@ export class ProxyAnimation {
     // 1. If animation’s play state is not idle, perform the following steps:
     //    1.1  Run the procedure to reset an animation’s pending tasks on
     //         animation.
-    //    1.2 Reeject the current finished promsie with a DOMException named
+    //    1.2 Reject the current finished promise with a DOMException named
     //        "AbortError"
     //    1.3 Let current finished promise be a new (pending) Promise object.
     //    1.4+ Deferred to native implementation.
@@ -1208,9 +1213,9 @@ export class ProxyAnimation {
       resetPendingTasks(details);
       if (details.finishedPromise &&
           details.finishedPromise.state == 'pending') {
-        details.finishedPromise.reject();
+        details.finishedPromise.reject(createAbortError());
       }
-      details.finishedPromise = null;
+      details.finishedPromise = new PromiseWrapper();
       details.animation.cancel();
     }
 
@@ -1248,9 +1253,7 @@ export class ProxyAnimation {
        return details.animation.finished;
 
     if (!details.finishedPromise) {
-      details.finishedPromise = new PromiseWrapper(details);
-      // if (this.playState == 'finished')
-      //   details.finishedPromise.scheduleAsyncFinish();
+      details.finishedPromise = new PromiseWrapper();
     }
     return details.finishedPromise.promise;
   }
@@ -1261,8 +1264,8 @@ export class ProxyAnimation {
       return details.animation.ready;
 
     if (!details.readyPromise) {
-      details.readyPromise = new PromiseWrapper(details);
-      details.readyPromise.resolve();
+      details.readyPromise = new PromiseWrapper();
+      details.readyPromise.resolve(this);
     }
     return details.readyPromise.promise;
   }
