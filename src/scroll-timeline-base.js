@@ -68,6 +68,8 @@ function calculateTimeRange(scrollTimeline) {
 function directionAwareScrollOffset(scrollSource, orientation) {
   const style = getComputedStyle(scrollSource);
   // All writing modes are vertical except for horizontal-tb.
+  // TODO: sideways-lr should flow bottom to top, but is currently unsupported
+  // in Chrome.
   // http://drafts.csswg.org/css-writing-modes-4/#block-flow
   const horizontalWritingMode = style.writingMode == 'horizontal-tb';
   let currentScrollOffset  = scrollSource.scrollTop;
@@ -122,7 +124,7 @@ export function calculateMaxScrollOffset(scrollSource, orientation) {
   if (orientation === "block")
     orientation = horizontalWritingMode ? "vertical" : "horizontal";
   else if (orientation === "inline")
-    orientation = verticalWritingModel ? "vertical" : "horizontal";
+    orientation = horizontalWritingMode ? "vertical" : "horizontal";
   if (orientation === "vertical")
     return scrollSource.scrollHeight - scrollSource.clientHeight;
   else if (orientation === "horizontal")
