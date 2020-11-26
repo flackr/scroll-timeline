@@ -124,7 +124,7 @@ export function calculateMaxScrollOffset(scrollSource, orientation) {
   if (orientation === "block")
     orientation = horizontalWritingMode ? "vertical" : "horizontal";
   else if (orientation === "inline")
-    orientation = horizontalWritingMode ? "vertical" : "horizontal";
+    orientation = horizontalWritingMode ? "horizontal" : "vertical";
   if (orientation === "vertical")
     return scrollSource.scrollHeight - scrollSource.clientHeight;
   else if (orientation === "horizontal")
