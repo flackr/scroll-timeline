@@ -59,6 +59,32 @@ function calculateTimeRange(scrollTimeline) {
 }
 
 /**
+ * Calculates a scroll offset that corrects for writing modes, text direction
+ * and a logical orientation.
+ * @param scrollTimeline {ScrollTimeline}
+ * @param orientation {String}
+ * @returns {Number}
+ */
+function directionAwareScrollOffset(scrollSource, orientation) {
+  const style = getComputedStyle(scrollSource);
+  // All writing modes are vertical except for horizontal-tb.
+  // http://drafts.csswg.org/css-writing-modes-4/#block-flow
+  const horizontalWritingMode = style.writingMode == 'horizontal-tb';
+  let currentScrollOffset  = scrollSource.scrollTop;
+  if (orientation == 'horizontal' ||
+     (orientation == 'inline' && horizontalWritingMode) ||
+     (orientation == 'block' && !horizontalWritingMode)) {
+    // Negative values are reported for scrollLeft when the inline text
+    // direction is right to left or for vertical text with a right to left
+    // block flow. This is a consequence of shifting the scroll origin due to
+    // changes in the overflow direction.
+    // http://drafts.csswg.org/cssom-view/#overflow-directions.
+    currentScrollOffset = Math.abs(scrollSource.scrollLeft);
+  }
+  return currentScrollOffset;
+}
+
+/**
  * Determines target effect end based on animation duration, iterations count and start and end delays
  *  returned value should always be positive
  * @param options {Animation} animation
@@ -89,9 +115,14 @@ export function installScrollOffsetExtension(parseFunction, evaluateFunction) {
  * @returns {number}
  */
 export function calculateMaxScrollOffset(scrollSource, orientation) {
-  // TODO: Support other writing directions.
-  if (orientation === "block") orientation = "vertical";
-  else if (orientation === "inline") orientation = "horizontal";
+  // Only one horizontal writing mode: horizontal-tb.  All other writing modes
+  // flow vertically.
+  const horizontalWritingMode =
+    getComputedStyle(this.scrollSource).writingMode == 'horizontal-tb';
+  if (orientation === "block")
+    orientation = horizontalWritingMode ? "vertical" : "horizontal";
+  else if (orientation === "inline")
+    orientation = verticalWritingModel ? "vertical" : "horizontal";
   if (orientation === "vertical")
     return scrollSource.scrollHeight - scrollSource.clientHeight;
   else if (orientation === "horizontal")
@@ -394,11 +425,8 @@ export class ScrollTimeline {
       return "inactive";
 
     // Step 2
-    // TODO: Support other writing directions.
-    let currentScrollOffset = this.scrollSource.scrollTop
-    if (this.orientation === 'inline' || this.orientation === 'horizontal') {
-      currentScrollOffset = this.scrollSource.scrollLeft
-    }
+    const currentScrollOffset =
+        directionAwareScrollOffset(this.scrollSource, this.orientation);
 
     // Step 3
     if (currentScrollOffset < startOffset)
@@ -433,11 +461,8 @@ export class ScrollTimeline {
     let timeRange = calculateTimeRange(this);
 
     // Step 2
-    // TODO: Support other writing directions.
-    let currentScrollOffset = this.scrollSource.scrollTop
-    if (this.orientation === 'inline' || this.orientation === 'horizontal') {
-      currentScrollOffset = this.scrollSource.scrollLeft
-    }
+    const currentScrollOffset =
+        directionAwareScrollOffset(this.scrollSource, this.orientation);
 
     // Step 3
     if (currentScrollOffset < startOffset)
