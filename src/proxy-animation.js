@@ -863,7 +863,7 @@ export class ProxyAnimation {
   }
 
   get playState() {
-    details = proxyAnimations.get(this);
+    const details = proxyAnimations.get(this);
     if (!details.timeline)
       return details.animation.playState;
 
