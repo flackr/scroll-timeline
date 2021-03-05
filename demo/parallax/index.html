@@ -172,8 +172,8 @@ function animateParallax() {
       duration: 10000, // Arbitrary duration...
       fill: 'both',
       timeline: new ScrollTimeline({
-          startScrollOffset: {target: header, edge: 'end', clamp: true},
-          endScrollOffset: {target: header, clamp: true},
+          scrollOffsets: [{target: header, edge: 'end', clamp: true},
+                          {target: header, clamp: true}],
           fill: 'both',
       })
     });
@@ -186,8 +186,8 @@ function animateZoom() {
       duration: 10000,
       fill: 'both',
       timeline: new ScrollTimeline({
-          startScrollOffset: {target: container, edge: 'end', threshold: 1, clamp: true},
-          endScrollOffset: {target: container, threshold: 1, clamp: true},
+          scrollOffsets: [{target: container, edge: 'end', threshold: 1, clamp: true},
+                          {target: container, threshold: 1, clamp: true}],
           fill: 'both',
       })
   });
@@ -200,8 +200,8 @@ function animatePan() {
       duration: 10000,
       fill: 'both',
       timeline: new ScrollTimeline({
-          startScrollOffset: {target: container, edge: 'end', clamp: true},
-          endScrollOffset: {target: container, clamp: true},
+          scrollOffsets: [{target: container, edge: 'end', clamp: true},
+                          {target: container, clamp: true}],
           fill: 'both',
       })
   });
@@ -214,8 +214,8 @@ function animateWipe() {
       duration: 10000,
       fill: 'both',
       timeline: new ScrollTimeline({
-          startScrollOffset: {target: container, edge: 'end', clamp: true},
-          endScrollOffset: {target: container, clamp: true},
+          scrollOffsets: [{target: container, edge: 'end', clamp: true},
+                          {target: container, clamp: true}],
           fill: 'both',
       })
   });
@@ -232,8 +232,8 @@ function animateHeaders() {
         duration: 10000,
         fill: 'both',
         timeline: new ScrollTimeline({
-            startScrollOffset: {target: headers[i], edge: 'end', rootMargin: '-20px', clamp: true},
-            endScrollOffset: {target: headers[i], edge: 'end', threshold: 1, rootMargin: '-20px', clamp: true},
+            scrollOffsets: [{target: headers[i], edge: 'end', rootMargin: '-20px', clamp: true},
+                            {target: headers[i], edge: 'end', threshold: 1, rootMargin: '-20px', clamp: true}],
             fill: 'both',
         })
     });
