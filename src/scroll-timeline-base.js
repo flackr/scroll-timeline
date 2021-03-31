@@ -413,8 +413,23 @@ export class ScrollTimeline {
     return data.scrollOffsets;
   }
 
+<<<<<<< HEAD
   get duration() {
     return CSS.percent(100);
+=======
+  set timeRange(range) {
+    if (range != "auto") {
+      // Check for a valid number, which if finite and not NaN.
+      if (typeof(range) != "number" || !Number.isFinite(range) || range != range)
+        throw TypeError("Invalid timeRange value");
+    }
+    scrollTimelineOptions.get(this).timeRange = range;
+    updateInternal(this);
+  }
+
+  get timeRange() {
+    return scrollTimelineOptions.get(this).timeRange;
+>>>>>>> 3968928 (Implement support for multiple scroll offsets. (#28))
   }
 
   get phase() {
@@ -485,6 +500,10 @@ export class ScrollTimeline {
     );
     let startOffset = effectiveScrollOffsets[0];
     let endOffset = effectiveScrollOffsets[effectiveScrollOffsets.length - 1];
+<<<<<<< HEAD
+=======
+    let timeRange = calculateTimeRange(this);
+>>>>>>> 3968928 (Implement support for multiple scroll offsets. (#28))
 
     // Step 2
     const currentScrollOffset =
@@ -503,7 +522,11 @@ export class ScrollTimeline {
       currentScrollOffset,
       effectiveScrollOffsets
     );
+<<<<<<< HEAD
     return CSS.percent(100 * progress);
+=======
+    return progress * timeRange;
+>>>>>>> 3968928 (Implement support for multiple scroll offsets. (#28))
   }
 
   get __polyfill() {
