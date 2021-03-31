@@ -424,6 +424,7 @@ export class ScrollTimeline {
     let data = scrollTimelineOptions.get(this);
     data.scrollOffsets = offsets;
     data.scrollOffsetFns = fns;
+    updateInternal(this);
   }
 
   get scrollOffsets() {
