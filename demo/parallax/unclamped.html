@@ -173,8 +173,8 @@ function animateParallax() {
       duration: 10000, // Arbitrary duration...
       fill: 'both',
       timeline: new ScrollTimeline({
-          startScrollOffset: {target: header, edge: 'end'},
-          endScrollOffset: {target: header},
+          scrollOffsets: [{target: header, edge: 'end'},
+                          {target: header}],
           fill: 'both',
       })
     });
@@ -187,8 +187,8 @@ function animateZoom() {
       duration: 10000,
       fill: 'both',
       timeline: new ScrollTimeline({
-          startScrollOffset: {target: container, edge: 'end', threshold: 1},
-          endScrollOffset: {target: container, threshold: 1},
+          scrollOffsets: [{target: container, edge: 'end', threshold: 1},
+                          {target: container, threshold: 1}],
           fill: 'both',
       })
   });
@@ -201,8 +201,8 @@ function animatePan() {
       duration: 10000,
       fill: 'both',
       timeline: new ScrollTimeline({
-          startScrollOffset: {target: container, edge: 'end'},
-          endScrollOffset: {target: container},
+          scrollOffsets: [{target: container, edge: 'end'},
+                          {target: container}],
           fill: 'both',
       })
   });
@@ -215,8 +215,8 @@ function animateWipe() {
       duration: 10000,
       fill: 'both',
       timeline: new ScrollTimeline({
-          startScrollOffset: {target: container, edge: 'end'},
-          endScrollOffset: {target: container},
+          scrollOffsets: [{target: container, edge: 'end'},
+                          {target: container}],
           fill: 'both',
       })
   });
@@ -233,8 +233,8 @@ function animateHeaders() {
         duration: 10000,
         fill: 'both',
         timeline: new ScrollTimeline({
-            startScrollOffset: {target: headers[i], edge: 'end', rootMargin: '-20px'},
-            endScrollOffset: {target: headers[i], edge: 'end', threshold: 1, rootMargin: '-20px'},
+            scrollOffsets: [{target: headers[i], edge: 'end', rootMargin: '-20px'},
+                            {target: headers[i], edge: 'end', threshold: 1, rootMargin: '-20px'}],
             fill: 'both',
         })
     });
