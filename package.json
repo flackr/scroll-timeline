@@ -36,7 +36,7 @@
   "devDependencies": {
     "dotenv": "^8.2.0",
     "kleur": "^3.0.3",
-    "microbundle": "^0.12.2",
+    "microbundle": "^0.13.1",
     "run-all": "^1.0.1",
     "saucelabs": "^4.4.1",
     "selenium-webdriver": "^4.0.0-alpha.7",

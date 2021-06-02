@@ -14,6 +14,9 @@
 
 import { parseLength } from "./utils";
 
+import { installCSSOM } from "./proxy-cssom.js";
+installCSSOM();
+
 const AUTO = new CSSKeywordValue("auto");
 
 let scrollTimelineOptions = new WeakMap();
