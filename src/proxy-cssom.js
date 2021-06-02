@@ -13,6 +13,7 @@
 // limitations under the License.
 
 export function installCSSOM() {
+<<<<<<< HEAD
   // Object for storing details associated with an object which are to be kept
   // private. This approach allows the constructed objects to more closely
   // resemble their native counterparts when inspected.
@@ -97,11 +98,55 @@ export function installCSSOM() {
     'CSSKeywordValue': class {
       constructor(value) {
         this.value = value;
+=======
+  if (!window.CSSUnitValue) {
+    class CSSUnitValue {
+      constructor(value, unit) {
+        this.value_ = value;
+        this.unit_ = unit;
+      }
+
+      get value() {
+        return this.value_;
+      }
+
+      get unit() {
+        return this.unit_;
+      }
+
+      displayUnit() {
+        switch(this.unit_) {
+          case 'percent':
+            return '%';
+          case 'number':
+            return '';
+          default:
+            return this.unit_.toLowerCase();
+        }
+      }
+
+      toString() {
+        return `${this.value}${this.displayUnit()}`;
+      }
+    }
+    window.CSSUnitValue = CSSUnitValue;
+  }
+
+  if (!window.CSSKeywordValue) {
+    class CSSKeywordValue {
+      constructor(value) {
+        this.value_ = value;
+      }
+
+      get value() {
+        return this.value_;
+>>>>>>> c4ecd0b (Add polyfill for CSSOM.)
       }
 
       toString() {
         return this.value.toString();
       }
+<<<<<<< HEAD
     },
 
     'CSSMathSum': class extends MathOperation  {
@@ -197,4 +242,107 @@ export function installCSSOM() {
     if (!Reflect.defineProperty(window, type, { value: cssOMTypes[type] }))
       throw Error(`Error installing CSSOM support for ${type}`);
   }
+=======
+    }
+    window.CSSKeywordValue = CSSKeywordValue;
+  }
+
+  if (!window.CSSNumericArray) {
+    class CSSNumericArray {
+      constructor() {
+        this.values = arguments.map(v => new CSSUnitValue(v, 'number'));
+      }
+      toArray() {
+        return this.values.map(v => v.value);
+      }
+    }
+    window.CSSNumericArray = CSSNumericArray;
+  }
+
+  if (!window.CSSMathSum) {
+    class CSSMathSum {
+      constructor() {
+        this.values = new CSSNumericArray(arguments);
+      }
+
+      toString() {
+        return this.values.toArray().join(' + ');
+      }
+    }
+    window.CSSMathSum = CSSMathSum;
+  }
+
+  if (!window.CSSMathMax) {
+    class CSSMathMax {
+      constructor() {
+        this.values = new CSSNumericArray(arguments);
+      }
+
+      toString() {
+        return 'max(' + this.values.toArray().join(', ') + ')';
+      }
+    }
+    window.CSSMathMax = CSSMathMax;
+  }
+
+  if (!window.CSSMathMin) {
+    class CSSMathMin {
+      constructor() {
+        this.values = new CSSNumericArray(arguments);
+      }
+
+      toString() {
+        return 'min(' + this.values.toArray().join(', ') + ')';
+      }
+    }
+    window.CSSMathMin = CSSMathMin;
+  }
+
+  if (!window.CSS)
+    window.CSS = {};
+
+  [
+    'number',
+    'percent',
+    // Length units
+    'em',
+    'ex',
+    'px',
+    'cm',
+    'mm',
+    'in',
+    'pt',
+    'pc',  // Picas
+    'Q',  // Quarter millimeter
+    'vw',
+    'vh',
+    'vmin',
+    'vmax',
+    'rems',
+    "ch",
+    // Angle units
+    'deg',
+    'rad',
+    'grad',
+    'turn',
+    // Time units
+    'ms',
+    's',
+    'Hz',
+    'kHz',
+    // Resolution
+    'dppx',
+    'dpi',
+    'dpcm',
+    // Other units
+    "fr"
+  ].forEach((name) => {
+    if (!CSS[name]) {
+      CSS[name] = (value) => {
+        return new CSSUnitValue(value, name);
+      }
+    }
+  });
+
+>>>>>>> c4ecd0b (Add polyfill for CSSOM.)
 }
