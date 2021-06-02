@@ -13,105 +13,153 @@
 // limitations under the License.
 
 export function installCSSOM() {
+  // Object for storing details associated with an object which are to be kept
+  // private. This approach allows the constructed objects to more closely
+  // resemble their native counterparts when inspected.
+  let privateDetails = new WeakMap();
+
   if (!window.CSSUnitValue) {
-    class CSSUnitValue {
+    function displayUnit(unit) {
+      switch(unit) {
+        case 'percent':
+          return '%';
+        case 'number':
+          return '';
+        default:
+          return unit.toLowerCase();
+      }
+    }
+    class ProxyCSSUnitValue {
       constructor(value, unit) {
-        this.value_ = value;
-        this.unit_ = unit;
+        privateDetails.set(this, {
+          value: value,
+          unit: unit
+        });
       }
 
       get value() {
-        return this.value_;
+        return privateDetails.get(this).value;
+      }
+
+      set value(value) {
+        privateDetails.get(this).value = value;
       }
 
       get unit() {
-        return this.unit_;
-      }
-
-      displayUnit() {
-        switch(this.unit_) {
-          case 'percent':
-            return '%';
-          case 'number':
-            return '';
-          default:
-            return this.unit_.toLowerCase();
-        }
+        return  privateDetails.get(this).unit;
       }
 
       toString() {
-        return `${this.value}${this.displayUnit()}`;
+        const details = privateDetails.get(this);
+        return `${details.value}${displayUnit(details.unit)}`;
       }
     }
-    window.CSSUnitValue = CSSUnitValue;
+    window.CSSUnitValue = ProxyCSSUnitValue;
   }
 
   if (!window.CSSKeywordValue) {
-    class CSSKeywordValue {
+    class ProxyCSSKeywordValue {
       constructor(value) {
-        this.value_ = value;
-      }
-
-      get value() {
-        return this.value_;
+        this.value = value;
       }
 
       toString() {
         return this.value.toString();
       }
     }
-    window.CSSKeywordValue = CSSKeywordValue;
+    window.CSSKeywordValue = ProxyCSSKeywordValue;
   }
 
-  if (!window.CSSNumericArray) {
-    class CSSNumericArray {
-      constructor() {
-        this.values = arguments.map(v => new CSSUnitValue(v, 'number'));
-      }
-      toArray() {
-        return this.values.map(v => v.value);
-      }
+  function toCssUnitValue(v) {
+    if (typeof v === 'number')
+      return new CSSUnitValue(v, 'number');
+    return v;
+  }
+
+  function toCssNumericArray(values) {
+    const result = [];
+    for (let i = 0; i < values.length; i++) {
+      result[i] = toCssUnitValue(values[i]);
     }
-    window.CSSNumericArray = CSSNumericArray;
+    return result;
+  }
+
+  class ProxyMathOperation {
+    constructor(values, operator, opt_name, opt_delimiter) {
+      privateDetails.set(this, {
+        values: toCssNumericArray(values),
+        operator: operator,
+        name: opt_name || operator,
+        delimiter: opt_delimiter || ', '
+      });
+    }
+
+    get operator() {
+      return privateDetails.get(this).operator;
+    }
+
+    get values() {
+      return  privateDetails.get(this).values;
+    }
+
+    toString() {
+      const details = privateDetails.get(this);
+      return `${details.name}(${details.values.join(details.delimiter)})`;
+    }
   }
 
   if (!window.CSSMathSum) {
-    class CSSMathSum {
-      constructor() {
-        this.values = new CSSNumericArray(arguments);
-      }
-
-      toString() {
-        return this.values.toArray().join(' + ');
+    class ProxyCSSMathSum extends ProxyMathOperation  {
+      constructor(values) {
+        super(arguments, 'sum', 'calc', ' + ');
       }
     }
-    window.CSSMathSum = CSSMathSum;
+    window.CSSMathSum = ProxyCSSMathSum;
+  }
+
+  if (!window.CSSMathProduct) {
+    class ProxyCSSMathProduct extends ProxyMathOperation  {
+      constructor(values) {
+        super(arguments, 'product', 'calc', ' * ');
+      }
+    }
+    window.CSSMathProduct = ProxyCSSMathProduct;
+  }
+
+  if (!window.CSSMathNegate) {
+    class ProxyCSSMathNegate extends ProxyMathOperation {
+      constructor(values) {
+        super([arguments[0]], 'negate', '-');
+      }
+    }
+    window.CSSMathNegate = ProxyCSSMathNegate;
+  }
+
+  if (!window.CSSMathInvert) {
+    class ProxyCSSMathNegate extends ProxyMathOperation {
+      constructor(values) {
+        super([1, arguments[0]], 'invert', 'calc', ' / ');
+      }
+    }
+    window.CSSMathNegate = ProxyCSSMathNegate;
   }
 
   if (!window.CSSMathMax) {
-    class CSSMathMax {
+    class ProxyCSSMathMax extends ProxyMathOperation {
       constructor() {
-        this.values = new CSSNumericArray(arguments);
-      }
-
-      toString() {
-        return 'max(' + this.values.toArray().join(', ') + ')';
+        super(arguments, 'max');
       }
     }
-    window.CSSMathMax = CSSMathMax;
+    window.CSSMathMax = ProxyCSSMathMax;
   }
 
   if (!window.CSSMathMin) {
-    class CSSMathMin {
+    class ProxyCSSMathMin extends ProxyMathOperation  {
       constructor() {
-        this.values = new CSSNumericArray(arguments);
-      }
-
-      toString() {
-        return 'min(' + this.values.toArray().join(', ') + ')';
+        super(arguments, 'min');
       }
     }
-    window.CSSMathMin = CSSMathMin;
+    window.CSSMathMin = ProxyCSSMathMin;
   }
 
   if (!window.CSS)
