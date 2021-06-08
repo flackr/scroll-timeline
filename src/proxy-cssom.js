@@ -146,7 +146,7 @@ export function installCSSOM() {
       throw Error(`Error installing CSSOM support`);
   }
 
-  if (!window.CSS.CSSUnitValue) {
+  if (!window.CSSUnitValue) {
     [
       'number',
       'percent',
