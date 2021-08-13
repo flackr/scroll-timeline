@@ -108,6 +108,13 @@ function fromCssNumberish(details, value) {
   }
 }
 
+// TODO: Eliminate the need to match Blink's internal duration for a scroll
+// linked animation. This is presently only required to get events to report
+// the "correct" times; however, these should be specced to use the same time
+// representation as the animation: ie. time in ms or CSS.percent. Some form
+// of normalization is still required to support "duration: auto".  We will
+// need to retain the specified times, yet inject a proper duration value into
+// the native animation.
 function normalizedTiming(details) {
   if (details.normalizedTiming)
     return details.normalizedTiming;
@@ -117,7 +124,7 @@ function normalizedTiming(details) {
   const totalDuration =
      timing.delay + timing.endDelay + timing.iterations * timing.duration;
 
-  // Match arbitrary value of 100s used in Blink.
+  // Match arbitrary value of 100s used in Blink for scroll timeline duration.
   const scale = (totalDuration > 0) ? 100000 / totalDuration : 0;
 
   details.normalizedTiming = {
