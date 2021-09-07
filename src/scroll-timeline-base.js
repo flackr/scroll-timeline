@@ -435,6 +435,7 @@ export class ScrollTimeline {
     return data.scrollOffsets;
   }
 
+  // TODO(deprecate)
   set timeRange(range) {
     if (range != "auto") {
       // Check for a valid number, which if finite and not NaN.
@@ -445,8 +446,13 @@ export class ScrollTimeline {
     updateInternal(this);
   }
 
+  // TODO(deprecate)
   get timeRange() {
     return scrollTimelineOptions.get(this).timeRange;
+  }
+
+  get duration() {
+    return CSS.percent(100);
   }
 
   get phase() {
@@ -525,18 +531,18 @@ export class ScrollTimeline {
 
     // Step 3
     if (currentScrollOffset < startOffset)
-      return 0;
+      return CSS.percent(0); // 0;
 
     // Step 4
     if (currentScrollOffset >= endOffset)
-      return timeRange;
+      return CSS.percent(100); // timeRange;
 
     // Step 5
     let progress = ComputeProgress(
       currentScrollOffset,
       effectiveScrollOffsets
     );
-    return progress * timeRange;
+    return CSS.percent(100 * progress);
   }
 
   get __polyfill() {

@@ -108,41 +108,6 @@ function fromCssNumberish(details, value) {
   }
 }
 
-// TODO: Eliminate the need to match Blink's internal duration for a scroll
-// linked animation. This is presently only required to get events to report
-// the "correct" times; however, these should be specced to use the same time
-// representation as the animation: ie. time in ms or CSS.percent. Some form
-// of normalization is still required to support "duration: auto".  We will
-// need to retain the specified times, yet inject a proper duration value into
-// the native animation.
-function normalizedTiming(details) {
-  if (details.normalizedTiming)
-    return details.normalizedTiming;
-
-  // TODO: Handle duration: auto.
-  const timing = details.proxy.effect.getTiming();
-  const totalDuration =
-     timing.delay + timing.endDelay + timing.iterations * timing.duration;
-
-  // Match arbitrary value of 100s used in Blink for scroll timeline duration.
-  const scale = (totalDuration > 0) ? 100000 / totalDuration : 0;
-
-  details.normalizedTiming = {
-    startDelay: scale * timing.delay,
-    endDelay: scale * timing.endDelay,
-    iterationDuration: scale * timing.duration,
-    totalDuration: scale * Math.max(0, totalDuration)
-  };
-
-  // once we update the timing of the underlying animation, we'll need to
-  // keep the original around in order to properly produce specified timings.
-  // details.timing = timing;
-
-  // TODO: adjust the timing of the underlying native animation. This is
-  // especially important when duration is 'auto'.
-  return details.normalizedTiming;
-}
-
 function commitPendingPlay(details)  {
   // https://drafts4.csswg.org/web-animations-2/#playing-an-animation-section
   // Refer to steps listed under "Schedule a task to run ..."
@@ -255,24 +220,13 @@ function commitFinishedNotification(details) {
 
   details.animation.pause();
 
-  // The current time and timeline time are still specced as
-  // double valued.
-  // TODO: align timing of underlying native animation so that scale is not
-  // necessary.
-  const timing = normalizedTiming(details);
-  const scale = timing.totalDuration / effectEnd(details);
-  const eventCurrentTime =
-      fromCssNumberish(details, details.proxy.currentTime);
-
-  const eventTimelineTime =
-      fromCssNumberish(details, details.proxy.timeline.currentTime);
-
   const finishedEvent =
       new AnimationPlaybackEvent(
           'finish',
           {
-            currentTime: eventCurrentTime * scale,
-            timelineTime: eventTimelineTime * scale
+            currentTime: fromCssNumberish(details, details.proxy.currentTime),
+            timelineTime: fromCssNumberish(details,
+                                           details.proxy.timeline.currentTime)
           });
    requestAnimationFrame(() => {
      queueMicrotask(() => {
@@ -658,22 +612,73 @@ function createProxyEffect(details) {
       return timing;
     }
   };
+  // Override getTiming to normalize the timing. EffectEnd for the animation
+  // align with the timeline duration.
+  const getTimingHandler = {
+    apply: function(target) {
+      // Arbitrary conversion of 100% to ms.
+      const INTERNAL_DURATION_MS = 100000;
+
+      if (details.specifiedTiming)
+        return details.specifiedTiming;
+
+      const timing = target.apply(effect);
+      details.specifiedTiming = timing;
+
+      let totalDuration;
+      let scale;
+
+      // Duration 'auto' case.
+      if (timing.duration === null) {
+        // TODO: start and end delay are specced as doubles and currently
+        // ignored for a progress based animation. Support delay and endDelay
+        // once CSSNumberish.
+        timing.delay = 0;
+        timing.endDelay = 0;
+        totalDuration = timing.iterations ? INTERNAL_DURATION_MS : 0;
+        timing.duration =
+            timing.iterations ? totalDuration / timing.iterations : 0;
+        scale = 1;
+      } else {
+        totalDuration =
+           timing.delay + timing.endDelay + timing.iterations * timing.duration;
+        scale = (totalDuration > 0) ? INTERNAL_DURATION_MS / totalDuration : 0;
+      }
+
+      // Add a second optional argument to indicate that this is an internal
+      // update and that the timing should not be renormalized.
+      effect.updateTiming({
+        startDelay: scale * timing.delay,
+        endDelay: scale * timing.endDelay,
+        iterationDuration: scale * timing.duration,
+        totalDuration: scale * Math.max(0, totalDuration)
+      }, /*internal_update*/true);
+
+      return timing;
+    }
+  };
+  const updateTimingHandler = {
+    apply: function(target, thisArg, argumentsList) {
+      const options = argumentsList[0];
+      if (!!argumentsList[1]) {
+        // This step is required to ensure that the total duration of the native
+        // animation aligns with the timeline duration.
+        target.apply(effect, options);
+      } else {
+        // Apply updates on top of the original specified timing.
+        target.apply(effect, details.specifiedTiming);
+        target.apply(effect, options);
+        details.specifiedTiming = null;
+        // Force renormalization.
+        details.effect.getTiming();
+      }
+    }
+  };
   proxy = new Proxy(effect, handler);
   proxy.getComputedTiming = new Proxy(effect.getComputedTiming,
                                       getComputedTimingHandler);
-
-  // TODO: handle intrinsic iteration duration.
-  // The intrinsic iteration duration of an effect is zero when linked to a
-  // document timeline, but may be non-zero for a scroll timeline.  This,
-  // discrepancy, will mean that the timing information needs to be adjusted
-  // for the native animation to ensure that iteration progress is properly
-  // tracked. Until this is addressed, the iteration duration of the native
-  // animation will be treated as zero in the duration 'auto' case.
-  // To address, we need to call updateTiming on the native animation with a
-  // corrected value for the duration. Ideally, we should store off the original
-  // timing information so that we can return correct values when getTiming is
-  // called. Explit calls to updateTiming should apply a delta on top of the
-  // original (unmodified) set of options and repeat the normalization process.
+  proxy.getTiming = new Proxy(effect.getTiming, getTimingHandler);
+  proxy.updateTiming = new Proxy(effect.updateTiming, updateTimingHandler);
   return proxy;
 }
 
@@ -700,7 +705,8 @@ export class ProxyAnimation {
       // properties does not affect the play state of the underlying animation.
       // Note that any changes to these values require an update of current
       // time for the underlying animation to ensure that its hold time is set
-      // to the correct position.
+      // to the correct position. These values are represented as floating point
+      // numbers in milliseconds.
       startTime: null,
       holdTime: null,
       previousCurrentTime: null,
@@ -713,10 +719,11 @@ export class ProxyAnimation {
       // tracked.
       pendingPlaybackRate: null,
       pendingTask: null,
-      // Internally timing is in ms, though values get/set via the API may be
-      // percentages. The normalized timing adjusts the specified timing to
-      // map the scroll animation to a fixed duration in milliseconds.
-      normalizedTiming: null,
+      // Record the specified timing since it may be different than the timing
+      // actually used for the animation. When fetching the timing, this value
+      // will be returned, however, the native animation will use normalized
+      // values.
+      specifiedTiming: null,
       proxy: this
     });
   }
@@ -764,6 +771,11 @@ export class ProxyAnimation {
     // 4. Let previous current time be the animation’s current time.
     const previousCurrentTime = this.currentTime;
 
+    const details = proxyAnimations.get(this);
+    const end = effectEnd(details);
+    const progress =
+        end > 0 ? fromCssNumberish(details, previousCurrentTime) / end : 0;
+
     // 5. Let from finite timeline be true if old timeline is not null and not
     //    monotonically increasing.
     const fromScrollTimeline = (oldTimeline instanceof ScrollTimeline);
@@ -778,7 +790,6 @@ export class ProxyAnimation {
     // polyfilling, supporting natively, or throwing an error.
 
     // 8. Set the flag reset current time on resume to false.
-    const details = proxyAnimations.get(this);
     details.resetCurrentTimeOnResume = false;
 
     // Additional step required to track whether the animation was pending in
@@ -828,7 +839,8 @@ export class ProxyAnimation {
         case 'paused':
           details.resetCurrentTimeOnResume = true;
           details.startTime = null;
-          details.holdTime = previousCurrentTime;
+          details.holdTime =
+              fromCssNumberish(details, CSS.percent(100 * progress));
           break;
 
         // Oterwise
@@ -881,7 +893,7 @@ export class ProxyAnimation {
       //   Run the procedure to set the current time to previous current time.
       if (fromScrollTimeline) {
         if (previousCurrentTime !== null)
-          details.animation.currentTime = previousCurrentTime;
+          details.animation.currentTime = progress * effectEnd(details);
 
         switch (previousPlayState) {
           case 'paused':
