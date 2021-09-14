@@ -220,19 +220,28 @@ function commitFinishedNotification(details) {
 
   details.animation.pause();
 
+  // Event times are speced as doubles in web-animations-1.
+  // Cannot dispatch a proxy to an event since the proxy is not a fully
+  // transparent replacement. As a workaround, use a custom event and inject
+  // the necessary getters.
   const finishedEvent =
-      new AnimationPlaybackEvent(
-          'finish',
-          {
-            currentTime: fromCssNumberish(details, details.proxy.currentTime),
-            timelineTime: fromCssNumberish(details,
-                                           details.proxy.timeline.currentTime)
-          });
-   requestAnimationFrame(() => {
-     queueMicrotask(() => {
-       details.animation.dispatchEvent(finishedEvent);
-     });
-   });
+    new CustomEvent('finish',
+                    { detail: {
+                      currentTime: details.proxy.currentTime,
+                      timelineTime: details.proxy.timeline.currentTime
+                    }});
+  Object.defineProperty(finishedEvent, 'currentTime', {
+    get: function() { return this.detail.currentTime; }
+  });
+  Object.defineProperty(finishedEvent, 'timelineTime', {
+    get: function() { return this.detail.timelineTime; }
+  });
+
+  requestAnimationFrame(() => {
+    queueMicrotask(() => {
+      details.animation.dispatchEvent(finishedEvent);
+    });
+  });
 }
 
 function effectivePlaybackRate(details) {
