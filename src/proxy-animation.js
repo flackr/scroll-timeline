@@ -43,17 +43,6 @@ function createAbortError() {
   return new DOMException("The user aborted a request", "AbortError");
 }
 
-function IsProgressBasedAnimation(details) {
-  if (!details.timeline)
-    return false;
-
-  // TODO: remove support for timeRange once removed in Blink.
-  if (typeof details.timeline.timeRange !== 'number')
-    return true;
-
-  return false;
-}
-
 function toCssNumberish(details, value) {
   if (value === null)
     return value;
@@ -64,16 +53,9 @@ function toCssNumberish(details, value) {
           "InvalidStateError");
   }
 
-  if (!details.timeline || !IsProgressBasedAnimation(details)) {
-    // Document timeline or legacy scroll timeline.
-    // TODO: remove support for non-progress-based scroll animations once
-    // removed in Blink.
-    return value;
-  } else {
-    const limit = effectEnd(details);
-    const percent = limit ? 100 * value / limit : 0;
-    return CSS.percent(percent);
-  }
+  const limit = effectEnd(details);
+  const percent = limit ? 100 * value / limit : 0;
+  return CSS.percent(percent);
 }
 
 function fromCssNumberish(details, value) {
@@ -95,11 +77,7 @@ function fromCssNumberish(details, value) {
     if (value === null)
       return value;
 
-    // TODO: remove once all scroll animations are progress based.
-    if (!IsProgressBasedAnimation(details) && typeof value === 'number')
-      return value;
-
-    if (IsProgressBasedAnimation(details) && value.unit === 'percent')
+    if (value.unit === 'percent')
       return value.value * effectEnd(details) / 100;
 
     throw new DOMException(
