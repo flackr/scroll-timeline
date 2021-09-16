@@ -572,6 +572,8 @@ function notifyReady(details) {
 
 function createProxyEffect(details) {
   const effect = details.animation.effect;
+  const nativeUpdateTiming = effect.updateTiming;
+
   // Generic pass-through handler for any method or attribute that is not
   // explicitly overridden.
   const handler = {
@@ -602,14 +604,14 @@ function createProxyEffect(details) {
   // Override getTiming to normalize the timing. EffectEnd for the animation
   // align with the timeline duration.
   const getTimingHandler = {
-    apply: function(target) {
+    apply: function(target, thisArg) {
       // Arbitrary conversion of 100% to ms.
       const INTERNAL_DURATION_MS = 100000;
 
       if (details.specifiedTiming)
         return details.specifiedTiming;
 
-      const timing = target.apply(effect);
+      let timing = target.apply(effect);
       details.specifiedTiming = timing;
 
       let totalDuration;
@@ -632,33 +634,27 @@ function createProxyEffect(details) {
         scale = (totalDuration > 0) ? INTERNAL_DURATION_MS / totalDuration : 0;
       }
 
-      // Add a second optional argument to indicate that this is an internal
-      // update and that the timing should not be renormalized.
-      effect.updateTiming({
+      // Set the timing on the native animation to the normalized values without
+      // affecting the specified timing.
+      nativeUpdateTiming.apply(effect, [{
         startDelay: scale * timing.delay,
         endDelay: scale * timing.endDelay,
         iterationDuration: scale * timing.duration,
         totalDuration: scale * Math.max(0, totalDuration)
-      }, /*internal_update*/true);
+      }]);
 
-      return timing;
+      return details.specifiedTiming;
     }
   };
   const updateTimingHandler = {
     apply: function(target, thisArg, argumentsList) {
-      const options = argumentsList[0];
-      if (!!argumentsList[1]) {
-        // This step is required to ensure that the total duration of the native
-        // animation aligns with the timeline duration.
-        target.apply(effect, options);
-      } else {
-        // Apply updates on top of the original specified timing.
-        target.apply(effect, details.specifiedTiming);
-        target.apply(effect, options);
-        details.specifiedTiming = null;
-        // Force renormalization.
-        details.effect.getTiming();
+      // Apply updates on top of the original specified timing.
+      if (details.specifiedTiming) {
+        target.apply(effect, [details.specifiedTiming]);
       }
+      target.apply(effect, argumentsList);
+      // Force renormalization.
+      details.specifiedTiming = null;
     }
   };
   proxy = new Proxy(effect, handler);
