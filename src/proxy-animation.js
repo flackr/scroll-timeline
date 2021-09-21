@@ -89,9 +89,11 @@ function fromCssNumberish(details, value) {
 }
 
 function normalizedTiming(details) {
-  if (!details.normalizedTiming)
-    details.proxy.effect.getTiming();
-  return details.normalizedTiming;
+  // Used normalized timing in the case of a progress-based animation or
+  // specified timing with a document timeline.  The normalizedTiming property
+  // is initialized and cached when fetching the timing information.
+  const timing = details.proxy.effect.getTiming();
+  return details.normalizedTiming || timing;
 }
 
 function commitPendingPlay(details)  {
