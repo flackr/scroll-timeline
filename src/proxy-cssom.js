@@ -18,56 +18,15 @@ export function installCSSOM() {
   // resemble their native counterparts when inspected.
   let privateDetails = new WeakMap();
 
-  if (!window.CSSUnitValue) {
-    function displayUnit(unit) {
-      switch(unit) {
-        case 'percent':
-          return '%';
-        case 'number':
-          return '';
-        default:
-          return unit.toLowerCase();
-      }
+  function displayUnit(unit) {
+    switch(unit) {
+      case 'percent':
+        return '%';
+      case 'number':
+        return '';
+      default:
+        return unit.toLowerCase();
     }
-    class ProxyCSSUnitValue {
-      constructor(value, unit) {
-        privateDetails.set(this, {
-          value: value,
-          unit: unit
-        });
-      }
-
-      get value() {
-        return privateDetails.get(this).value;
-      }
-
-      set value(value) {
-        privateDetails.get(this).value = value;
-      }
-
-      get unit() {
-        return  privateDetails.get(this).unit;
-      }
-
-      toString() {
-        const details = privateDetails.get(this);
-        return `${details.value}${displayUnit(details.unit)}`;
-      }
-    }
-    window.CSSUnitValue = ProxyCSSUnitValue;
-  }
-
-  if (!window.CSSKeywordValue) {
-    class ProxyCSSKeywordValue {
-      constructor(value) {
-        this.value = value;
-      }
-
-      toString() {
-        return this.value.toString();
-      }
-    }
-    window.CSSKeywordValue = ProxyCSSKeywordValue;
   }
 
   function toCssUnitValue(v) {
@@ -84,7 +43,7 @@ export function installCSSOM() {
     return result;
   }
 
-  class ProxyMathOperation {
+  class MathOperation {
     constructor(values, operator, opt_name, opt_delimiter) {
       privateDetails.set(this, {
         values: toCssNumericArray(values),
@@ -108,104 +67,134 @@ export function installCSSOM() {
     }
   }
 
-  if (!window.CSSMathSum) {
-    class ProxyCSSMathSum extends ProxyMathOperation  {
+  const cssOMTypes = {
+    'CSSUnitValue': class {
+      constructor(value, unit) {
+        privateDetails.set(this, {
+          value: value,
+          unit: unit
+        });
+      }
+
+      get value() {
+        return privateDetails.get(this).value;
+      }
+
+      set value(value) {
+        privateDetails.get(this).value = value;
+      }
+
+      get unit() {
+        return  privateDetails.get(this).unit;
+      }
+
+      toString() {
+        const details = privateDetails.get(this);
+        return `${details.value}${displayUnit(details.unit)}`;
+      }
+    },
+
+    'CSSKeywordValue': class {
+      constructor(value) {
+        this.value = value;
+      }
+
+      toString() {
+        return this.value.toString();
+      }
+    },
+
+    'CSSMathSum': class extends MathOperation  {
       constructor(values) {
         super(arguments, 'sum', 'calc', ' + ');
       }
-    }
-    window.CSSMathSum = ProxyCSSMathSum;
-  }
+    },
 
-  if (!window.CSSMathProduct) {
-    class ProxyCSSMathProduct extends ProxyMathOperation  {
+    'CSSMathProduct': class extends MathOperation  {
       constructor(values) {
         super(arguments, 'product', 'calc', ' * ');
       }
-    }
-    window.CSSMathProduct = ProxyCSSMathProduct;
-  }
+    },
 
-  if (!window.CSSMathNegate) {
-    class ProxyCSSMathNegate extends ProxyMathOperation {
+    'CSSMathNegate': class extends MathOperation {
       constructor(values) {
         super([arguments[0]], 'negate', '-');
       }
-    }
-    window.CSSMathNegate = ProxyCSSMathNegate;
-  }
+    },
 
-  if (!window.CSSMathInvert) {
-    class ProxyCSSMathNegate extends ProxyMathOperation {
+    'CSSMathNegate': class extends MathOperation {
       constructor(values) {
         super([1, arguments[0]], 'invert', 'calc', ' / ');
       }
-    }
-    window.CSSMathNegate = ProxyCSSMathNegate;
-  }
+    },
 
-  if (!window.CSSMathMax) {
-    class ProxyCSSMathMax extends ProxyMathOperation {
+    'CSSMathMax': class extends MathOperation {
       constructor() {
         super(arguments, 'max');
       }
-    }
-    window.CSSMathMax = ProxyCSSMathMax;
-  }
+    },
 
-  if (!window.CSSMathMin) {
-    class ProxyCSSMathMin extends ProxyMathOperation  {
+    'CSSMathMin': class extends MathOperation  {
       constructor() {
         super(arguments, 'min');
       }
     }
-    window.CSSMathMin = ProxyCSSMathMin;
+  };
+
+  if (!window.CSS) {
+    if (!Reflect.defineProperty(window, 'CSS', { value: {} }))
+      throw Error(`Error installing CSSOM support`);
   }
 
-  if (!window.CSS)
-    window.CSS = {};
-
-  [
-    'number',
-    'percent',
-    // Length units
-    'em',
-    'ex',
-    'px',
-    'cm',
-    'mm',
-    'in',
-    'pt',
-    'pc',  // Picas
-    'Q',  // Quarter millimeter
-    'vw',
-    'vh',
-    'vmin',
-    'vmax',
-    'rems',
-    "ch",
-    // Angle units
-    'deg',
-    'rad',
-    'grad',
-    'turn',
-    // Time units
-    'ms',
-    's',
-    'Hz',
-    'kHz',
-    // Resolution
-    'dppx',
-    'dpi',
-    'dpcm',
-    // Other units
-    "fr"
-  ].forEach((name) => {
-    if (!CSS[name]) {
-      CSS[name] = (value) => {
+  if (!window.CSSUnitValue) {
+    [
+      'number',
+      'percent',
+      // Length units
+      'em',
+      'ex',
+      'px',
+      'cm',
+      'mm',
+      'in',
+      'pt',
+      'pc',  // Picas
+      'Q',  // Quarter millimeter
+      'vw',
+      'vh',
+      'vmin',
+      'vmax',
+      'rems',
+      "ch",
+      // Angle units
+      'deg',
+      'rad',
+      'grad',
+      'turn',
+      // Time units
+      'ms',
+      's',
+      'Hz',
+      'kHz',
+      // Resolution
+      'dppx',
+      'dpi',
+      'dpcm',
+      // Other units
+      "fr"
+    ].forEach((name) => {
+      const fn = (value) => {
         return new CSSUnitValue(value, name);
-      }
-    }
-  });
+      };
+      if (!Reflect.defineProperty(CSS, name, { value: fn }))
+        throw Error(`Error installing CSS.${name}`);
+    });
+  }
 
+  for (let type in cssOMTypes) {
+    if (type in window)
+      continue;
+    if (!Reflect.defineProperty(window, type, { value: cssOMTypes[type] }))
+      throw Error(`Error installing CSSOM support for ${type}`);
+  }
 }

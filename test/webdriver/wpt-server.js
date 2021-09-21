@@ -42,11 +42,11 @@ async function wptServer(harnessTestURLs, testConfigs, env) {
     }
     let server = http.createServer(handler)
     return new Promise((res, rej) => {
-        server.listen(env.WPT_SERVER_PORT, (err) => {
+        server.listen(env.WPT_SERVER_PORT, env.WPT_SERVER_ADDRESS, (err) => {
             if (err) {
                 rej(err)
             }
-            console.log(`Starting WPT server on localhost:${env.WPT_SERVER_PORT}`)
+            console.log(`Starting WPT server on ${env.WPT_SERVER_ADDRESS}:${env.WPT_SERVER_PORT}`)
             res(server)
         });
     })
