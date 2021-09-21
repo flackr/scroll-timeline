@@ -77,13 +77,21 @@ function fromCssNumberish(details, value) {
     if (value === null)
       return value;
 
-    if (value.unit === 'percent')
-      return value.value * effectEnd(details) / 100;
+    if (value.unit === 'percent') {
+      const duration = effectEnd(details);
+      return value.value * duration / 100;
+    }
 
     throw new DOMException(
         "CSSNumericValue must be a percentage for progress based animations.",
         "NotSupportedError");
   }
+}
+
+function normalizedTiming(details) {
+  if (!details.normalizedTiming)
+    details.proxy.effect.getTiming();
+  return details.normalizedTiming;
 }
 
 function commitPendingPlay(details)  {
@@ -348,7 +356,7 @@ function updateFinishedState(details, didSeek, synchronouslyNotify) {
 
 function effectEnd(details) {
   // https://www.w3.org/TR/web-animations-1/#end-time
-  const timing = details.proxy.effect.getTiming();
+  const timing = normalizedTiming(details);
   const totalDuration =
      timing.delay + timing.endDelay + timing.iterations * timing.duration;
 
@@ -593,11 +601,48 @@ function createProxyEffect(details) {
   // progress-based timeline.
   const getComputedTimingHandler = {
     apply: function(target) {
+      // Ensure that the native animation is using normalized values.
+      effect.getTiming();
+
       const timing = target.apply(effect);
-      timing.localTime = toCssNumberish(details, timing.localTime);
-      timing.endTime = toCssNumberish(details, timing.endTime);
-      timing.duration = toCssNumberish(details, timing.duration);
-      timing.activeDuration = toCssNumberish(details, timing.activeDuration);
+
+      if (details.timeline) {
+        const preConvertLocalTime = timing.localTime;
+        timing.localTime = toCssNumberish(details, timing.localTime);
+        timing.endTime = toCssNumberish(details, timing.endTime);
+        timing.activeDuration =
+            toCssNumberish(details, timing.activeDuration);
+        // The attributes duration and delays are still specced as doubles.
+        // TODO: These should be CSSNumberish. In the meantime, the duration
+        // is converted to double by dropping the unit.
+        const limit = effectEnd(details);
+        const iteration_duration = timing.iterations ?
+            (limit - timing.delay - timing.endDelay) / timing.iterations : 0;
+        timing.duration = 100 * iteration_duration / Math.max(limit, 1);
+
+        // Correct for timeline phase.
+        const phase = details.timeline.phase;
+        const fill = timing.fill;
+
+        if (timing.delay != 0) {
+          console.log('timeline current time: ' + details.timeline.currentTime);
+          console.log('animation current time: ' + details.proxy.currentTime);
+          console.log('localTime: ' + timing.localTime + " " + preConvertLocalTime);
+          console.log('delay: ' + timing.delay + ', endDelay: ' + timing.endDelay);
+          console.log('phase: ' + phase);
+        }
+        if(phase == 'before' && fill != 'backwards' && fill != 'both') {
+          timing.progress = null;
+        }
+        if (phase == 'after' && fill != 'forwards' && fill != 'both') {
+          timing.progress = null;
+        }
+
+        // Correct for inactive timeline.
+        if (details.timeline.currentTime === undefined) {
+          timing.localTime = null;
+        }
+      }
       return timing;
     }
   };
@@ -611,43 +656,50 @@ function createProxyEffect(details) {
       if (details.specifiedTiming)
         return details.specifiedTiming;
 
-      let timing = target.apply(effect);
-      details.specifiedTiming = timing;
+      details.specifiedTiming = target.apply(effect);
+      let timing = Object.assign({}, details.specifiedTiming);
 
       let totalDuration;
-      let scale;
 
       // Duration 'auto' case.
-      if (timing.duration === null) {
-        // TODO: start and end delay are specced as doubles and currently
-        // ignored for a progress based animation. Support delay and endDelay
-        // once CSSNumberish.
-        timing.delay = 0;
-        timing.endDelay = 0;
-        totalDuration = timing.iterations ? INTERNAL_DURATION_MS : 0;
-        timing.duration =
-            timing.iterations ? totalDuration / timing.iterations : 0;
-        scale = 1;
-      } else {
-        totalDuration =
-           timing.delay + timing.endDelay + timing.iterations * timing.duration;
-        scale = (totalDuration > 0) ? INTERNAL_DURATION_MS / totalDuration : 0;
+      if (timing.duration === null || timing.duration === 'auto') {
+        if (details.timeline) {
+          // TODO: start and end delay are specced as doubles and currently
+          // ignored for a progress based animation. Support delay and endDelay
+          // once CSSNumberish.
+          timing.delay = 0;
+          timing.endDelay = 0;
+          totalDuration = timing.iterations ? INTERNAL_DURATION_MS : 0;
+          timing.duration =
+              timing.iterations ? totalDuration / timing.iterations : 0;
+          // Set the timing on the native animation to the normalized values
+          // while preserving the specified timing.
+          nativeUpdateTiming.apply(effect, [timing]);
+        }
       }
-
-      // Set the timing on the native animation to the normalized values without
-      // affecting the specified timing.
-      nativeUpdateTiming.apply(effect, [{
-        startDelay: scale * timing.delay,
-        endDelay: scale * timing.endDelay,
-        iterationDuration: scale * timing.duration,
-        totalDuration: scale * Math.max(0, totalDuration)
-      }]);
-
+      details.normalizedTiming = timing;
       return details.specifiedTiming;
     }
   };
   const updateTimingHandler = {
     apply: function(target, thisArg, argumentsList) {
+      // Additional validation that is specific to scroll timeilnes.
+      if (details.timeline) {
+        const options = argumentsList[0];
+        const duration = options.duration;
+        if (duration === Infinity) {
+          throw TypeError(
+              "Effect duration cannot be Infinity when used with Scroll " +
+              "Timelines");
+        }
+        const iterations = options.iterations;
+        if (iterations === Infinity) {
+          throw TypeError(
+            "Effect iterations cannot be Infinity when used with Scroll " +
+            "Timelines");
+        }
+      }
+
       // Apply updates on top of the original specified timing.
       if (details.specifiedTiming) {
         target.apply(effect, [details.specifiedTiming]);
@@ -707,6 +759,9 @@ export class ProxyAnimation {
       // will be returned, however, the native animation will use normalized
       // values.
       specifiedTiming: null,
+      // The normalized timing has the corrected timing with the intrinsic
+      // iteration duration resolved.
+      normalizedTiming: null,
       proxy: this
     });
   }
