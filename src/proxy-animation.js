@@ -620,19 +620,14 @@ function createProxyEffect(details) {
         const limit = effectEnd(details);
         const iteration_duration = timing.iterations ?
             (limit - timing.delay - timing.endDelay) / timing.iterations : 0;
-        timing.duration = 100 * iteration_duration / Math.max(limit, 1);
+        timing.duration = limit ?
+            CSS.percent(100 * iteration_duration / limit) :
+            CSS.percent(0);
 
         // Correct for timeline phase.
         const phase = details.timeline.phase;
         const fill = timing.fill;
 
-        if (timing.delay != 0) {
-          console.log('timeline current time: ' + details.timeline.currentTime);
-          console.log('animation current time: ' + details.proxy.currentTime);
-          console.log('localTime: ' + timing.localTime + " " + preConvertLocalTime);
-          console.log('delay: ' + timing.delay + ', endDelay: ' + timing.endDelay);
-          console.log('phase: ' + phase);
-        }
         if(phase == 'before' && fill != 'backwards' && fill != 'both') {
           timing.progress = null;
         }
