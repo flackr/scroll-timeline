@@ -43,6 +43,10 @@ function createAbortError() {
   return new DOMException("The user aborted a request", "AbortError");
 }
 
+// Converts a time from its internal representation to a percent. For a
+// monotonic timeline, time is reported as a double with implicit units of
+// milliseconds. For progress-based animations, times are reported as
+// percentages.
 function toCssNumberish(details, value) {
   if (value === null)
     return value;
@@ -58,6 +62,10 @@ function toCssNumberish(details, value) {
   return CSS.percent(percent);
 }
 
+// Covnerts a time to its internal representation. Progress-based animations
+// use times expressed as percentages. Each progress-based animation is backed
+// by a native animation with a document timeline in the polyfill. Thus, we
+// need to convert the timing from percent to milliseconds with implicit units.
 function fromCssNumberish(details, value) {
   if (!details.timeline) {
     // Document timeline
@@ -614,9 +622,6 @@ function createProxyEffect(details) {
         timing.endTime = toCssNumberish(details, timing.endTime);
         timing.activeDuration =
             toCssNumberish(details, timing.activeDuration);
-        // The attributes duration and delays are still specced as doubles.
-        // TODO: These should be CSSNumberish. In the meantime, the duration
-        // is converted to double by dropping the unit.
         const limit = effectEnd(details);
         const iteration_duration = timing.iterations ?
             (limit - timing.delay - timing.endDelay) / timing.iterations : 0;
@@ -680,7 +685,7 @@ function createProxyEffect(details) {
   };
   const updateTimingHandler = {
     apply: function(target, thisArg, argumentsList) {
-      // Additional validation that is specific to scroll timeilnes.
+      // Additional validation that is specific to scroll timelines.
       if (details.timeline) {
         const options = argumentsList[0];
         const duration = options.duration;
@@ -759,6 +764,9 @@ export class ProxyAnimation {
       // The normalized timing has the corrected timing with the intrinsic
       // iteration duration resolved.
       normalizedTiming: null,
+      // Effect proxy that performs the necessary time conversions when using a
+      // progress-based timelines.
+      effect: null,
       proxy: this
     });
   }
@@ -781,7 +789,8 @@ export class ProxyAnimation {
   }
   set effect(newEffect) {
     proxyAnimations.get(this).animation.effect = newEffect;
-    details.proxyEffect = null;
+    // Reset proxy to force re-initialization the next time it is accessed.
+    details.effect = null;
   }
 
   get timeline() {
