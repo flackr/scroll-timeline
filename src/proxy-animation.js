@@ -43,11 +43,72 @@ function createAbortError() {
   return new DOMException("The user aborted a request", "AbortError");
 }
 
+// Converts a time from its internal representation to a percent. For a
+// monotonic timeline, time is reported as a double with implicit units of
+// milliseconds. For progress-based animations, times are reported as
+// percentages.
+function toCssNumberish(details, value) {
+  if (value === null)
+    return value;
+
+  if (typeof value !== 'number') {
+      throw new DOMException(
+          `Unexpected value: ${value}.  Cannot convert to CssNumberish`,
+          "InvalidStateError");
+  }
+
+  const limit = effectEnd(details);
+  const percent = limit ? 100 * value / limit : 0;
+  return CSS.percent(percent);
+}
+
+// Covnerts a time to its internal representation. Progress-based animations
+// use times expressed as percentages. Each progress-based animation is backed
+// by a native animation with a document timeline in the polyfill. Thus, we
+// need to convert the timing from percent to milliseconds with implicit units.
+function fromCssNumberish(details, value) {
+  if (!details.timeline) {
+    // Document timeline
+    if (value == null || typeof value === 'number')
+      return value;
+
+    const convertedTime = value.to('ms');
+    if (convertTime)
+      return convertedTime.value;
+
+    throw new DOMException(
+        "CSSNumericValue must be either a number or a time value for " +
+        "time based animations.",
+        "InvalidStateError");
+  } else {
+    // Scroll timeline.
+    if (value === null)
+      return value;
+
+    if (value.unit === 'percent') {
+      const duration = effectEnd(details);
+      return value.value * duration / 100;
+    }
+
+    throw new DOMException(
+        "CSSNumericValue must be a percentage for progress based animations.",
+        "NotSupportedError");
+  }
+}
+
+function normalizedTiming(details) {
+  // Used normalized timing in the case of a progress-based animation or
+  // specified timing with a document timeline.  The normalizedTiming property
+  // is initialized and cached when fetching the timing information.
+  const timing = details.proxy.effect.getTiming();
+  return details.normalizedTiming || timing;
+}
+
 function commitPendingPlay(details)  {
   // https://drafts4.csswg.org/web-animations-2/#playing-an-animation-section
   // Refer to steps listed under "Schedule a task to run ..."
 
-  const timelineTime = details.timeline.currentTime;
+  const timelineTime = fromCssNumberish(details, details.timeline.currentTime);
   if (details.holdTime != null) {
     // A: If animation’s hold time is resolved,
     // A.1. Apply any pending playback rate on animation.
@@ -115,7 +176,7 @@ function commitPendingPause(details) {
   // 1. Let ready time be the time value of the timeline associated with
   //    animation at the moment when the user agent completed processing
   //    necessary to suspend playback of animation’s target effect.
-  const readyTime = details.timeline.currentTime;
+  const readyTime = fromCssNumberish(details, details.timeline.currentTime);
 
   // 2. If animation’s start time is resolved and its hold time is not
   //    resolved, let animation’s hold time be the result of evaluating
@@ -152,10 +213,31 @@ function commitFinishedNotification(details) {
     return;
 
   details.finishedPromise.resolve(details.proxy);
-  // Handle the finished event via the native animation.
-  // TODO: consider polyfilling queuing the event.
-  details.animation.finish();
+
   details.animation.pause();
+
+  // Event times are speced as doubles in web-animations-1.
+  // Cannot dispatch a proxy to an event since the proxy is not a fully
+  // transparent replacement. As a workaround, use a custom event and inject
+  // the necessary getters.
+  const finishedEvent =
+    new CustomEvent('finish',
+                    { detail: {
+                      currentTime: details.proxy.currentTime,
+                      timelineTime: details.proxy.timeline.currentTime
+                    }});
+  Object.defineProperty(finishedEvent, 'currentTime', {
+    get: function() { return this.detail.currentTime; }
+  });
+  Object.defineProperty(finishedEvent, 'timelineTime', {
+    get: function() { return this.detail.timelineTime; }
+  });
+
+  requestAnimationFrame(() => {
+    queueMicrotask(() => {
+      details.animation.dispatchEvent(finishedEvent);
+    });
+  });
 }
 
 function effectivePlaybackRate(details) {
@@ -175,7 +257,7 @@ function calculateCurrentTime(details) {
   if (!details.timeline)
     return null;
 
-  const timelineTime = details.timeline.currentTime;
+  const timelineTime = fromCssNumberish(details, details.timeline.currentTime);
   if (timelineTime === null)
     return null;
 
@@ -196,7 +278,7 @@ function calculateStartTime(details, currentTime) {
   if (!details.timeline)
     return null;
 
-  const timelineTime = details.timeline.currentTime;
+  const timelineTime = fromCssNumberish(details, details.timeline.currentTime);
   if (timelineTime == null)
     return null;
 
@@ -212,8 +294,9 @@ function updateFinishedState(details, didSeek, synchronouslyNotify) {
   // required to accommodate timelines that may change direction. Without this
   // distinction, a once-finished animation would remain finished even when its
   // timeline progresses in the opposite direction.
-  const unconstrainedCurrentTime =
-      didSeek ? details.proxy.currentTime : calculateCurrentTime(details);
+  let unconstrainedCurrentTime =
+      didSeek ? fromCssNumberish(details, details.proxy.currentTime)
+              : calculateCurrentTime(details);
 
   // 2. Conditionally update the hold time.
   if (unconstrainedCurrentTime && details.startTime != null &&
@@ -250,7 +333,8 @@ function updateFinishedState(details, didSeek, synchronouslyNotify) {
   syncCurrentTime(details);
 
   // 3. Set the previous current time.
-  details.previousCurrentTime = details.proxy.currentTime;
+  details.previousCurrentTime = fromCssNumberish(details,
+                                                 details.proxy.currentTime);
 
   // 4. Set the current finished state.
   const playState = details.proxy.playState;
@@ -282,12 +366,12 @@ function updateFinishedState(details, didSeek, synchronouslyNotify) {
 
 function effectEnd(details) {
   // https://www.w3.org/TR/web-animations-1/#end-time
-  const timing = details.animation.effect.getTiming();
+  const timing = normalizedTiming(details);
   const totalDuration =
      timing.delay + timing.endDelay + timing.iterations * timing.duration;
+
   return Math.max(0, totalDuration);
 }
-
 
 function hasActiveTimeline(details) {
   return !details.timeline || details.timeline.phase != 'inactive';
@@ -298,9 +382,11 @@ function syncCurrentTime(details) {
     return;
 
   if (details.startTime !== null) {
-    const timelineTime = details.timeline.currentTime;
+    const timelineTime = fromCssNumberish(details,
+                                          details.timeline.currentTime);
     details.animation.currentTime =
-        (timelineTime - details.startTime) * details.animation.playbackRate;
+        (timelineTime - details.startTime) *
+            details.animation.playbackRate;
   } else if (details.holdTime !== null) {
     details.animation.currentTime = details.holdTime;
   }
@@ -377,7 +463,8 @@ function playInternal(details, autoRewind) {
   // 5c If animation’s effective playback rate = 0 and animation’s current time
   //    is unresolved,
   //    5c1. Set seek time to zero.
-  let previousCurrentTime = details.proxy.currentTime;
+  let previousCurrentTime = fromCssNumberish(details,
+                                             details.proxy.currentTime);
 
   // Resume of a paused animation after a timeline change snaps to the scroll
   // position.
@@ -479,8 +566,11 @@ function tickAnimation(timelineTime) {
 
   const playState = this.playState;
   if (playState == 'running' || playState == 'finished') {
+    const timelineTimeMs = fromCssNumberish(details, timelineTime);
+
     details.animation.currentTime =
-        (timelineTime - this.startTime) * this.playbackRate;
+        (timelineTimeMs - fromCssNumberish(details, this.startTime)) *
+            this.playbackRate;
 
     // Conditionally reset the hold time so that the finished state can be
     // properly recomputed.
@@ -496,6 +586,137 @@ function notifyReady(details) {
   } else if (details.pendingTask == 'play') {
     commitPendingPlay(details);
   }
+}
+
+function createProxyEffect(details) {
+  const effect = details.animation.effect;
+  const nativeUpdateTiming = effect.updateTiming;
+
+  // Generic pass-through handler for any method or attribute that is not
+  // explicitly overridden.
+  const handler = {
+    get: function(obj, prop) {
+      const result = obj[prop];
+      if (typeof result === 'function')
+        return result.bind(effect);
+      return result;
+    },
+
+    set: function(obj, prop, value) {
+      obj[prop] = value;
+      return true;
+    }
+  };
+  // Override getComputedTiming to convert to percentages when using a
+  // progress-based timeline.
+  const getComputedTimingHandler = {
+    apply: function(target) {
+      // Ensure that the native animation is using normalized values.
+      effect.getTiming();
+
+      const timing = target.apply(effect);
+
+      if (details.timeline) {
+        const preConvertLocalTime = timing.localTime;
+        timing.localTime = toCssNumberish(details, timing.localTime);
+        timing.endTime = toCssNumberish(details, timing.endTime);
+        timing.activeDuration =
+            toCssNumberish(details, timing.activeDuration);
+        const limit = effectEnd(details);
+        const iteration_duration = timing.iterations ?
+            (limit - timing.delay - timing.endDelay) / timing.iterations : 0;
+        timing.duration = limit ?
+            CSS.percent(100 * iteration_duration / limit) :
+            CSS.percent(0);
+
+        // Correct for timeline phase.
+        const phase = details.timeline.phase;
+        const fill = timing.fill;
+
+        if(phase == 'before' && fill != 'backwards' && fill != 'both') {
+          timing.progress = null;
+        }
+        if (phase == 'after' && fill != 'forwards' && fill != 'both') {
+          timing.progress = null;
+        }
+
+        // Correct for inactive timeline.
+        if (details.timeline.currentTime === undefined) {
+          timing.localTime = null;
+        }
+      }
+      return timing;
+    }
+  };
+  // Override getTiming to normalize the timing. EffectEnd for the animation
+  // align with the timeline duration.
+  const getTimingHandler = {
+    apply: function(target, thisArg) {
+      // Arbitrary conversion of 100% to ms.
+      const INTERNAL_DURATION_MS = 100000;
+
+      if (details.specifiedTiming)
+        return details.specifiedTiming;
+
+      details.specifiedTiming = target.apply(effect);
+      let timing = Object.assign({}, details.specifiedTiming);
+
+      let totalDuration;
+
+      // Duration 'auto' case.
+      if (timing.duration === null || timing.duration === 'auto') {
+        if (details.timeline) {
+          // TODO: start and end delay are specced as doubles and currently
+          // ignored for a progress based animation. Support delay and endDelay
+          // once CSSNumberish.
+          timing.delay = 0;
+          timing.endDelay = 0;
+          totalDuration = timing.iterations ? INTERNAL_DURATION_MS : 0;
+          timing.duration =
+              timing.iterations ? totalDuration / timing.iterations : 0;
+          // Set the timing on the native animation to the normalized values
+          // while preserving the specified timing.
+          nativeUpdateTiming.apply(effect, [timing]);
+        }
+      }
+      details.normalizedTiming = timing;
+      return details.specifiedTiming;
+    }
+  };
+  const updateTimingHandler = {
+    apply: function(target, thisArg, argumentsList) {
+      // Additional validation that is specific to scroll timelines.
+      if (details.timeline) {
+        const options = argumentsList[0];
+        const duration = options.duration;
+        if (duration === Infinity) {
+          throw TypeError(
+              "Effect duration cannot be Infinity when used with Scroll " +
+              "Timelines");
+        }
+        const iterations = options.iterations;
+        if (iterations === Infinity) {
+          throw TypeError(
+            "Effect iterations cannot be Infinity when used with Scroll " +
+            "Timelines");
+        }
+      }
+
+      // Apply updates on top of the original specified timing.
+      if (details.specifiedTiming) {
+        target.apply(effect, [details.specifiedTiming]);
+      }
+      target.apply(effect, argumentsList);
+      // Force renormalization.
+      details.specifiedTiming = null;
+    }
+  };
+  proxy = new Proxy(effect, handler);
+  proxy.getComputedTiming = new Proxy(effect.getComputedTiming,
+                                      getComputedTimingHandler);
+  proxy.getTiming = new Proxy(effect.getTiming, getTimingHandler);
+  proxy.updateTiming = new Proxy(effect.updateTiming, updateTimingHandler);
+  return proxy;
 }
 
 // Create an alternate Animation class which proxies API requests.
@@ -521,7 +742,8 @@ export class ProxyAnimation {
       // properties does not affect the play state of the underlying animation.
       // Note that any changes to these values require an update of current
       // time for the underlying animation to ensure that its hold time is set
-      // to the correct position.
+      // to the correct position. These values are represented as floating point
+      // numbers in milliseconds.
       startTime: null,
       holdTime: null,
       previousCurrentTime: null,
@@ -534,6 +756,17 @@ export class ProxyAnimation {
       // tracked.
       pendingPlaybackRate: null,
       pendingTask: null,
+      // Record the specified timing since it may be different than the timing
+      // actually used for the animation. When fetching the timing, this value
+      // will be returned, however, the native animation will use normalized
+      // values.
+      specifiedTiming: null,
+      // The normalized timing has the corrected timing with the intrinsic
+      // iteration duration resolved.
+      normalizedTiming: null,
+      // Effect proxy that performs the necessary time conversions when using a
+      // progress-based timelines.
+      effect: null,
       proxy: this
     });
   }
@@ -543,10 +776,21 @@ export class ProxyAnimation {
   // -----------------------------------------
 
   get effect() {
-    return proxyAnimations.get(this).animation.effect;
+    const details = proxyAnimations.get(this);
+    if (!details.timeline)
+      return details.animation.effect;
+
+    // Proxy the effect to support timing conversions for progress based
+    // animations.
+    if (!details.effect)
+      details.effect = createProxyEffect(details);
+
+    return details.effect;
   }
   set effect(newEffect) {
     proxyAnimations.get(this).animation.effect = newEffect;
+    // Reset proxy to force re-initialization the next time it is accessed.
+    details.effect = null;
   }
 
   get timeline() {
@@ -571,6 +815,11 @@ export class ProxyAnimation {
     // 4. Let previous current time be the animation’s current time.
     const previousCurrentTime = this.currentTime;
 
+    const details = proxyAnimations.get(this);
+    const end = effectEnd(details);
+    const progress =
+        end > 0 ? fromCssNumberish(details, previousCurrentTime) / end : 0;
+
     // 5. Let from finite timeline be true if old timeline is not null and not
     //    monotonically increasing.
     const fromScrollTimeline = (oldTimeline instanceof ScrollTimeline);
@@ -585,7 +834,6 @@ export class ProxyAnimation {
     // polyfilling, supporting natively, or throwing an error.
 
     // 8. Set the flag reset current time on resume to false.
-    const details = proxyAnimations.get(this);
     details.resetCurrentTimeOnResume = false;
 
     // Additional step required to track whether the animation was pending in
@@ -635,7 +883,8 @@ export class ProxyAnimation {
         case 'paused':
           details.resetCurrentTimeOnResume = true;
           details.startTime = null;
-          details.holdTime = previousCurrentTime;
+          details.holdTime =
+              fromCssNumberish(details, CSS.percent(100 * progress));
           break;
 
         // Oterwise
@@ -688,7 +937,7 @@ export class ProxyAnimation {
       //   Run the procedure to set the current time to previous current time.
       if (fromScrollTimeline) {
         if (previousCurrentTime !== null)
-          details.animation.currentTime = previousCurrentTime;
+          details.animation.currentTime = progress * effectEnd(details);
 
         switch (previousPlayState) {
           case 'paused':
@@ -708,13 +957,14 @@ export class ProxyAnimation {
   get startTime() {
     const details = proxyAnimations.get(this);
     if (details.timeline)
-      return details.startTime;
+      return toCssNumberish(details, details.startTime);
 
     return details.animation.startTime;
   }
   set startTime(value) {
     // https://drafts.csswg.org/web-animations/#setting-the-start-time-of-an-animation
     const details = proxyAnimations.get(this);
+    value = fromCssNumberish(details, value);
     if (!details.timeline) {
       details.animation.startTime = value;
       return;
@@ -724,7 +974,8 @@ export class ProxyAnimation {
     //    animation is associated with. If there is no timeline associated with
     //    animation or the associated timeline is inactive, let the timeline
     //    time be unresolved.
-    const timelineTime = details.timeline.currentTime;
+    const timelineTime = fromCssNumberish(details,
+                                          details.timeline.currentTime);
 
     // 2. If timeline time is unresolved and new start time is resolved, make
     //    animation’s hold time unresolved.
@@ -738,7 +989,7 @@ export class ProxyAnimation {
     // 3. Let previous current time be animation’s current time.
     // Note: This is the current time after applying the changes from the
     // previous step which may cause the current time to become unresolved.
-    const previousCurrentTime = this.currentTime;
+    const previousCurrentTime = fromCssNumberish(details, this.currentTime);
 
     // 4. Apply any pending playback rate on animation.
     applyPendingPlaybackRate(details);
@@ -788,12 +1039,13 @@ export class ProxyAnimation {
       return details.animation.currentTime;
 
     if (details.holdTime != null)
-      return details.holdTime;
+      return toCssNumberish(details, details.holdTime);
 
-    return calculateCurrentTime(details);
+    return toCssNumberish(details, calculateCurrentTime(details));
   }
   set currentTime(value) {
     const details = proxyAnimations.get(this);
+    value = fromCssNumberish(details, value);
     if (!details.timeline || value == null) {
       details.animation.currentTime = value;
       return;
@@ -867,7 +1119,7 @@ export class ProxyAnimation {
     if (!details.timeline)
       return details.animation.playState;
 
-    const currentTime = this.currentTime;
+    const currentTime = fromCssNumberish(details, this.currentTime);
 
     // 1. All of the following conditions are true:
     //    * The current time of animation is unresolved, and
@@ -954,7 +1206,7 @@ export class ProxyAnimation {
     const limit = playbackRate < 0 ? 0 : duration;
 
     // 4. Silently set the current time to limit.
-    this.currentTime = limit;
+    this.currentTime = toCssNumberish(details, limit);
 
     // 5. If animation’s start time is unresolved and animation has an
     //    associated active timeline, let the start time be the result of
@@ -962,7 +1214,8 @@ export class ProxyAnimation {
     //        timeline time - (limit / playback rate)
     //    where timeline time is the current time value of the associated
     //    timeline.
-    const timelineTime = details.timeline.currentTime;
+    const timelineTime = fromCssNumberish(details,
+                                          details.timeline.currentTime);
 
     if (details.startTime === null && timelineTime !== null) {
        details.startTime =
@@ -1079,7 +1332,8 @@ export class ProxyAnimation {
     const details = proxyAnimations.get(this);
     const playbackRate = effectivePlaybackRate(details);
     const previousCurrentTime =
-        details.resetCurrentTimeOnResume ? null :  this.currentTime;
+        details.resetCurrentTimeOnResume ?
+            null : fromCssNumberish(details, this.currentTime);
     const inifiniteDuration = effectEnd(details) == Infinity;
 
     // Let the native implementation handle throwing the exception in cases
@@ -1154,7 +1408,8 @@ export class ProxyAnimation {
       //         synchronously notify flag set to false.
 
       case 'finished':
-        const timelineTime = details.timeline.currentTime;
+        const timelineTime = fromCssNumberish(details,
+                                              details.timeline.currentTime);
         const unconstrainedCurrentTime = timelineTime !== null ?
             (timelineTime - details.startTime) * details.animation.playbackRate
             : null;

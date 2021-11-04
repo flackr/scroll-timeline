@@ -42,26 +42,6 @@ function updateInternal(scrollTimelineInstance) {
 }
 
 /**
- * Calculates the number of milliseconds mapped to the scroll range in case of AUTO
- *  in case developer provided timeRange, we use that directly.
- * @param scrollTimeline {ScrollTimeline}
- * @returns {Number}
- */
-function calculateTimeRange(scrollTimeline) {
-  let timeRange = scrollTimeline.timeRange;
-  if (timeRange == AUTO) {
-    timeRange = 0;
-    let animations = scrollTimelineOptions.get(scrollTimeline).animations;
-    for (let i = 0; i < animations.length; i++) {
-      timeRange = Math.max(timeRange,
-                           calculateTargetEffectEnd(animations[i].animation));
-    }
-    if (timeRange === Infinity) timeRange = 0;
-  }
-  return timeRange;
-}
-
-/**
  * Calculates a scroll offset that corrects for writing modes, text direction
  * and a logical orientation.
  * @param scrollTimeline {ScrollTimeline}
@@ -349,7 +329,6 @@ export class ScrollTimeline {
       scrollSource: null,
       orientation: "block",
       scrollOffsets: [],
-      timeRange: AUTO,
 
       // Internal members
       animations: [],
@@ -359,7 +338,6 @@ export class ScrollTimeline {
       options && options.scrollSource !== undefined ? options.scrollSource : document.scrollingElement;
     this.orientation = (options && options.orientation) || "block";
     this.scrollOffsets = options && options.scrollOffsets !== undefined ? options.scrollOffsets : [];
-    this.timeRange = options && options.timeRange !== undefined ? options.timeRange : "auto";
   }
 
   set scrollSource(element) {
@@ -435,18 +413,8 @@ export class ScrollTimeline {
     return data.scrollOffsets;
   }
 
-  set timeRange(range) {
-    if (range != "auto") {
-      // Check for a valid number, which if finite and not NaN.
-      if (typeof(range) != "number" || !Number.isFinite(range) || range != range)
-        throw TypeError("Invalid timeRange value");
-    }
-    scrollTimelineOptions.get(this).timeRange = range;
-    updateInternal(this);
-  }
-
-  get timeRange() {
-    return scrollTimelineOptions.get(this).timeRange;
+  get duration() {
+    return CSS.percent(100);
   }
 
   get phase() {
@@ -517,7 +485,6 @@ export class ScrollTimeline {
     );
     let startOffset = effectiveScrollOffsets[0];
     let endOffset = effectiveScrollOffsets[effectiveScrollOffsets.length - 1];
-    let timeRange = calculateTimeRange(this);
 
     // Step 2
     const currentScrollOffset =
@@ -525,18 +492,18 @@ export class ScrollTimeline {
 
     // Step 3
     if (currentScrollOffset < startOffset)
-      return 0;
+      return CSS.percent(0);
 
     // Step 4
     if (currentScrollOffset >= endOffset)
-      return timeRange;
+      return CSS.percent(100);
 
     // Step 5
     let progress = ComputeProgress(
       currentScrollOffset,
       effectiveScrollOffsets
     );
-    return progress * timeRange;
+    return CSS.percent(100 * progress);
   }
 
   get __polyfill() {
