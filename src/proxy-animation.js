@@ -711,7 +711,7 @@ function createProxyEffect(details) {
       details.specifiedTiming = null;
     }
   };
-  proxy = new Proxy(effect, handler);
+  const proxy = new Proxy(effect, handler);
   proxy.getComputedTiming = new Proxy(effect.getComputedTiming,
                                       getComputedTimingHandler);
   proxy.getTiming = new Proxy(effect.getTiming, getTimingHandler);
