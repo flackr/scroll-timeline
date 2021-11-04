@@ -22,9 +22,9 @@ const AUTO = new CSSKeywordValue("auto");
 let scrollTimelineOptions = new WeakMap();
 let extensionScrollOffsetFunctions = [];
 
-function scrollEventSource(scrollSource) {
-  if (scrollSource === document.scrollingElement) return document;
-  return scrollSource;
+function scrollEventSource(source) {
+  if (source === document.scrollingElement) return document;
+  return source;
 }
 
 /**
@@ -48,14 +48,14 @@ function updateInternal(scrollTimelineInstance) {
  * @param orientation {String}
  * @returns {Number}
  */
-function directionAwareScrollOffset(scrollSource, orientation) {
-  const style = getComputedStyle(scrollSource);
+function directionAwareScrollOffset(source, orientation) {
+  const style = getComputedStyle(source);
   // All writing modes are vertical except for horizontal-tb.
   // TODO: sideways-lr should flow bottom to top, but is currently unsupported
   // in Chrome.
   // http://drafts.csswg.org/css-writing-modes-4/#block-flow
   const horizontalWritingMode = style.writingMode == 'horizontal-tb';
-  let currentScrollOffset  = scrollSource.scrollTop;
+  let currentScrollOffset  = source.scrollTop;
   if (orientation == 'horizontal' ||
      (orientation == 'inline' && horizontalWritingMode) ||
      (orientation == 'block' && !horizontalWritingMode)) {
@@ -64,7 +64,7 @@ function directionAwareScrollOffset(scrollSource, orientation) {
     // block flow. This is a consequence of shifting the scroll origin due to
     // changes in the overflow direction.
     // http://drafts.csswg.org/cssom-view/#overflow-directions.
-    currentScrollOffset = Math.abs(scrollSource.scrollLeft);
+    currentScrollOffset = Math.abs(source.scrollLeft);
   }
   return currentScrollOffset;
 }
@@ -94,24 +94,24 @@ export function installScrollOffsetExtension(parseFunction, evaluateFunction) {
 }
 
 /**
- * Calculates scroll offset based on orientation and scrollSource geometry
- * @param scrollSource {DOMElement}
+ * Calculates scroll offset based on orientation and source geometry
+ * @param source {DOMElement}
  * @param orientation {String}
  * @returns {number}
  */
-export function calculateMaxScrollOffset(scrollSource, orientation) {
+export function calculateMaxScrollOffset(source, orientation) {
   // Only one horizontal writing mode: horizontal-tb.  All other writing modes
   // flow vertically.
   const horizontalWritingMode =
-    getComputedStyle(this.scrollSource).writingMode == 'horizontal-tb';
+    getComputedStyle(this.source).writingMode == 'horizontal-tb';
   if (orientation === "block")
     orientation = horizontalWritingMode ? "vertical" : "horizontal";
   else if (orientation === "inline")
     orientation = horizontalWritingMode ? "horizontal" : "vertical";
   if (orientation === "vertical")
-    return scrollSource.scrollHeight - scrollSource.clientHeight;
+    return source.scrollHeight - source.clientHeight;
   else if (orientation === "horizontal")
-    return scrollSource.scrollWidth - scrollSource.clientWidth;
+    return source.scrollWidth - source.clientWidth;
 }
 
 function resolvePx(cssValue, resolvedLength) {
@@ -134,14 +134,14 @@ function resolvePx(cssValue, resolvedLength) {
 
 export function calculateScrollOffset(
   autoValue,
-  scrollSource,
+  source,
   orientation,
   offset,
   fn
 ) {
   if (fn)
     return fn(
-      scrollSource,
+      source,
       orientation,
       offset,
       autoValue.value == 0 ? "start" : "end"
@@ -152,8 +152,8 @@ export function calculateScrollOffset(
 
   let maxValue =
     orientation === "vertical"
-      ? scrollSource.scrollHeight - scrollSource.clientHeight
-      : scrollSource.scrollWidth - scrollSource.clientWidth;
+      ? source.scrollHeight - source.clientHeight
+      : source.scrollWidth - source.clientWidth;
   let parsed = parseLength(offset === AUTO ? autoValue : offset);
   return resolvePx(parsed, maxValue);
 }
@@ -161,14 +161,14 @@ export function calculateScrollOffset(
 /**
  * Resolve scroll offsets per
  * https://drafts.csswg.org/scroll-animations-1/#effective-scroll-offsets-algorithm
- * @param scrollSource {DOMElement}
+ * @param source {DOMElement}
  * @param orientation {String}
  * @param scrollOffsets {Array}
  * @param fns {Array}
  * @returns {Array}
  */
 export function resolveScrollOffsets(
-  scrollSource,
+  source,
   orientation,
   scrollOffsets,
   fns
@@ -187,7 +187,7 @@ export function resolveScrollOffsets(
     effectiveScrollOffsets.push(
       calculateScrollOffset(
         new CSSUnitValue(0, 'percent'),
-        scrollSource,
+        source,
         orientation,
         AUTO
     ));
@@ -199,7 +199,7 @@ export function resolveScrollOffsets(
     effectiveScrollOffsets.push(
       calculateScrollOffset(
         new CSSUnitValue(100, 'percent'),
-        scrollSource,
+        source,
         orientation,
         AUTO
     ));
@@ -212,7 +212,7 @@ export function resolveScrollOffsets(
     effectiveScrollOffsets.push(
       calculateScrollOffset(
         new CSSUnitValue(0, 'percent'),
-        scrollSource,
+        source,
         orientation,
         AUTO
     ));
@@ -227,7 +227,7 @@ export function resolveScrollOffsets(
     // first flag set to first offset.
     let effectiveOffset = calculateScrollOffset(
       firstOffset ? new CSSUnitValue(0, 'percent') : new CSSUnitValue(100, 'percent'),
-      scrollSource,
+      source,
       orientation,
       scrollOffsets[i],
       fns[i]);
@@ -326,7 +326,7 @@ export function _getStlOptions(scrollTimeline) {
 export class ScrollTimeline {
   constructor(options) {
     scrollTimelineOptions.set(this, {
-      scrollSource: null,
+      source: null,
       orientation: "block",
       scrollOffsets: [],
 
@@ -334,18 +334,18 @@ export class ScrollTimeline {
       animations: [],
       scrollOffsetFns: [],
     });
-    this.scrollSource =
-      options && options.scrollSource !== undefined ? options.scrollSource : document.scrollingElement;
+    this.source =
+      options && options.source !== undefined ? options.source : document.scrollingElement;
     this.orientation = (options && options.orientation) || "block";
     this.scrollOffsets = options && options.scrollOffsets !== undefined ? options.scrollOffsets : [];
   }
 
-  set scrollSource(element) {
-    if (this.scrollSource)
-      scrollEventSource(this.scrollSource).removeEventListener("scroll", () =>
+  set source(element) {
+    if (this.source)
+      scrollEventSource(this.source).removeEventListener("scroll", () =>
         updateInternal(this)
       );
-    scrollTimelineOptions.get(this).scrollSource = element;
+    scrollTimelineOptions.get(this).source = element;
     if (element) {
       scrollEventSource(element).addEventListener("scroll", () =>
         updateInternal(this)
@@ -354,8 +354,8 @@ export class ScrollTimeline {
     updateInternal(this);
   }
 
-  get scrollSource() {
-    return scrollTimelineOptions.get(this).scrollSource;
+  get source() {
+    return scrollTimelineOptions.get(this).source;
   }
 
   set orientation(orientation) {
@@ -422,22 +422,22 @@ export class ScrollTimeline {
     // Step 1
     let unresolved = null;
     //   if source is null
-    if (!this.scrollSource) return "inactive";
-    let scrollerStyle = getComputedStyle(this.scrollSource);
+    if (!this.source) return "inactive";
+    let scrollerStyle = getComputedStyle(this.source);
 
     //   if source does not currently have a CSS layout box
     if (scrollerStyle.display == "none")
       return "inactive";
 
     //   if source's layout box is not a scroll container"
-    if (this.scrollSource != document.scrollingElement &&
+    if (this.source != document.scrollingElement &&
         (scrollerStyle.overflow == 'visible' ||
          scrollerStyle.overflow == "clip")) {
         return "inactive";
     }
 
     let effectiveScrollOffsets = resolveScrollOffsets(
-      this.scrollSource,
+      this.source,
       this.orientation,
       this.scrollOffsets,
       scrollTimelineOptions.get(this).scrollOffsetFns
@@ -449,7 +449,7 @@ export class ScrollTimeline {
 
     let maxOffset = calculateScrollOffset(
       new CSSUnitValue(100, 'percent'),
-      this.scrollSource,
+      this.source,
       this.orientation,
       new CSSUnitValue(100, 'percent'),
       null
@@ -459,7 +459,7 @@ export class ScrollTimeline {
 
     // Step 2
     const currentScrollOffset =
-        directionAwareScrollOffset(this.scrollSource, this.orientation);
+        directionAwareScrollOffset(this.source, this.orientation);
 
     // Step 3
     if (currentScrollOffset < startOffset)
@@ -473,12 +473,12 @@ export class ScrollTimeline {
     // Per https://wicg.github.io/scroll-animations/#current-time-algorithm
     // Step 1
     let unresolved = null;
-    if (!this.scrollSource) return unresolved;
+    if (!this.source) return unresolved;
     if (this.phase == 'inactive')
       return unresolved;
 
     let effectiveScrollOffsets = resolveScrollOffsets(
-      this.scrollSource,
+      this.source,
       this.orientation,
       this.scrollOffsets,
       scrollTimelineOptions.get(this).scrollOffsetFns
@@ -488,7 +488,7 @@ export class ScrollTimeline {
 
     // Step 2
     const currentScrollOffset =
-        directionAwareScrollOffset(this.scrollSource, this.orientation);
+        directionAwareScrollOffset(this.source, this.orientation);
 
     // Step 3
     if (currentScrollOffset < startOffset)
