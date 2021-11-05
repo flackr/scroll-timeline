@@ -143,21 +143,21 @@ function resolveLength(length, containerSize) {
   return length[0];
 }
 
-export function calculateOffset(scrollSource, orientation, offset, startOrEnd) {
+export function calculateOffset(source, orientation, offset, startOrEnd) {
   // TODO: Support other writing directions.
   if (orientation == "block") orientation = "vertical";
   else if (orientation == "inline") orientation = "horizontal";
   let originalViewport =
-    scrollSource == document.scrollingElement
+    source == document.scrollingElement
       ? {
           left: 0,
-          right: scrollSource.clientWidth,
+          right: source.clientWidth,
           top: 0,
-          bottom: scrollSource.clientHeight,
-          width: scrollSource.clientWidth,
-          height: scrollSource.clientHeight,
+          bottom: source.clientHeight,
+          width: source.clientWidth,
+          height: source.clientHeight,
         }
-      : scrollSource.getBoundingClientRect();
+      : source.getBoundingClientRect();
 
   // Resolve margins and offset viewport.
   let parsedMargins = IntersectionOptions.get(offset).rootMargin;
@@ -198,10 +198,10 @@ export function calculateOffset(scrollSource, orientation, offset, startOrEnd) {
       target.top +
       target.height * threshold -
       viewport.top +
-      scrollSource.scrollTop;
+      source.scrollTop;
     if (clamped) {
       if (offset.edge == "end") return Math.max(0, point - viewport.height);
-      return Math.min(point, scrollSource.scrollHeight - viewport.height);
+      return Math.min(point, source.scrollHeight - viewport.height);
     } else {
       if (offset.edge == "end") return point - viewport.height;
       return point;
@@ -212,10 +212,10 @@ export function calculateOffset(scrollSource, orientation, offset, startOrEnd) {
       target.left +
       target.width * threshold -
       viewport.left +
-      scrollSource.scrollLeft;
+      source.scrollLeft;
     if (clamped) {
       if (offset.edge == "end") return Math.max(0, point - viewport.width);
-      return Math.min(point, scrollSource.scrollWidth - viewport.width);
+      return Math.min(point, source.scrollWidth - viewport.width);
     } else {
       if (offset.edge == "end") return point - viewport.width;
       return point;
