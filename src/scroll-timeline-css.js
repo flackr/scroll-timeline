@@ -18,11 +18,8 @@ function transpileStyleSheet(sheetSrc, srcUrl) {
     }
     if (lookAhead("@scroll-timeline", p)) {
       const { scrollTimeline, startIndex, endIndex } = parseScrollTimeline(p);
-      // console.log("found @scroll-timeline " + JSON.stringify(scrollTimeline));
 
       saveScrollTimelineOptions(scrollTimeline.name, scrollTimeline);
-
-      // // console.log("after " + JSON.stringify(scrollTimeline));
 
       // const replacement = stringifyContainerQuery(query); // todo
       // replacePart(startIndex, endIndex, p, p);
@@ -30,7 +27,6 @@ function transpileStyleSheet(sheetSrc, srcUrl) {
     } else {
       const rule = parseQualifiedRule(p);
       if (!rule) continue;
-      // // console.log("rule " + JSON.stringify(rule));
       handleScrollTimelineProps(rule, p);
     }
   }
@@ -56,7 +52,6 @@ function parseScrollTimeline(p) {
   assertString(p, "@scroll-timeline");
   eatWhitespace(p);
   let name = parseIdentifier(p);
-  // console.log("name: " + name);
   eatWhitespace(p);
   assertString(p, "{"); // eats {
   eatWhitespace(p);
@@ -77,9 +72,6 @@ function parseScrollTimeline(p) {
     assertString(p, ";");
     eatWhitespace(p);
   }
-
-  // console.log("scrollTimeline.source >>" + scrollTimeline.source + "<<");
-  // // console.log("scrollTimeline.orientation >>" + scrollTimeline.orientation + "<<");
 
   assertString(p, "}");
   const endIndex = p.index;
@@ -146,13 +138,9 @@ function handleScrollTimelineProps(rule, p) {
       .exec(rule.block.contents)?.[1]
       .trim().split(",").map(name => name.trim());
 
-    // assert(timelineNames.length == animationNames.length);
-
     for (let i = 0; i < timelineNames.length; i++) {
       animationToScrollTimeline.set(animationNames[i], timelineNames[i]);
-      console.log("group " + animationNames[i] + " " + timelineNames[i]);
     }
-
     return;
   }
 
@@ -243,8 +231,6 @@ function eatBlock(p) {
   const endIndex = p.index;
   const contents = p.sheetSrc.slice(startIndex, endIndex);
 
-  // // console.log("eatBlock found this: >>" + contents + "<<");
-
   return { startIndex, endIndex, contents };
 }
 
@@ -270,8 +256,6 @@ function parseSelector(p) {
     throw Error("Empty selector");
   }
 
-  // // console.log("parseSelector found this: >>" + p.sheetSrc.slice(startIndex, p.index) + "<<");
-
   return p.sheetSrc.slice(startIndex, p.index);
 }
 
@@ -294,41 +278,23 @@ function peek(p) {
 }
 
 function handleStyleTag(el) { // el: HtmlStyleElement
-  // console.log("handleStyleTag");
   // Don’t touch empty style tags.
   if (el.innerHTML.trim().length === 0) {
-    // console.log("innerHTML is empty");
     return;
   }
-  // console.log("el.innerHTML " + el.innerHTML);
   const newSrc = transpileStyleSheet(el.innerHTML);
-  // console.log("newSrc is " + newSrc);
   el.innerHTML = newSrc;
-
-  // el.innerHTML = 
-  // "#progress { " + 
-  //     "width: 100%; " +
-  //     "height: 20px; " + 
-  //     "background: red;" + 
-  //   " }";
 }
 
 function init() {
-  // console.log("init is called event");
-
   const sheetObserver = new MutationObserver((entries) => {
-    // console.log("call back of MutationObserver event");
-
     for (const entry of entries) {
-      // // console.log("handling entry");
       for (const addedNode of entry.addedNodes) {
         if (addedNode instanceof HTMLStyleElement) {
-          // console.log("&&& handleStyleTag event");
           handleStyleTag(addedNode);
         }
         if (addedNode instanceof HTMLLinkElement) {
           // handleLinkedStylesheet(addedNode);
-          // console.log("handleLinkedStylesheet");
         }
       }
     }
@@ -343,8 +309,6 @@ function init() {
     childList: true,
     subtree: true,
   });
-
-  // console.log("init call is finished event");
 }
 
 function getSourceElement(source) {
@@ -462,11 +426,6 @@ function createScrollTimeline(name) {
   const sourceElement = getSourceElement(options.source);
   const scrollOffsets = getScrollOffsets(sourceElement, options['scroll-offsets']);
 
-  // console.log(">> sourceElement " + options.source + " " + sourceElement);
-  // console.log(">> orientation " + options.orientation);
-  // console.log(">> scroll-offsets " + options['scroll-offsets']);
-  // console.log(">> scrollOffsets " + scrollOffsets);
-
   if (scrollOffsets !== null) {
     const scrollTimeline = new ScrollTimeline({
       ...(sourceElement ? { source: getSourceElement(options.source) } : {}),
@@ -548,7 +507,6 @@ function addProxyForElement(elem) {
 }
 
 const animationToScrollTimeline = new Map();
-const scrollTimelineByName = new Map();
 const scrollTimelineCSSRules = new Map();
 const scrollTimelineOptions = new Map(); // save options by name
 
@@ -574,30 +532,23 @@ function getScrollTimelineName(animationName, target) {
   if (target_timeline) return target_timeline;
 
   scrollTimelineCSSRules.forEach((rule, timeline) => {
-    // console.log(">> " + timeline + " " + rule);
     document.querySelectorAll(rule).forEach(element => {
       if (element == target) {
         target_timeline = timeline;
-        // console.log("woww " + target_timeline);
       }
     })
   })
   return target_timeline;
 }
 
-console.log("here src/scroll-timeline-css.js");
-
 export function initCSSPolyfill() {
   init();
 
   // window.addEventListener('load', (event) => {
   window.addEventListener('animationstart', (evt) => {
-    // console.log("animationstart event");
     const anim =
       evt.target.getAnimations().filter(
         anim => anim.animationName == evt.animationName)[0];
-
-    // console.log("event target#" + evt.path);
 
     const scrollTimelineName = getScrollTimelineName(anim.animationName, evt.target);
 
@@ -628,20 +579,9 @@ export function initCSSPolyfill() {
         }
       } else {
         // animation-timeline:none, or unknown timeline
-        // console.log("just canceling");
         // anim.cancel();
       }
     }
-
-    // let scrollTimelineName = getScrollTimelineByTarget(evt.target);
-    // console.log(">>>> " + letScrollTimeline + " " + anim.animationName);
-
-    // let matchedElements = document.querySelectorAll("#element_source_none").forEach(element => {
-    //   if (element == evt.target) {
-    //     console.log("animation started and matched querySelectorAll");
-    //   }
-    // });
-
   });
   // });
 }
