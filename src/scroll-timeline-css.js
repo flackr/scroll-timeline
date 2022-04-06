@@ -18,12 +18,7 @@ function transpileStyleSheet(sheetSrc, srcUrl) {
     }
     if (lookAhead("@scroll-timeline", p)) {
       const { scrollTimeline, startIndex, endIndex } = parseScrollTimeline(p);
-
       saveScrollTimelineOptions(scrollTimeline.name, scrollTimeline);
-
-      // const replacement = stringifyContainerQuery(query); // todo
-      // replacePart(startIndex, endIndex, p, p);
-      // registerContainerQuery(query); // todo
     } else {
       const rule = parseQualifiedRule(p);
       if (!rule) continue;
@@ -60,7 +55,7 @@ function parseScrollTimeline(p) {
     name: name,
     source: "auto",
     orientation: undefined,
-    scrollOffsets: []
+    'scroll-offsets': undefined
   };
 
   while (peek(p) !== "}") {
@@ -286,7 +281,7 @@ function handleStyleTag(el) { // el: HtmlStyleElement
   el.innerHTML = newSrc;
 }
 
-function init() {
+function initMutationobserver() {
   const sheetObserver = new MutationObserver((entries) => {
     for (const entry of entries) {
       for (const addedNode of entry.addedNodes) {
@@ -302,7 +297,6 @@ function init() {
     document.querySelectorAll("body *").forEach(element => {
       addProxyForElement(element);
     });
-
   });
 
   sheetObserver.observe(document.documentElement, {
@@ -347,25 +341,23 @@ function convertOneScrollOffset(part) {
     '%',
   ];
 
-  const re = new RegExp('(^[0-9]+)(' + validScrollOffsetSuffixes.join('|') + ')');
-  const matches = re.exec(part);
-  if (matches) {
-    return new CSSUnitValue(parseInt(matches[1]), matches[2]);
+  const offsetWithSuffix = new RegExp('(^[0-9]+)(' + validScrollOffsetSuffixes.join('|') + ')');
+  const matchesOffsetWithSuffix = offsetWithSuffix.exec(part);
+  if (matchesOffsetWithSuffix) {
+    return new CSSUnitValue(parseInt(matchesOffsetWithSuffix[1]), matchesOffsetWithSuffix[2]);
   }
 
-  const matches_selector = /selector\(#([^)]+)\)[ ]{0,1}(start|end)*[ ]{0,1}([0-9]+[.]{0,1}[0-9]*)*/.exec(part);
-
-  if (matches_selector) {
-    if (document.getElementById(matches_selector[1])) {
+  const matchesSelector = /selector\(#([^)]+)\)[ ]{0,1}(start|end)*[ ]{0,1}([0-9]+[.]{0,1}[0-9]*)*/.exec(part);
+  if (matchesSelector) {
+    if (document.getElementById(matchesSelector[1])) {
       return {
-        target: document.getElementById(matches_selector[1]),
-        ...(matches_selector.length >= 3 ? { edge: matches_selector[2] } : {}),
-        ...(matches_selector.length >= 4 ? { threshold: parseFloat(matches_selector[3]) } : {})
+        target: document.getElementById(matchesSelector[1]),
+        ...(matchesSelector.length >= 3 ? { edge: matchesSelector[2] } : {}),
+        ...(matchesSelector.length >= 4 ? { threshold: parseFloat(matchesSelector[3]) } : {})
       };
     }
   }
 
-  // todo selector
   return null;
 }
 
@@ -506,17 +498,6 @@ function addProxyForElement(elem) {
   elem.__proto__ = new Proxy(Object.getPrototypeOf(elem), handler);
 }
 
-const animationToScrollTimeline = new Map();
-const scrollTimelineCSSRules = new Map();
-const scrollTimelineOptions = new Map(); // save options by name
-
-const animationKewords = [
-  'normal', 'reverse', 'alternate', 'alternate-reverse',
-  'none', 'forwards', 'backwards', 'both',
-  'running', 'paused',
-  'ease', 'linear', 'ease-in', 'ease-out', 'ease-in-out'
-];
-
 function isTime(s) {
   const timeMatcher = /^[0-9]+(s|ms)/;
   return timeMatcher.exec(s);
@@ -528,21 +509,32 @@ function isNumber(s) {
 }
 
 function getScrollTimelineName(animationName, target) {
-  let target_timeline = animationToScrollTimeline.get(animationName);
-  if (target_timeline) return target_timeline;
+  let targetTimeline = animationToScrollTimeline.get(animationName);
+  if (targetTimeline) return targetTimeline;
 
   scrollTimelineCSSRules.forEach((rule, timeline) => {
     document.querySelectorAll(rule).forEach(element => {
       if (element == target) {
-        target_timeline = timeline;
+        targetTimeline = timeline;
       }
     })
   })
-  return target_timeline;
+  return targetTimeline;
 }
 
+const animationToScrollTimeline = new Map();
+const scrollTimelineCSSRules = new Map();
+const scrollTimelineOptions = new Map(); // save options by name
+
+const animationKewords = [
+  'normal', 'reverse', 'alternate', 'alternate-reverse',
+  'none', 'forwards', 'backwards', 'both',
+  'running', 'paused',
+  'ease', 'linear', 'ease-in', 'ease-out', 'ease-in-out'
+];
+
 export function initCSSPolyfill() {
-  init();
+  initMutationobserver();
 
   // window.addEventListener('load', (event) => {
   window.addEventListener('animationstart', (evt) => {
@@ -554,21 +546,8 @@ export function initCSSPolyfill() {
 
     if (scrollTimelineName) {
       const scrollTimeline = createScrollTimeline(scrollTimelineName);
-      /*
-      in order to be able to fix the element-based-offset
-      which points to self, i should create scroll timeline here,
-      and set the target to evt.target.
-      const scrollTimeline = new ScrollTimeline({
-        source: document.getElementById("myUL"),
-        scrollOffsets: [
-          { target: evt.target, edge: 'end', threshold: 0 },
-          { target: evt.target, edge: 'end', threshold: 1 }
-        ],
-      });
-      */
-
-      // if there is a scrollTimeline name associated to this animation
-      // cancel already, whether we create a new animation or not
+      // If there is a scrollTimeline name associated to this animation,
+      // cancel it, whether we create a new animation or not
       // depends on the fact that whether that scrollTimeline was valid or not
       anim.cancel();
       if (scrollTimeline) {
