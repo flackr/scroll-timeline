@@ -2,7 +2,7 @@ import { StyleParser, removeKeywordsFromAnimationShorthand } from "./scroll-time
 
 const parser = new StyleParser();
 
-function initMutationobserver() {
+function initMutationObserver() {
   const sheetObserver = new MutationObserver((entries) => {
     for (const entry of entries) {
       for (const addedNode of entry.addedNodes) {
@@ -15,8 +15,8 @@ function initMutationobserver() {
       }
     }
 
-    // TODO: not a good idea to proxy all elements,
-    // this affects tests that there is no animation, 
+    // TODO: Not a good idea to proxy all elements.
+    // Not adding proxy affects tests that there is no animation,
     // but there is change for 'animation', 'animation-timeline', etc via style
     // like this: e.style['animation-timeline'] = "none, auto"
     // document.querySelectorAll("body *").forEach(element => {
@@ -125,11 +125,9 @@ function getScrollOffsets(source, offsets) {
         .map(part => convertOneScrollOffset(part))
         .filter(offset => offset);
 
-      // there are some offsets, but they are not valid
-      // so we just don't create the scrollTimeline
-      // this way, the name of the scrollTimline is there,
-      // but there is no object for that
-      for (off of scrollOffsets) {
+      // If the available scroll-offsets are not valid,
+      // so we won't create the scrollTimeline,
+      for (let off of scrollOffsets) {
         if (off.target && off.target instanceof Element &&
           (window.getComputedStyle(off.target, null).display == "none" || !isDescendant(off.target, source))) {
           return null;
@@ -163,90 +161,21 @@ function createScrollTimeline(name) {
   }
 }
 
-function addProxyForElement(elem) {
-  const styleHandler = {
-    get(target, prop, receiver) {
-      if (prop === 'getPropertyValue') {
-        return (prop) => {
-          if (prop === 'animation' && target['animation-timeline']) {
-            return `${target[prop]} ${target['animation-timeline']}`;
-          }
-
-          return target[prop];
-        };
-      }
-
-      if (prop in target) {
-        return target[prop];
-      }
-
-      return Reflect.get(...arguments);
-    },
-    set(obj, prop, value) {
-      if (prop == 'animation') {
-        let animationTimelines = [];
-        const animations = value.split(',')
-          .map(anim => anim.trim())
-          .map(anim => {
-            const remainingTokens = removeKeywordsFromAnimationShorthand(anim);
-
-            // if after removing keywords and times and numbers,
-            // there are two tokens remaining, we are assuming the
-            // first part is animation-name and the second part
-            // is animation-timeline!
-            if (remainingTokens.length == 2) {
-              animationTimelines.push(remainingTokens[1]);
-              return anim.split(' ').slice(0, -1).join(' ');
-            } else {
-              return anim;
-            }
-          }).join(', ');
-
-        if (animationTimelines.length > 0) {
-          obj['animation-timeline'] = animationTimelines.join(", ");
-        }
-        obj[prop] = animations;
-        return Reflect.set(obj, prop, animations);
-      }
-
-      // TODO: split value when prop=='animation-timeline'
-      if (prop == 'animation-timeline') {
-        obj[prop] = value;
-        return true;
-      }
-
-      return Reflect.set(...arguments);
-    },
-  };
-
-  const handler = {
-    get(target, prop, receiver) {
-      let result = Reflect.get(...arguments);
-      if (prop === 'style') {
-        return new Proxy(result, styleHandler);
-      }
-      return result;
-    },
-  };
-  elem.__proto__ = new Proxy(Object.getPrototypeOf(elem), handler);
-}
-
 function getScrollTimelineName(animationName, target) {
   let targetTimeline = parser.animationToScrollTimeline.get(animationName);
   if (targetTimeline) return targetTimeline;
 
-  parser.scrollTimelineCSSRules.forEach((rule, timeline) => {
-    document.querySelectorAll(rule).forEach(element => {
-      if (element == target) {
-        targetTimeline = timeline;
-      }
-    })
-  })
-  return targetTimeline;
+  for (const [timelineName, rule] of parser.scrollTimelineCSSRules) {
+    for (const element of document.querySelectorAll(rule)) {
+      if (element == target) return timelineName;
+    }
+  }
+
+  return null;
 }
 
 export function initCSSPolyfill() {
-  initMutationobserver();
+  initMutationObserver();
 
   window.addEventListener('animationstart', (evt) => {
     const anim =
@@ -269,7 +198,7 @@ export function initCSSPolyfill() {
         }
       } else {
         // animation-timeline:none, or unknown timeline
-        // anim.cancel();
+        // or invalid scroll-offsets
       }
     }
   });

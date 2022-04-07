@@ -1,3 +1,10 @@
+// 1 - Extracts @scroll-timeline and saves it in scrollTimelineOptions.
+// 2 - If we can find a timeline name in any of the rules, we will
+// save the timeline name and the rule selector in scrollTimelineCSSRules.
+// 3 - If there is a direct relationship between an animation and a timeline name,
+// it is saved in animationToScrollTimeline
+// TODO: there is some bug related to 3, if the same animation is used with different
+// elements with different timelines this will break
 export class StyleParser {
   constructor() {
     this.animationToScrollTimeline = new Map();
@@ -66,11 +73,11 @@ export class StyleParser {
     };
 
     while (this.peek(p) !== "}") {
-      const temp = this.parseIdentifier(p);
+      const property = this.parseIdentifier(p);
       this.eatWhitespace(p);
       this.assertString(p, ":");
       this.eatWhitespace(p);
-      scrollTimeline[temp] = this.removeEnclosingDoubleQuotes(this.eatUntil(";", p));
+      scrollTimeline[property] = this.removeEnclosingDoubleQuotes(this.eatUntil(";", p));
       this.assertString(p, ";");
       this.eatWhitespace(p);
     }
@@ -87,9 +94,9 @@ export class StyleParser {
 
   handleScrollTimelineProps(rule, p) {
     // TODO is it enough to check with "includes()"
-    const hasAnimationName = rule.block.contents.includes("animation-name");
-    const hasAnimation = rule.block.contents.includes("animation");
-    const hasScrollTimeline = rule.block.contents.includes("animation-timeline");
+    const hasAnimationName = rule.block.contents.includes("animation-name:");
+    const hasScrollTimeline = rule.block.contents.includes("animation-timeline:");
+    const hasAnimation = rule.block.contents.includes("animation:");
 
     if (hasScrollTimeline && hasAnimationName) {
       let timelineNames = /animation-timeline\s*:([^;}]+)/
@@ -122,12 +129,16 @@ export class StyleParser {
 
       if (shorthand) {
         let remainingTokens = removeKeywordsFromAnimationShorthand(shorthand);
+        // TODO we are assuming the first one that is remaining is
+        // definitely animation name, and the second one is definitely
+        // scrollTimeline name, which may not be true!
         if (remainingTokens.length <= 2)
           animationName = remainingTokens[0];
 
         if (remainingTokens.length == 2) {
           scrollTimelineName = remainingTokens[1];
-
+          // Remove timeline name from animation shorthand
+          // so the native implementation works with the rest of the properties
           rule.block.contents = rule.block.contents.replace(
             scrollTimelineName,
             ""
