@@ -1,0 +1,294 @@
+export class StyleParser {
+  constructor() {
+    this.animationToScrollTimeline = new Map();
+    this.scrollTimelineCSSRules = new Map();
+    this.scrollTimelineOptions = new Map(); // save options by name
+  }
+
+  transpileStyleSheet(sheetSrc, srcUrl) {
+    // AdhocParser
+    const p = {
+      sheetSrc: sheetSrc,
+      index: 0,
+      name: srcUrl,
+    };
+
+    while (p.index < p.sheetSrc.length) {
+      this.eatWhitespace(p);
+      if (p.index >= p.sheetSrc.length) break;
+      if (this.lookAhead("/*", p)) {
+        while (this.lookAhead("/*", p)) {
+          this.eatComment(p);
+          this.eatWhitespace(p);
+        }
+        continue;
+      }
+      if (this.lookAhead("@scroll-timeline", p)) {
+        const { scrollTimeline, startIndex, endIndex } = this.parseScrollTimeline(p);
+        this.scrollTimelineOptions.set(scrollTimeline.name, scrollTimeline);
+      } else {
+        const rule = this.parseQualifiedRule(p);
+        if (!rule) continue;
+        this.handleScrollTimelineProps(rule, p);
+      }
+    }
+
+    // If this sheet has no srcURL (like from a <style> tag), we are
+    // done. Otherwise, we have to find `url()` functions and resolve
+    // relative and path-absolute URLs to absolute URLs.
+    if (!srcUrl) {
+      return p.sheetSrc;
+    }
+
+    p.sheetSrc = p.sheetSrc.replace(
+      /url\(["']*([^)"']+)["']*\)/g,
+      (match, url) => {
+        return `url(${new URL(url, srcUrl)})`;
+      }
+    );
+    return p.sheetSrc;
+  }
+
+  parseScrollTimeline(p) {
+    const startIndex = p.index;
+    this.assertString(p, "@scroll-timeline");
+    this.eatWhitespace(p);
+    let name = this.parseIdentifier(p);
+    this.eatWhitespace(p);
+    this.assertString(p, "{"); // eats {
+    this.eatWhitespace(p);
+
+    let scrollTimeline = {
+      name: name,
+      source: "auto",
+      orientation: undefined,
+      'scroll-offsets': undefined
+    };
+
+    while (this.peek(p) !== "}") {
+      const temp = this.parseIdentifier(p);
+      this.eatWhitespace(p);
+      this.assertString(p, ":");
+      this.eatWhitespace(p);
+      scrollTimeline[temp] = this.removeEnclosingDoubleQuotes(this.eatUntil(";", p));
+      this.assertString(p, ";");
+      this.eatWhitespace(p);
+    }
+
+    this.assertString(p, "}");
+    const endIndex = p.index;
+    this.eatWhitespace(p);
+    return {
+      scrollTimeline,
+      startIndex,
+      endIndex,
+    };
+  }
+
+  handleScrollTimelineProps(rule, p) {
+    // TODO is it enough to check with "includes()"
+    const hasAnimationName = rule.block.contents.includes("animation-name");
+    const hasAnimation = rule.block.contents.includes("animation");
+    const hasScrollTimeline = rule.block.contents.includes("animation-timeline");
+
+    if (hasScrollTimeline && hasAnimationName) {
+      let timelineNames = /animation-timeline\s*:([^;}]+)/
+        .exec(rule.block.contents)?.[1]
+        .trim().split(",").map(name => name.trim());
+
+      let animationNames = /animation-name\s*:([^;}]+)/
+        .exec(rule.block.contents)?.[1]
+        .trim().split(",").map(name => name.trim());
+
+      for (let i = 0; i < timelineNames.length; i++) {
+        this.animationToScrollTimeline.set(animationNames[i], timelineNames[i]);
+      }
+      return;
+    }
+
+    let scrollTimelineName = /animation-timeline\s*:([^;}]+)/
+      .exec(rule.block.contents)?.[1]
+      .trim();
+
+    let animationName = undefined;
+    if (hasAnimationName) {
+      animationName = /animation-name\s*:([^;}]+)/
+        .exec(rule.block.contents)?.[1]
+        .trim();
+    } else if (hasAnimation) {
+      let shorthand = /animation\s*:([^;}]+)/
+        .exec(rule.block.contents)?.[1]
+        .trim();
+
+      if (shorthand) {
+        let remainingTokens = removeKeywordsFromAnimationShorthand(shorthand);
+        if (remainingTokens.length <= 2)
+          animationName = remainingTokens[0];
+
+        if (remainingTokens.length == 2) {
+          scrollTimelineName = remainingTokens[1];
+
+          rule.block.contents = rule.block.contents.replace(
+            scrollTimelineName,
+            ""
+          );
+          this.replacePart(
+            rule.block.startIndex,
+            rule.block.endIndex,
+            rule.block.contents,
+            p
+          );
+        }
+      }
+    }
+
+    if (animationName && scrollTimelineName) {
+      this.animationToScrollTimeline.set(animationName, scrollTimelineName);
+    }
+
+    // The animation-timeline property may not be used in keyframes
+    if (scrollTimelineName && !rule.selector.includes("@keyframes")) {
+      this.scrollTimelineCSSRules.set(scrollTimelineName, rule.selector.trim());
+    }
+  }
+
+  parseIdentifier(p) {
+    identMatcher.lastIndex = p.index;
+    const match = identMatcher.exec(p.sheetSrc);
+    if (!match) {
+      throw this.parseError(p, "Expected an identifier");
+    }
+    p.index += match[0].length;
+    return match[0];
+  }
+
+  parseQualifiedRule(p) {
+    const startIndex = p.index;
+    const selector = this.parseSelector(p);
+    if (!selector) return;
+    const block = this.eatBlock(p);
+    const endIndex = p.index;
+    return {
+      selector,
+      block,
+      startIndex,
+      endIndex,
+    };
+  }
+
+  removeEnclosingDoubleQuotes(s) {
+    let startIndex = s[0] == '"' ? 1 : 0;
+    let endIndex = s[s.length - 1] == '"' ? s.length - 1 : s.length;
+    return s.substring(startIndex, endIndex);
+  }
+
+  assertString(p, s) {
+    if (p.sheetSrc.substr(p.index, s.length) != s) {
+      throw this.parseError(p, `Did not find expected sequence ${s}`);
+    }
+    p.index += s.length;
+  }
+
+  replacePart(start, end, replacement, p) {
+    p.sheetSrc = p.sheetSrc.slice(0, start) + replacement + p.sheetSrc.slice(end);
+    // If we are pointing past the end of the affected section, we need to
+    // recalculate the string pointer. Pointing to something inside the section
+    // that’s being replaced is undefined behavior. Sue me.
+    if (p.index >= end) {
+      const delta = p.index - end;
+      p.index = start + replacement.length + delta;
+    }
+  }
+
+  eatComment(p) {
+    this.assertString(p, "/*");
+    this.eatUntil("*/", p);
+    this.assertString(p, "*/");
+  }
+
+  eatBlock(p) {
+    const startIndex = p.index;
+    this.assertString(p, "{");
+    let level = 1;
+    while (level != 0) {
+      if (p.sheetSrc[p.index] === "{") {
+        level++;
+      } else if (p.sheetSrc[p.index] === "}") {
+        level--;
+      }
+      this.advance(p);
+    }
+    const endIndex = p.index;
+    const contents = p.sheetSrc.slice(startIndex, endIndex);
+
+    return { startIndex, endIndex, contents };
+  }
+
+  advance(p) {
+    p.index++;
+    if (p.index > p.sheetSrc.length) {
+      throw this.parseError(p, "Advanced beyond the end");
+    }
+  }
+
+  eatUntil(s, p) {
+    const startIndex = p.index;
+    while (!this.lookAhead(s, p)) {
+      this.advance(p);
+    }
+    return p.sheetSrc.slice(startIndex, p.index);
+  }
+
+  parseSelector(p) {
+    let startIndex = p.index;
+    this.eatUntil("{", p);
+    if (startIndex === p.index) {
+      throw Error("Empty selector");
+    }
+
+    return p.sheetSrc.slice(startIndex, p.index);
+  }
+
+  eatWhitespace(p) {
+    // Start matching at the current position in the sheet src
+    whitespaceMatcher.lastIndex = p.index;
+    const match = whitespaceMatcher.exec(p.sheetSrc);
+    if (match) {
+      p.index += match[0].length;
+    }
+  }
+
+  lookAhead(s, p) {
+    return p.sheetSrc.substr(p.index, s.length) == s;
+  }
+
+  peek(p) {
+    return p.sheetSrc[p.index];
+  }
+}
+
+const identMatcher = /[\w\\\@_-]+/g;
+const whitespaceMatcher = /\s*/g;
+const numberMatcher = /^[0-9]+/;
+const timeMatcher = /^[0-9]+(s|ms)/;
+
+const animationKewords = [
+  'normal', 'reverse', 'alternate', 'alternate-reverse',
+  'none', 'forwards', 'backwards', 'both',
+  'running', 'paused',
+  'ease', 'linear', 'ease-in', 'ease-out', 'ease-in-out'
+];
+
+function isTime(s) {
+  return timeMatcher.exec(s);
+}
+
+function isNumber(s) {
+  return numberMatcher.exec(s);
+}
+
+export function removeKeywordsFromAnimationShorthand(anim) {
+  return anim.split(' ').filter(
+    (item, index, array) => index == array.length - 1 || !animationKewords.includes(item))
+    .filter(item => !isTime(item) && !isNumber(item));
+}

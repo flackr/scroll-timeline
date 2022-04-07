@@ -1,285 +1,6 @@
-function transpileStyleSheet(sheetSrc, srcUrl) {
-  // AdhocParser
-  const p = {
-    sheetSrc: sheetSrc,
-    index: 0,
-    name: srcUrl,
-  };
+import { StyleParser, removeKeywordsFromAnimationShorthand } from "./scroll-timeline-css-parser";
 
-  while (p.index < p.sheetSrc.length) {
-    eatWhitespace(p);
-    if (p.index >= p.sheetSrc.length) break;
-    if (lookAhead("/*", p)) {
-      while (lookAhead("/*", p)) {
-        eatComment(p);
-        eatWhitespace(p);
-      }
-      continue;
-    }
-    if (lookAhead("@scroll-timeline", p)) {
-      const { scrollTimeline, startIndex, endIndex } = parseScrollTimeline(p);
-      saveScrollTimelineOptions(scrollTimeline.name, scrollTimeline);
-    } else {
-      const rule = parseQualifiedRule(p);
-      if (!rule) continue;
-      handleScrollTimelineProps(rule, p);
-    }
-  }
-
-  // If this sheet has no srcURL (like from a <style> tag), we are
-  // done. Otherwise, we have to find `url()` functions and resolve
-  // relative and path-absolute URLs to absolute URLs.
-  if (!srcUrl) {
-    return p.sheetSrc;
-  }
-
-  p.sheetSrc = p.sheetSrc.replace(
-    /url\(["']*([^)"']+)["']*\)/g,
-    (match, url) => {
-      return `url(${new URL(url, srcUrl)})`;
-    }
-  );
-  return p.sheetSrc;
-}
-
-function parseScrollTimeline(p) {
-  const startIndex = p.index;
-  assertString(p, "@scroll-timeline");
-  eatWhitespace(p);
-  let name = parseIdentifier(p);
-  eatWhitespace(p);
-  assertString(p, "{"); // eats {
-  eatWhitespace(p);
-
-  let scrollTimeline = {
-    name: name,
-    source: "auto",
-    orientation: undefined,
-    'scroll-offsets': undefined
-  };
-
-  while (peek(p) !== "}") {
-    const temp = parseIdentifier(p);
-    eatWhitespace(p);
-    assertString(p, ":");
-    eatWhitespace(p);
-    scrollTimeline[temp] = removeEnclosingDoubleQuotes(eatUntil(";", p));
-    assertString(p, ";");
-    eatWhitespace(p);
-  }
-
-  assertString(p, "}");
-  const endIndex = p.index;
-  eatWhitespace(p);
-  return {
-    scrollTimeline,
-    startIndex,
-    endIndex,
-  };
-}
-
-const identMatcher = /[\w\\\@_-]+/g;
-function parseIdentifier(p) {
-  identMatcher.lastIndex = p.index;
-  const match = identMatcher.exec(p.sheetSrc);
-  if (!match) {
-    throw parseError(p, "Expected an identifier");
-  }
-  p.index += match[0].length;
-  return match[0];
-}
-
-function parseQualifiedRule(p) {
-  const startIndex = p.index;
-  const selector = parseSelector(p);
-  if (!selector) return;
-  const block = eatBlock(p);
-  const endIndex = p.index;
-  return {
-    selector,
-    block,
-    startIndex,
-    endIndex,
-  };
-}
-
-function removeEnclosingDoubleQuotes(s) {
-  let startIndex = s[0] == '"' ? 1 : 0;
-  let endIndex = s[s.length - 1] == '"' ? s.length - 1 : s.length;
-  return s.substring(startIndex, endIndex);
-}
-
-function assertString(p, s) {
-  if (p.sheetSrc.substr(p.index, s.length) != s) {
-    throw parseError(p, `Did not find expected sequence ${s}`);
-  }
-  p.index += s.length;
-}
-
-function handleScrollTimelineProps(rule, p) {
-  // todo includes()? is this enough
-  const hasAnimationName = rule.block.contents.includes("animation-name");
-  const hasAnimation = rule.block.contents.includes("animation");
-  const hasScrollTimeline = rule.block.contents.includes("animation-timeline");
-
-  // if (!hasScrollTimeline) return;
-
-  if (hasScrollTimeline && hasAnimationName) {
-    let timelineNames = /animation-timeline\s*:([^;}]+)/
-      .exec(rule.block.contents)?.[1]
-      .trim().split(",").map(name => name.trim());
-
-    let animationNames = /animation-name\s*:([^;}]+)/
-      .exec(rule.block.contents)?.[1]
-      .trim().split(",").map(name => name.trim());
-
-    for (let i = 0; i < timelineNames.length; i++) {
-      animationToScrollTimeline.set(animationNames[i], timelineNames[i]);
-    }
-    return;
-  }
-
-  let scrollTimelineName = /animation-timeline\s*:([^;}]+)/
-    .exec(rule.block.contents)?.[1]
-    .trim();
-
-  let animationName = undefined;
-  if (hasAnimationName) {
-    animationName = /animation-name\s*:([^;}]+)/
-      .exec(rule.block.contents)?.[1]
-      .trim();
-  } else if (hasAnimation) {
-    let shorthand = /animation\s*:([^;}]+)/
-      .exec(rule.block.contents)?.[1]
-      .trim();
-
-    if (shorthand) {
-      let remainingTokens = removeKeywordsFromAnimationShorthand(shorthand);
-      if (remainingTokens.length <= 2)
-        animationName = remainingTokens[0];
-
-      if (remainingTokens.length == 2) {
-        scrollTimelineName = remainingTokens[1];
-
-        rule.block.contents = rule.block.contents.replace(
-          scrollTimelineName,
-          ""
-        );
-        replacePart(
-          rule.block.startIndex,
-          rule.block.endIndex,
-          rule.block.contents,
-          p
-        );
-      }
-    }
-  }
-
-  if (animationName && scrollTimelineName) {
-    animationToScrollTimeline.set(animationName, scrollTimelineName);
-  }
-
-  // The animation-timeline property may not be used in keyframes
-  if (scrollTimelineName && !rule.selector.includes("@keyframes")) {
-    scrollTimelineCSSRules.set(scrollTimelineName, rule.selector.trim());
-  }
-
-  // todo
-  // watchedContainerSelectors.push({
-  //     name: containerName,
-  //     selector: rule.selector,
-  // });
-  // for (const el of document.querySelectorAll(rule.selector)) {
-  //     registerContainer(el, containerName);
-  // }
-}
-
-function replacePart(start, end, replacement, p) {
-  p.sheetSrc = p.sheetSrc.slice(0, start) + replacement + p.sheetSrc.slice(end);
-  // If we are pointing past the end of the affected section, we need to
-  // recalculate the string pointer. Pointing to something inside the section
-  // that’s being replaced is undefined behavior. Sue me.
-  if (p.index >= end) {
-    const delta = p.index - end;
-    p.index = start + replacement.length + delta;
-  }
-}
-
-function eatComment(p) {
-  assertString(p, "/*");
-  eatUntil("*/", p);
-  assertString(p, "*/");
-}
-
-function eatBlock(p) {
-  const startIndex = p.index;
-  assertString(p, "{");
-  let level = 1;
-  while (level != 0) {
-    if (p.sheetSrc[p.index] === "{") {
-      level++;
-    } else if (p.sheetSrc[p.index] === "}") {
-      level--;
-    }
-    advance(p);
-  }
-  const endIndex = p.index;
-  const contents = p.sheetSrc.slice(startIndex, endIndex);
-
-  return { startIndex, endIndex, contents };
-}
-
-function advance(p) {
-  p.index++;
-  if (p.index > p.sheetSrc.length) {
-    throw parseError(p, "Advanced beyond the end");
-  }
-}
-
-function eatUntil(s, p) {
-  const startIndex = p.index;
-  while (!lookAhead(s, p)) {
-    advance(p);
-  }
-  return p.sheetSrc.slice(startIndex, p.index);
-}
-
-function parseSelector(p) {
-  let startIndex = p.index;
-  eatUntil("{", p);
-  if (startIndex === p.index) {
-    throw Error("Empty selector");
-  }
-
-  return p.sheetSrc.slice(startIndex, p.index);
-}
-
-const whitespaceMatcher = /\s*/g;
-function eatWhitespace(p) {
-  // Start matching at the current position in the sheet src
-  whitespaceMatcher.lastIndex = p.index;
-  const match = whitespaceMatcher.exec(p.sheetSrc);
-  if (match) {
-    p.index += match[0].length;
-  }
-}
-
-function lookAhead(s, p) {
-  return p.sheetSrc.substr(p.index, s.length) == s;
-}
-
-function peek(p) {
-  return p.sheetSrc[p.index];
-}
-
-function handleStyleTag(el) { // el: HtmlStyleElement
-  // Don’t touch empty style tags.
-  if (el.innerHTML.trim().length === 0) {
-    return;
-  }
-  const newSrc = transpileStyleSheet(el.innerHTML);
-  el.innerHTML = newSrc;
-}
+const parser = new StyleParser();
 
 function initMutationobserver() {
   const sheetObserver = new MutationObserver((entries) => {
@@ -289,20 +10,42 @@ function initMutationobserver() {
           handleStyleTag(addedNode);
         }
         if (addedNode instanceof HTMLLinkElement) {
-          // handleLinkedStylesheet(addedNode);
+          handleLinkedStylesheet(addedNode);
         }
       }
     }
 
-    document.querySelectorAll("body *").forEach(element => {
-      addProxyForElement(element);
-    });
+    // TODO: not a good idea to proxy all elements,
+    // this affects tests that there is no animation, 
+    // but there is change for 'animation', 'animation-timeline', etc via style
+    // like this: e.style['animation-timeline'] = "none, auto"
+    // document.querySelectorAll("body *").forEach(element => {
+    //   addProxyForElement(element);
+    // });
   });
 
   sheetObserver.observe(document.documentElement, {
     childList: true,
     subtree: true,
   });
+
+  function handleStyleTag(el) { // el: HtmlStyleElement
+    // Don’t touch empty style tags.
+    if (el.innerHTML.trim().length === 0) {
+      return;
+    }
+    const newSrc = parser.transpileStyleSheet(el.innerHTML);
+    el.innerHTML = newSrc;
+  }
+
+  function handleLinkedStylesheet(el) {
+    // TODO
+  }
+
+  document.querySelectorAll("style").forEach((tag) => handleStyleTag(tag));
+  document
+    .querySelectorAll("link")
+    .forEach((tag) => handleLinkedStylesheet(tag));
 }
 
 function getSourceElement(source) {
@@ -401,18 +144,8 @@ function getScrollOffsets(source, offsets) {
   return scrollOffsets;
 }
 
-function saveScrollTimelineOptions(name, options) {
-  scrollTimelineOptions.set(name, options);
-}
-
-function removeKeywordsFromAnimationShorthand(anim) {
-  return anim.split(' ').filter(
-    (item, index, array) => index == array.length - 1 || !animationKewords.includes(item))
-    .filter(item => !isTime(item) && !isNumber(item));
-}
-
 function createScrollTimeline(name) {
-  const options = scrollTimelineOptions.get(name);
+  const options = parser.scrollTimelineOptions.get(name);
   if (!options) return null;
 
   const sourceElement = getSourceElement(options.source);
@@ -449,7 +182,6 @@ function addProxyForElement(elem) {
 
       return Reflect.get(...arguments);
     },
-    // todo split value when prop=='animation-timeline'
     set(obj, prop, value) {
       if (prop == 'animation') {
         let animationTimelines = [];
@@ -477,6 +209,7 @@ function addProxyForElement(elem) {
         return Reflect.set(obj, prop, animations);
       }
 
+      // TODO: split value when prop=='animation-timeline'
       if (prop == 'animation-timeline') {
         obj[prop] = value;
         return true;
@@ -498,21 +231,11 @@ function addProxyForElement(elem) {
   elem.__proto__ = new Proxy(Object.getPrototypeOf(elem), handler);
 }
 
-function isTime(s) {
-  const timeMatcher = /^[0-9]+(s|ms)/;
-  return timeMatcher.exec(s);
-}
-
-function isNumber(s) {
-  const numberMatcher = /^[0-9]+/;
-  return numberMatcher.exec(s);
-}
-
 function getScrollTimelineName(animationName, target) {
-  let targetTimeline = animationToScrollTimeline.get(animationName);
+  let targetTimeline = parser.animationToScrollTimeline.get(animationName);
   if (targetTimeline) return targetTimeline;
 
-  scrollTimelineCSSRules.forEach((rule, timeline) => {
+  parser.scrollTimelineCSSRules.forEach((rule, timeline) => {
     document.querySelectorAll(rule).forEach(element => {
       if (element == target) {
         targetTimeline = timeline;
@@ -522,21 +245,9 @@ function getScrollTimelineName(animationName, target) {
   return targetTimeline;
 }
 
-const animationToScrollTimeline = new Map();
-const scrollTimelineCSSRules = new Map();
-const scrollTimelineOptions = new Map(); // save options by name
-
-const animationKewords = [
-  'normal', 'reverse', 'alternate', 'alternate-reverse',
-  'none', 'forwards', 'backwards', 'both',
-  'running', 'paused',
-  'ease', 'linear', 'ease-in', 'ease-out', 'ease-in-out'
-];
-
 export function initCSSPolyfill() {
   initMutationobserver();
 
-  // window.addEventListener('load', (event) => {
   window.addEventListener('animationstart', (evt) => {
     const anim =
       evt.target.getAnimations().filter(
@@ -562,5 +273,4 @@ export function initCSSPolyfill() {
       }
     }
   });
-  // });
 }
