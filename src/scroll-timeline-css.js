@@ -161,19 +161,6 @@ function createScrollTimeline(name) {
   }
 }
 
-function getScrollTimelineName(animationName, target) {
-  let targetTimeline = parser.animationToScrollTimeline.get(animationName);
-  if (targetTimeline) return targetTimeline;
-
-  for (const [timelineName, rule] of parser.scrollTimelineCSSRules) {
-    for (const element of document.querySelectorAll(rule)) {
-      if (element == target) return timelineName;
-    }
-  }
-
-  return null;
-}
-
 export function initCSSPolyfill() {
   initMutationObserver();
 
@@ -182,10 +169,10 @@ export function initCSSPolyfill() {
       evt.target.getAnimations().filter(
         anim => anim.animationName == evt.animationName)[0];
 
-    const scrollTimelineName = getScrollTimelineName(anim.animationName, evt.target);
+    const timelineName = parser.getScrollTimelineName(anim.animationName, evt.target);
 
-    if (scrollTimelineName) {
-      const scrollTimeline = createScrollTimeline(scrollTimelineName);
+    if (timelineName) {
+      const scrollTimeline = createScrollTimeline(timelineName);
       // If there is a scrollTimeline name associated to this animation,
       // cancel it, whether we create a new animation or not
       // depends on the fact that whether that scrollTimeline was valid or not

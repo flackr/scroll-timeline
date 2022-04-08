@@ -1,14 +1,9 @@
 // 1 - Extracts @scroll-timeline and saves it in scrollTimelineOptions.
-// 2 - If we can find a timeline name in any of the rules, we will
-// save the timeline name and the rule selector in scrollTimelineCSSRules.
-// 3 - If there is a direct relationship between an animation and a timeline name,
-// it is saved in animationToScrollTimeline
-// TODO: there is some bug related to 3, if the same animation is used with different
-// elements with different timelines this will break
+// 2 - If we find any animation-timeline in any of the CSS Rules, 
+// we will save objects in a list named cssRulesWithTimelineName
 export class StyleParser {
   constructor() {
-    this.animationToScrollTimeline = new Map();
-    this.scrollTimelineCSSRules = new Map();
+    this.cssRulesWithTimelineName = [];
     this.scrollTimelineOptions = new Map(); // save options by name
   }
 
@@ -56,6 +51,19 @@ export class StyleParser {
     return p.sheetSrc;
   }
 
+  getScrollTimelineName(animationName, target) {
+    for (let i = this.cssRulesWithTimelineName.length - 1; i >= 0; i--) {
+      const current = this.cssRulesWithTimelineName[i];
+      if (target.matches(current.selector)) {
+        if (!current['animation-name'] || current['animation-name'] == animationName) {
+          return current['animation-timeline'];
+        }
+      }
+    }
+
+    return null;
+  }
+
   parseScrollTimeline(p) {
     const startIndex = p.index;
     this.assertString(p, "@scroll-timeline");
@@ -98,6 +106,8 @@ export class StyleParser {
     const hasScrollTimeline = rule.block.contents.includes("animation-timeline:");
     const hasAnimation = rule.block.contents.includes("animation:");
 
+    // If both 'animation-timeline' and 'animation-name' are present,
+    // save them in the list
     if (hasScrollTimeline && hasAnimationName) {
       let timelineNames = /animation-timeline\s*:([^;}]+)/
         .exec(rule.block.contents)?.[1]
@@ -108,12 +118,16 @@ export class StyleParser {
         .trim().split(",").map(name => name.trim());
 
       for (let i = 0; i < timelineNames.length; i++) {
-        this.animationToScrollTimeline.set(animationNames[i], timelineNames[i]);
+        this.cssRulesWithTimelineName.push({
+          selector: rule.selector,
+          'animation-name': animationNames[i],
+          'animation-timeline': timelineNames[i]
+        });
       }
       return;
     }
 
-    let scrollTimelineName = /animation-timeline\s*:([^;}]+)/
+    let timelineName = /animation-timeline\s*:([^;}]+)/
       .exec(rule.block.contents)?.[1]
       .trim();
 
@@ -136,11 +150,11 @@ export class StyleParser {
           animationName = remainingTokens[0];
 
         if (remainingTokens.length == 2) {
-          scrollTimelineName = remainingTokens[1];
+          timelineName = remainingTokens[1];
           // Remove timeline name from animation shorthand
           // so the native implementation works with the rest of the properties
           rule.block.contents = rule.block.contents.replace(
-            scrollTimelineName,
+            timelineName,
             ""
           );
           this.replacePart(
@@ -153,13 +167,21 @@ export class StyleParser {
       }
     }
 
-    if (animationName && scrollTimelineName) {
-      this.animationToScrollTimeline.set(animationName, scrollTimelineName);
+    if (animationName && timelineName) {
+      this.cssRulesWithTimelineName.push({
+        selector: rule.selector,
+        'animation-name': animationName,
+        'animation-timeline': timelineName
+      });
     }
 
     // The animation-timeline property may not be used in keyframes
-    if (scrollTimelineName && !rule.selector.includes("@keyframes")) {
-      this.scrollTimelineCSSRules.set(scrollTimelineName, rule.selector.trim());
+    if (timelineName && !rule.selector.includes("@keyframes")) {
+      this.cssRulesWithTimelineName.push({
+        selector: rule.selector,
+        'animation-name': undefined,
+        'animation-timeline': timelineName
+      });
     }
   }
 
@@ -175,7 +197,7 @@ export class StyleParser {
 
   parseQualifiedRule(p) {
     const startIndex = p.index;
-    const selector = this.parseSelector(p);
+    const selector = this.parseSelector(p).trim();
     if (!selector) return;
     const block = this.eatBlock(p);
     const endIndex = p.index;
