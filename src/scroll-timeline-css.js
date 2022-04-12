@@ -149,14 +149,24 @@ function createScrollTimeline(name) {
 export function initCSSPolyfill() {
   initMutationObserver();
 
+  // We are not wrapping capturing 'animationstart' by a 'load' event,
+  // because we may lose some of the 'animationstart' events by the time 'load' is completed.
   window.addEventListener('animationstart', (evt) => {
     evt.target.getAnimations().filter(anim => anim.animationName === evt.animationName).forEach(anim => {
       const timelineName = parser.getScrollTimelineName(anim.animationName, evt.target);
       if (timelineName) {
         const scrollTimeline = createScrollTimeline(timelineName);
+
         // If there is a scrollTimeline name associated to this animation,
         // cancel it, whether we create a new animation or not
         // depends on the fact that whether that scrollTimeline was valid or not
+
+        // Current approach (cancelling current animation and creating a new one) results in a
+        // programmatic animation and not a CSS animation.
+        // As a result, composite-order will be incorrect.
+        // TODO: Don't cancel animation, pause and create a proxy for it instead,
+        // this way the native animation is still a CSS animation.
+        // Furthermore, we are not potentially creating a cancel event or a new animation start event.
         anim.cancel();
         if (scrollTimeline) {
           if (anim.timeline != scrollTimeline) {
