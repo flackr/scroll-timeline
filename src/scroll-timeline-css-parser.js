@@ -7,6 +7,9 @@ export class StyleParser {
     this.scrollTimelineOptions = new Map(); // save options by name
   }
 
+  // Inspired by
+  // https://drafts.csswg.org/css-syntax/#parser-diagrams
+  // https://github.com/GoogleChromeLabs/container-query-polyfill/blob/main/src/engine.ts
   transpileStyleSheet(sheetSrc, srcUrl) {
     // AdhocParser
     const p = {
