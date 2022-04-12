@@ -48,6 +48,8 @@ function initMutationObserver() {
     .forEach((tag) => handleLinkedStylesheet(tag));
 }
 
+// This implementation is based on https://drafts.csswg.org/scroll-animations-1/
+// TODO: Should update accordingly when new spec lands.
 function getSourceElement(source) {
   const matches = RegexMatcher.SOURCE_ELEMENT.exec(source);
   if (matches) {
@@ -59,6 +61,9 @@ function getSourceElement(source) {
   }
 }
 
+// This implementation is based on https://drafts.csswg.org/scroll-animations-1/
+// 'scroll-offsets' are likely to be deprecated,
+// TODO: Should update accordingly when new spec lands.
 function convertOneScrollOffset(part) {
   if (part == 'auto') return new CSSKeywordValue('auto');
 
@@ -89,6 +94,9 @@ function isDescendant(child, parent) {
   return false;
 }
 
+// This implementation is based on https://drafts.csswg.org/scroll-animations-1/
+// 'scroll-offsets' are likely to be deprecated,
+// TODO: Should update accordingly when new spec lands.
 function getScrollOffsets(source, offsets) {
   let scrollOffsets = undefined;
 
