@@ -303,7 +303,29 @@ export class StyleParser {
   }
 }
 
-const RegexMatcher = {
+const VALID_SCROLL_OFFSET_SUFFIXES = [
+  // Relative lengths.
+  'em',
+  'ex',
+  'ch',
+  'rem',
+  'vw',
+  'vh',
+  'vmin',
+  'vmax',
+  // Absolute lengths.
+  'cm',
+  'mm',
+  'q',
+  'in',
+  'pc',
+  'pt',
+  'px',
+  // Percentage.
+  '%',
+];
+
+export const RegexMatcher = {
   IDENTIFIER: /[\w\\\@_-]+/g,
   WHITE_SPACE: /\s*/g,
   NUMBER: /^[0-9]+/,
@@ -311,6 +333,9 @@ const RegexMatcher = {
   ANIMATION_TIMELINE: /animation-timeline\s*:([^;}]+)/,
   ANIMATION_NAME: /animation-name\s*:([^;}]+)/,
   ANIMATION: /animation\s*:([^;}]+)/,
+  OFFSET_WITH_SUFFIX: new RegExp('(^[0-9]+)(' + VALID_SCROLL_OFFSET_SUFFIXES.join('|') + ')'),
+  ELEMENT_OFFSET: /selector\(#([^)]+)\)[ ]{0,1}(start|end)*[ ]{0,1}([0-9]+[.]{0,1}[0-9]*)*/,
+  SOURCE_ELEMENT: /selector\(#([^)]+)\)/,
 };
 
 const ANIMATION_KEYWORDS = [

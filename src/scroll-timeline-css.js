@@ -1,4 +1,4 @@
-import { StyleParser, removeKeywordsFromAnimationShorthand } from "./scroll-timeline-css-parser";
+import { StyleParser, RegexMatcher } from "./scroll-timeline-css-parser";
 
 const parser = new StyleParser();
 
@@ -49,7 +49,7 @@ function initMutationObserver() {
 }
 
 function getSourceElement(source) {
-  const matches = /selector\(#([^)]+)\)/.exec(source);
+  const matches = RegexMatcher.SOURCE_ELEMENT.exec(source);
   if (matches) {
     return document.getElementById(matches[1]);
   } else if (source === "auto") {
@@ -62,41 +62,18 @@ function getSourceElement(source) {
 function convertOneScrollOffset(part) {
   if (part == 'auto') return new CSSKeywordValue('auto');
 
-  const validScrollOffsetSuffixes = [
-    // Relative lengths.
-    'em',
-    'ex',
-    'ch',
-    'rem',
-    'vw',
-    'vh',
-    'vmin',
-    'vmax',
-    // Absolute lengths.
-    'cm',
-    'mm',
-    'q',
-    'in',
-    'pc',
-    'pt',
-    'px',
-    // Percentage.
-    '%',
-  ];
-
-  const offsetWithSuffix = new RegExp('(^[0-9]+)(' + validScrollOffsetSuffixes.join('|') + ')');
-  const matchesOffsetWithSuffix = offsetWithSuffix.exec(part);
+  const matchesOffsetWithSuffix = RegexMatcher.OFFSET_WITH_SUFFIX.exec(part);
   if (matchesOffsetWithSuffix) {
     return new CSSUnitValue(parseInt(matchesOffsetWithSuffix[1]), matchesOffsetWithSuffix[2]);
   }
 
-  const matchesSelector = /selector\(#([^)]+)\)[ ]{0,1}(start|end)*[ ]{0,1}([0-9]+[.]{0,1}[0-9]*)*/.exec(part);
-  if (matchesSelector) {
-    if (document.getElementById(matchesSelector[1])) {
+  const matchesElementOffset = RegexMatcher.ELEMENT_OFFSET.exec(part);
+  if (matchesElementOffset) {
+    if (document.getElementById(matchesElementOffset[1])) {
       return {
-        target: document.getElementById(matchesSelector[1]),
-        ...(matchesSelector.length >= 3 ? { edge: matchesSelector[2] } : {}),
-        ...(matchesSelector.length >= 4 ? { threshold: parseFloat(matchesSelector[3]) } : {})
+        target: document.getElementById(matchesElementOffset[1]),
+        ...(matchesElementOffset.length >= 3 ? { edge: matchesElementOffset[2] } : {}),
+        ...(matchesElementOffset.length >= 4 ? { threshold: parseFloat(matchesElementOffset[3]) } : {})
       };
     }
   }
