@@ -267,10 +267,10 @@ export function ComputeProgress(
   }
   // 3. Let start offset be the offset value at position offset index in
   // scroll offsets.
-  let startOffset = scrollOffsets[0];
+  let startOffset = scrollOffsets[offsetIndex];
   // 4. Let end offset be the value of next offset in scroll offsets after
   // start offset.
-  let endOffset = scrollOffsets[scrollOffsets.length - 1];
+  let endOffset = scrollOffsets[offsetIndex + 1];
   // 5. Let size be the number of offsets in scroll offsets.
   let size = scrollOffsets.length;
   // 6. Let offset weight be the result of evaluating 1 / (size - 1).
@@ -492,11 +492,11 @@ export class ScrollTimeline {
 
     // Step 3
     if (currentScrollOffset < startOffset)
-      return CSS.percent(-0.001);
+      return CSS.percent(0);
 
     // Step 4
     if (currentScrollOffset >= endOffset)
-      return CSS.percent(100.001);
+      return CSS.percent(100);
 
     // Step 5
     let progress = ComputeProgress(

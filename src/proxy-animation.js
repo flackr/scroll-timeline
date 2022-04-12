@@ -568,22 +568,9 @@ function tickAnimation(timelineTime) {
   if (playState == 'running' || playState == 'finished') {
     const timelineTimeMs = fromCssNumberish(details, timelineTime);
 
-    let currentTime =
-      (timelineTimeMs - fromCssNumberish(details, this.startTime)) *
-      this.playbackRate;
-
-    const EPS = 1e-3;
-    if (currentTime) {
-      if (this.playbackRate > 0) {
-        if (effectEnd(details) - currentTime < EPS)
-          currentTime -= EPS;
-      } else {
-        if (currentTime < EPS)
-          currentTime += EPS;
-      }
-    }
-
-    details.animation.currentTime = currentTime;
+    details.animation.currentTime =
+        (timelineTimeMs - fromCssNumberish(details, this.startTime)) *
+            this.playbackRate;
 
     // Conditionally reset the hold time so that the finished state can be
     // properly recomputed.
