@@ -109,11 +109,11 @@ export class StyleParser {
     // If both 'animation-timeline' and 'animation-name' are present,
     // save them in the list
     if (hasScrollTimeline && hasAnimationName) {
-      let timelineNames = /animation-timeline\s*:([^;}]+)/
+      let timelineNames = RegexMatcher.ANIMATION_TIMELINE
         .exec(rule.block.contents)?.[1]
         .trim().split(",").map(name => name.trim());
 
-      let animationNames = /animation-name\s*:([^;}]+)/
+      let animationNames = RegexMatcher.ANIMATION_NAME
         .exec(rule.block.contents)?.[1]
         .trim().split(",").map(name => name.trim());
 
@@ -127,17 +127,17 @@ export class StyleParser {
       return;
     }
 
-    let timelineName = /animation-timeline\s*:([^;}]+)/
+    let timelineName = RegexMatcher.ANIMATION_TIMELINE
       .exec(rule.block.contents)?.[1]
       .trim();
 
     let animationName = undefined;
     if (hasAnimationName) {
-      animationName = /animation-name\s*:([^;}]+)/
+      animationName = RegexMatcher.ANIMATION_NAME
         .exec(rule.block.contents)?.[1]
         .trim();
     } else if (hasAnimation) {
-      let shorthand = /animation\s*:([^;}]+)/
+      let shorthand = RegexMatcher.ANIMATION
         .exec(rule.block.contents)?.[1]
         .trim();
 
@@ -186,8 +186,8 @@ export class StyleParser {
   }
 
   parseIdentifier(p) {
-    identMatcher.lastIndex = p.index;
-    const match = identMatcher.exec(p.sheetSrc);
+    RegexMatcher.IDENTIFIER.lastIndex = p.index;
+    const match = RegexMatcher.IDENTIFIER.exec(p.sheetSrc);
     if (!match) {
       throw this.parseError(p, "Expected an identifier");
     }
@@ -284,8 +284,8 @@ export class StyleParser {
 
   eatWhitespace(p) {
     // Start matching at the current position in the sheet src
-    whitespaceMatcher.lastIndex = p.index;
-    const match = whitespaceMatcher.exec(p.sheetSrc);
+    RegexMatcher.WHITE_SPACE.lastIndex = p.index;
+    const match = RegexMatcher.WHITE_SPACE.exec(p.sheetSrc);
     if (match) {
       p.index += match[0].length;
     }
@@ -300,12 +300,17 @@ export class StyleParser {
   }
 }
 
-const identMatcher = /[\w\\\@_-]+/g;
-const whitespaceMatcher = /\s*/g;
-const numberMatcher = /^[0-9]+/;
-const timeMatcher = /^[0-9]+(s|ms)/;
+const RegexMatcher = {
+  IDENTIFIER: /[\w\\\@_-]+/g,
+  WHITE_SPACE: /\s*/g,
+  NUMBER: /^[0-9]+/,
+  TIME: /^[0-9]+(s|ms)/,
+  ANIMATION_TIMELINE: /animation-timeline\s*:([^;}]+)/,
+  ANIMATION_NAME: /animation-name\s*:([^;}]+)/,
+  ANIMATION: /animation\s*:([^;}]+)/,
+};
 
-const animationKewords = [
+const ANIMATION_KEYWORDS = [
   'normal', 'reverse', 'alternate', 'alternate-reverse',
   'none', 'forwards', 'backwards', 'both',
   'running', 'paused',
@@ -313,15 +318,15 @@ const animationKewords = [
 ];
 
 function isTime(s) {
-  return timeMatcher.exec(s);
+  return RegexMatcher.TIME.exec(s);
 }
 
 function isNumber(s) {
-  return numberMatcher.exec(s);
+  return RegexMatcher.NUMBER.exec(s);
 }
 
 export function removeKeywordsFromAnimationShorthand(anim) {
   return anim.split(' ').filter(
-    (item, index, array) => index == array.length - 1 || !animationKewords.includes(item))
+    (item, index, array) => index == array.length - 1 || !ANIMATION_KEYWORDS.includes(item))
     .filter(item => !isTime(item) && !isNumber(item));
 }
