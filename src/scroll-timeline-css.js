@@ -165,28 +165,25 @@ export function initCSSPolyfill() {
   initMutationObserver();
 
   window.addEventListener('animationstart', (evt) => {
-    const anim =
-      evt.target.getAnimations().filter(
-        anim => anim.animationName == evt.animationName)[0];
-
-    const timelineName = parser.getScrollTimelineName(anim.animationName, evt.target);
-
-    if (timelineName) {
-      const scrollTimeline = createScrollTimeline(timelineName);
-      // If there is a scrollTimeline name associated to this animation,
-      // cancel it, whether we create a new animation or not
-      // depends on the fact that whether that scrollTimeline was valid or not
-      anim.cancel();
-      if (scrollTimeline) {
-        if (anim.timeline != scrollTimeline) {
-          const target = anim.effect.target;
-          const keyframes = anim.effect.getKeyframes();
-          target.animate(keyframes, { timeline: scrollTimeline });
+    evt.target.getAnimations().filter(anim => anim.animationName === evt.animationName).forEach(anim => {
+      const timelineName = parser.getScrollTimelineName(anim.animationName, evt.target);
+      if (timelineName) {
+        const scrollTimeline = createScrollTimeline(timelineName);
+        // If there is a scrollTimeline name associated to this animation,
+        // cancel it, whether we create a new animation or not
+        // depends on the fact that whether that scrollTimeline was valid or not
+        anim.cancel();
+        if (scrollTimeline) {
+          if (anim.timeline != scrollTimeline) {
+            const target = anim.effect.target;
+            const keyframes = anim.effect.getKeyframes();
+            target.animate(keyframes, { timeline: scrollTimeline });
+          }
+        } else {
+          // animation-timeline:none, or unknown timeline
+          // or invalid scroll-offsets
         }
-      } else {
-        // animation-timeline:none, or unknown timeline
-        // or invalid scroll-offsets
       }
-    }
+    });
   });
 }
