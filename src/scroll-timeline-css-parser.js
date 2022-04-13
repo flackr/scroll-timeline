@@ -96,43 +96,35 @@ export class StyleParser {
   handleScrollTimelineProps(rule, p) {
     // TODO is it enough to check with "includes()"
     const hasAnimationName = rule.block.contents.includes("animation-name:");
-    const hasScrollTimeline = rule.block.contents.includes("animation-timeline:");
+    const hasAnimationTimeline = rule.block.contents.includes("animation-timeline:");
     const hasAnimation = rule.block.contents.includes("animation:");
 
     // If both 'animation-timeline' and 'animation-name' are present,
     // save them in the list
-    if (hasScrollTimeline && hasAnimationName) {
-      let timelineNames = RegexMatcher.ANIMATION_TIMELINE
-        .exec(rule.block.contents)?.[1]
-        .trim().split(",").map(name => name.trim());
+    if (hasAnimationTimeline && hasAnimationName) {
+      let timelineNames = this.extract(rule.block.contents, RegexMatcher.ANIMATION_TIMELINE)
+        .split(",").map(name => name.trim());
 
-      let animationNames = RegexMatcher.ANIMATION_NAME
-        .exec(rule.block.contents)?.[1]
-        .trim().split(",").map(name => name.trim());
+      let animationNames = this.extract(rule.block.contents, RegexMatcher.ANIMATION_NAME)
+        .split(",").map(name => name.trim());
 
-      for (let i = 0; i < timelineNames.length; i++) {
+      for (let i = 0; i < Math.max(timelineNames.length, animationNames.length); i++) {
         this.cssRulesWithTimelineName.push({
           selector: rule.selector,
-          'animation-name': animationNames[i],
-          'animation-timeline': timelineNames[i]
+          'animation-name': animationNames[i % animationNames.length],
+          'animation-timeline': timelineNames[i % timelineNames.length]
         });
       }
       return;
     }
 
-    let timelineName = RegexMatcher.ANIMATION_TIMELINE
-      .exec(rule.block.contents)?.[1]
-      .trim();
+    let timelineName = this.extract(rule.block.contents, RegexMatcher.ANIMATION_TIMELINE);
 
     let animationName = undefined;
     if (hasAnimationName) {
-      animationName = RegexMatcher.ANIMATION_NAME
-        .exec(rule.block.contents)?.[1]
-        .trim();
+      animationName = this.extract(rule.block.contents, RegexMatcher.ANIMATION_NAME);
     } else if (hasAnimation) {
-      let shorthand = RegexMatcher.ANIMATION
-        .exec(rule.block.contents)?.[1]
-        .trim();
+      let shorthand = this.extract(rule.block.contents, RegexMatcher.ANIMATION);;
 
       if (shorthand) {
         let remainingTokens = removeKeywordsFromAnimationShorthand(shorthand);
@@ -290,6 +282,11 @@ export class StyleParser {
 
   peek(p) {
     return p.sheetSrc[p.index];
+  }
+
+  CAPTURE_INDEX = 1;
+  extract(contents, matcher) {
+    return matcher.exec(contents)?.[this.CAPTURE_INDEX].trim();
   }
 }
 
