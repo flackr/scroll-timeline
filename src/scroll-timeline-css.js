@@ -37,7 +37,8 @@ function initMutationObserver() {
     if (el.innerHTML.trim().length === 0) {
       return;
     }
-    const newSrc = parser.transpileStyleSheet(el.innerHTML);
+    let newSrc = parser.transpileStyleSheet(el.innerHTML);
+    newSrc = parser.transpileStyleSheet(newSrc);
     el.innerHTML = newSrc;
   }
 

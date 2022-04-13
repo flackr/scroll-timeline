@@ -137,20 +137,71 @@ export class StyleParser {
   }
 
   handleScrollTimelineProps(rule, p) {
+    // The animation-timeline property may not be used in keyframes
+    if (rule.selector.includes("@keyframes")) {
+      return;
+    }
+
     // TODO is it enough to check with "includes()"
     const hasAnimationName = rule.block.contents.includes("animation-name:");
     const hasAnimationTimeline = rule.block.contents.includes("animation-timeline:");
     const hasAnimation = rule.block.contents.includes("animation:");
 
-    // If both 'animation-timeline' and 'animation-name' are present,
-    // save them in the list
+    let timelineNames = [];
+    let animationNames = [];
+
+    if (hasAnimationTimeline) {
+      timelineNames = this.extract(rule.block.contents, RegexMatcher.ANIMATION_TIMELINE)
+        .split(",").map(name => name.trim());
+    }
+
+    if (hasAnimationName) {
+      animationNames = this.extract(rule.block.contents, RegexMatcher.ANIMATION_NAME)
+        .split(",").map(name => name.trim());
+    }
+
     if (hasAnimationTimeline && hasAnimationName) {
-      let timelineNames = this.extract(rule.block.contents, RegexMatcher.ANIMATION_TIMELINE)
-        .split(",").map(name => name.trim());
+      this.saveRelationInList(rule, timelineNames, animationNames);
+      return;
+    }
 
-      let animationNames = this.extract(rule.block.contents, RegexMatcher.ANIMATION_NAME)
-        .split(",").map(name => name.trim());
+    if (hasAnimation) {
+      this.extract(rule.block.contents, RegexMatcher.ANIMATION)
+        .split(",").map(shorthand => shorthand.trim()).forEach(shorthand => {
+          const animationName = this.extractAnimationName(shorthand);
+          const timelineName = this.extractTimelineName(shorthand);
+          if (animationName) animationNames.push(animationName);
+          if (timelineName) {
+            timelineNames.push(timelineName);
+            // Remove timeline name from animation shorthand
+            // so the native implementation works with the rest of the properties
+            rule.block.contents = rule.block.contents.replace(
+              timelineName,
+              ""
+            );
+            this.replacePart(
+              rule.block.startIndex,
+              rule.block.endIndex,
+              rule.block.contents,
+              p
+            );
+          }
+        });
+    }
 
+    this.saveRelationInList(rule, timelineNames, animationNames);
+  }
+
+  saveRelationInList(rule, timelineNames, animationNames) {
+    if (animationNames.length == 0) {
+      for (let i = 0; i < timelineNames.length; i++) {
+        this.cssRulesWithTimelineName.push({
+          selector: rule.selector,
+          'animation-name': undefined,
+          'animation-timeline': timelineNames[i]
+        });
+      }
+    } else {
       for (let i = 0; i < Math.max(timelineNames.length, animationNames.length); i++) {
         this.cssRulesWithTimelineName.push({
           selector: rule.selector,
@@ -158,59 +209,16 @@ export class StyleParser {
           'animation-timeline': timelineNames[i % timelineNames.length]
         });
       }
-      return;
     }
 
-    let timelineName = this.extract(rule.block.contents, RegexMatcher.ANIMATION_TIMELINE);
+  }
 
-    let animationName = undefined;
-    if (hasAnimationName) {
-      animationName = this.extract(rule.block.contents, RegexMatcher.ANIMATION_NAME);
-    } else if (hasAnimation) {
-      let shorthand = this.extract(rule.block.contents, RegexMatcher.ANIMATION);;
+  extractAnimationName(shorthand) {
+    return shorthand.split(" ").filter(part => this.keyframeNames.has(part))[0];
+  }
 
-      if (shorthand) {
-        let remainingTokens = removeKeywordsFromAnimationShorthand(shorthand);
-        // TODO we are assuming the first one that is remaining is
-        // definitely animation name, and the second one is definitely
-        // scrollTimeline name, which may not be true!
-        if (remainingTokens.length <= 2)
-          animationName = remainingTokens[0];
-
-        if (remainingTokens.length == 2) {
-          timelineName = remainingTokens[1];
-          // Remove timeline name from animation shorthand
-          // so the native implementation works with the rest of the properties
-          rule.block.contents = rule.block.contents.replace(
-            timelineName,
-            ""
-          );
-          this.replacePart(
-            rule.block.startIndex,
-            rule.block.endIndex,
-            rule.block.contents,
-            p
-          );
-        }
-      }
-    }
-
-    if (animationName && timelineName) {
-      this.cssRulesWithTimelineName.push({
-        selector: rule.selector,
-        'animation-name': animationName,
-        'animation-timeline': timelineName
-      });
-    }
-
-    // The animation-timeline property may not be used in keyframes
-    if (timelineName && !rule.selector.includes("@keyframes")) {
-      this.cssRulesWithTimelineName.push({
-        selector: rule.selector,
-        'animation-name': undefined,
-        'animation-timeline': timelineName
-      });
-    }
+  extractTimelineName(shorthand) {
+    return shorthand.split(" ").filter(part => this.scrollTimelineOptions.has(part))[0];
   }
 
   parseIdentifier(p) {
