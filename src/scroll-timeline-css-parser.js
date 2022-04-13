@@ -38,19 +38,9 @@ export class StyleParser {
       }
     }
 
-    // If this sheet has no srcURL (like from a <style> tag), we are
-    // done. Otherwise, we have to find `url()` functions and resolve
+    // If this sheet has no srcURL (like from a <style> tag), we are done.
+    // TODO: Otherwise, we have to find `url()` functions and resolve
     // relative and path-absolute URLs to absolute URLs.
-    if (!srcUrl) {
-      return p.sheetSrc;
-    }
-
-    p.sheetSrc = p.sheetSrc.replace(
-      /url\(["']*([^)"']+)["']*\)/g,
-      (match, url) => {
-        return `url(${new URL(url, srcUrl)})`;
-      }
-    );
     return p.sheetSrc;
   }
 
