@@ -47,6 +47,7 @@ export class StyleParser {
   constructor() {
     this.cssRulesWithTimelineName = [];
     this.scrollTimelineOptions = new Map(); // save options by name
+    this.keyframeNames = new Set();
   }
 
   // Inspired by
@@ -222,10 +223,26 @@ export class StyleParser {
     return match[0];
   }
 
+  /**
+   * @param {String} selector contains everything upto '{', eg: "@keyframes expand"
+   */
+  extractAndSaveKeyframeName(selector) {
+    if (selector.startsWith("@keyframes")) {
+      selector.split(" ").forEach((item, index) => {
+        if (index > 0) {
+          this.keyframeNames.add(item);
+        }
+      })
+    }
+  }
+
   parseQualifiedRule(p) {
     const startIndex = p.index;
     const selector = this.parseSelector(p).trim();
     if (!selector) return;
+
+    this.extractAndSaveKeyframeName(selector);
+
     const block = this.eatBlock(p);
     const endIndex = p.index;
     return {
