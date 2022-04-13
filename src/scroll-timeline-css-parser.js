@@ -53,7 +53,10 @@ export class StyleParser {
   // Inspired by
   // https://drafts.csswg.org/css-syntax/#parser-diagrams
   // https://github.com/GoogleChromeLabs/container-query-polyfill/blob/main/src/engine.ts
-  transpileStyleSheet(sheetSrc, srcUrl) {
+  // This function is called twice, in the first pass we are interested in saving
+  // @scroll-timeline and @keyframe names, in the second pass
+  // we will parse other rules
+  transpileStyleSheet(sheetSrc, firstPass, srcUrl) {
     // AdhocParser
     const p = {
       sheetSrc: sheetSrc,
@@ -71,13 +74,18 @@ export class StyleParser {
         }
         continue;
       }
+
       if (this.lookAhead("@scroll-timeline", p)) {
         const { scrollTimeline, startIndex, endIndex } = this.parseScrollTimeline(p);
-        this.scrollTimelineOptions.set(scrollTimeline.name, scrollTimeline);
+        if (firstPass) this.scrollTimelineOptions.set(scrollTimeline.name, scrollTimeline);
       } else {
         const rule = this.parseQualifiedRule(p);
         if (!rule) continue;
-        this.handleScrollTimelineProps(rule, p);
+        if (firstPass) {
+          this.extractAndSaveKeyframeName(rule.selector);
+        } else {
+          this.handleScrollTimelineProps(rule, p);
+        }
       }
     }
 
@@ -248,9 +256,6 @@ export class StyleParser {
     const startIndex = p.index;
     const selector = this.parseSelector(p).trim();
     if (!selector) return;
-
-    this.extractAndSaveKeyframeName(selector);
-
     const block = this.eatBlock(p);
     const endIndex = p.index;
     return {
