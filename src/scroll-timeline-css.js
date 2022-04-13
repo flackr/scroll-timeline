@@ -29,7 +29,10 @@ function initMutationObserver() {
     subtree: true,
   });
 
-  function handleStyleTag(el) { // el: HtmlStyleElement
+  /**
+   * @param {HtmlStyleElement} el style tag to be parsed
+   */
+  function handleStyleTag(el) {
     // Don’t touch empty style tags.
     if (el.innerHTML.trim().length === 0) {
       return;
