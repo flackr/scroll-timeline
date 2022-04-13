@@ -1,3 +1,45 @@
+const VALID_SCROLL_OFFSET_SUFFIXES = [
+  // Relative lengths.
+  'em',
+  'ex',
+  'ch',
+  'rem',
+  'vw',
+  'vh',
+  'vmin',
+  'vmax',
+  // Absolute lengths.
+  'cm',
+  'mm',
+  'q',
+  'in',
+  'pc',
+  'pt',
+  'px',
+  // Percentage.
+  '%',
+];
+
+export const RegexMatcher = {
+  IDENTIFIER: /[\w\\\@_-]+/g,
+  WHITE_SPACE: /\s*/g,
+  NUMBER: /^[0-9]+/,
+  TIME: /^[0-9]+(s|ms)/,
+  ANIMATION_TIMELINE: /animation-timeline\s*:([^;}]+)/,
+  ANIMATION_NAME: /animation-name\s*:([^;}]+)/,
+  ANIMATION: /animation\s*:([^;}]+)/,
+  OFFSET_WITH_SUFFIX: new RegExp('(^[0-9]+)(' + VALID_SCROLL_OFFSET_SUFFIXES.join('|') + ')'),
+  ELEMENT_OFFSET: /selector\(#([^)]+)\)[ ]{0,1}(start|end)*[ ]{0,1}([0-9]+[.]{0,1}[0-9]*)*/,
+  SOURCE_ELEMENT: /selector\(#([^)]+)\)/,
+};
+
+const ANIMATION_KEYWORDS = [
+  'normal', 'reverse', 'alternate', 'alternate-reverse',
+  'none', 'forwards', 'backwards', 'both',
+  'running', 'paused',
+  'ease', 'linear', 'ease-in', 'ease-out', 'ease-in-out'
+];
+
 // 1 - Extracts @scroll-timeline and saves it in scrollTimelineOptions.
 // 2 - If we find any animation-timeline in any of the CSS Rules, 
 // we will save objects in a list named cssRulesWithTimelineName
@@ -289,48 +331,6 @@ export class StyleParser {
     return matcher.exec(contents)?.[this.CAPTURE_INDEX].trim();
   }
 }
-
-const VALID_SCROLL_OFFSET_SUFFIXES = [
-  // Relative lengths.
-  'em',
-  'ex',
-  'ch',
-  'rem',
-  'vw',
-  'vh',
-  'vmin',
-  'vmax',
-  // Absolute lengths.
-  'cm',
-  'mm',
-  'q',
-  'in',
-  'pc',
-  'pt',
-  'px',
-  // Percentage.
-  '%',
-];
-
-export const RegexMatcher = {
-  IDENTIFIER: /[\w\\\@_-]+/g,
-  WHITE_SPACE: /\s*/g,
-  NUMBER: /^[0-9]+/,
-  TIME: /^[0-9]+(s|ms)/,
-  ANIMATION_TIMELINE: /animation-timeline\s*:([^;}]+)/,
-  ANIMATION_NAME: /animation-name\s*:([^;}]+)/,
-  ANIMATION: /animation\s*:([^;}]+)/,
-  OFFSET_WITH_SUFFIX: new RegExp('(^[0-9]+)(' + VALID_SCROLL_OFFSET_SUFFIXES.join('|') + ')'),
-  ELEMENT_OFFSET: /selector\(#([^)]+)\)[ ]{0,1}(start|end)*[ ]{0,1}([0-9]+[.]{0,1}[0-9]*)*/,
-  SOURCE_ELEMENT: /selector\(#([^)]+)\)/,
-};
-
-const ANIMATION_KEYWORDS = [
-  'normal', 'reverse', 'alternate', 'alternate-reverse',
-  'none', 'forwards', 'backwards', 'both',
-  'running', 'paused',
-  'ease', 'linear', 'ease-in', 'ease-out', 'ease-in-out'
-];
 
 function isTime(s) {
   return RegexMatcher.TIME.exec(s);
