@@ -33,6 +33,11 @@ export const RegexMatcher = {
   SOURCE_ELEMENT: /selector\(#([^)]+)\)/,
 };
 
+// Used for ANIMATION_TIMELINE, ANIMATION_NAME and ANIMATION regex
+const VALUES_CAPTURE_INDEX = 1;
+
+const WHOLE_MATCH_INDEX = 0;
+
 const ANIMATION_KEYWORDS = [
   'normal', 'reverse', 'alternate', 'alternate-reverse',
   'none', 'forwards', 'backwards', 'both',
@@ -235,8 +240,8 @@ export class StyleParser {
     if (!match) {
       throw this.parseError(p, "Expected an identifier");
     }
-    p.index += match[0].length;
-    return match[0];
+    p.index += match[WHOLE_MATCH_INDEX].length;
+    return match[WHOLE_MATCH_INDEX];
   }
 
   /**
@@ -344,7 +349,7 @@ export class StyleParser {
     RegexMatcher.WHITE_SPACE.lastIndex = p.index;
     const match = RegexMatcher.WHITE_SPACE.exec(p.sheetSrc);
     if (match) {
-      p.index += match[0].length;
+      p.index += match[WHOLE_MATCH_INDEX].length;
     }
   }
 
@@ -356,9 +361,8 @@ export class StyleParser {
     return p.sheetSrc[p.index];
   }
 
-  CAPTURE_INDEX = 1;
   extract(contents, matcher) {
-    return matcher.exec(contents)?.[this.CAPTURE_INDEX].trim();
+    return matcher.exec(contents)[VALUES_CAPTURE_INDEX].trim();
   }
 }
 
