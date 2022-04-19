@@ -56,8 +56,9 @@ function initMutationObserver() {
 // TODO: Should update accordingly when new spec lands.
 function getSourceElement(source) {
   const matches = RegexMatcher.SOURCE_ELEMENT.exec(source);
+  const SOURCE_CAPTURE_INDEX = 1;
   if (matches) {
-    return document.getElementById(matches[1]);
+    return document.getElementById(matches[SOURCE_CAPTURE_INDEX]);
   } else if (source === "auto") {
     return document.scrollingElement;
   } else {
@@ -72,17 +73,22 @@ function convertOneScrollOffset(part) {
   if (part == 'auto') return new CSSKeywordValue('auto');
 
   const matchesOffsetWithSuffix = RegexMatcher.OFFSET_WITH_SUFFIX.exec(part);
+  const VALUE_CAPTURE_INDEX = 1;
+  const UNIT_CAPTURE_INDEX = 2;
   if (matchesOffsetWithSuffix) {
-    return new CSSUnitValue(parseInt(matchesOffsetWithSuffix[1]), matchesOffsetWithSuffix[2]);
+    return new CSSUnitValue(parseInt(matchesOffsetWithSuffix[VALUE_CAPTURE_INDEX]), matchesOffsetWithSuffix[UNIT_CAPTURE_INDEX]);
   }
 
   const matchesElementOffset = RegexMatcher.ELEMENT_OFFSET.exec(part);
+  const SOURCE_CAPTURE_INDEX = 1;
+  const EDGE_CAPTURE_INDEX = 2;
+  const THRESHOLD_CAPTURE_INDEX = 3;
   if (matchesElementOffset) {
-    if (document.getElementById(matchesElementOffset[1])) {
+    if (document.getElementById(matchesElementOffset[SOURCE_CAPTURE_INDEX])) {
       return {
-        target: document.getElementById(matchesElementOffset[1]),
-        ...(matchesElementOffset.length >= 3 ? { edge: matchesElementOffset[2] } : {}),
-        ...(matchesElementOffset.length >= 4 ? { threshold: parseFloat(matchesElementOffset[3]) } : {})
+        target: document.getElementById(matchesElementOffset[SOURCE_CAPTURE_INDEX]),
+        ...(matchesElementOffset.length >= 3 ? { edge: matchesElementOffset[EDGE_CAPTURE_INDEX] } : {}),
+        ...(matchesElementOffset.length >= 4 ? { threshold: parseFloat(matchesElementOffset[THRESHOLD_CAPTURE_INDEX]) } : {})
       };
     }
   }
