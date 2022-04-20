@@ -20,6 +20,7 @@ const VALID_SCROLL_OFFSET_SUFFIXES = [
   '%',
 ];
 
+// This is also used in scroll-timeline-css.js
 export const RegexMatcher = {
   IDENTIFIER: /[\w\\\@_-]+/g,
   WHITE_SPACE: /\s*/g,
@@ -101,6 +102,10 @@ export class StyleParser {
   }
 
   getScrollTimelineName(animationName, target) {
+    // Rules are pushed to cssRulesWithTimelineName list in the same order as they appear in style sheet.
+    // We are traversing backwards to take the last sample of a rule in a style sheet.
+    // TODO: Rule specificity should be taken into account, i.e. don't just take the last
+    // rule that matches, instead take the one with the most specifity among those that match
     for (let i = this.cssRulesWithTimelineName.length - 1; i >= 0; i--) {
       const current = this.cssRulesWithTimelineName[i];
       if (target.matches(current.selector)) {
