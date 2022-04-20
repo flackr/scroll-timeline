@@ -15,13 +15,8 @@ function initMutationObserver() {
       }
     }
 
-    // TODO: Not a good idea to proxy all elements.
-    // Not adding proxy affects tests that there is no animation,
-    // but there is change for 'animation', 'animation-timeline', etc via style
-    // like this: e.style['animation-timeline'] = "none, auto"
-    // document.querySelectorAll("body *").forEach(element => {
-    //   addProxyForElement(element);
-    // });
+    // TODO: Proxy element.style similar to how we proxy element.animate.
+    // We accomplish this by swapping out Element.prototype.style.
   });
 
   sheetObserver.observe(document.documentElement, {

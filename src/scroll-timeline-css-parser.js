@@ -169,13 +169,11 @@ export class StyleParser {
     let animationNames = [];
 
     if (hasAnimationTimeline) {
-      timelineNames = this.extract(rule.block.contents, RegexMatcher.ANIMATION_TIMELINE)
-        .split(",").map(name => name.trim());
+      timelineNames = this.extractMatches(rule.block.contents, RegexMatcher.ANIMATION_TIMELINE);
     }
 
     if (hasAnimationName) {
-      animationNames = this.extract(rule.block.contents, RegexMatcher.ANIMATION_NAME)
-        .split(",").map(name => name.trim());
+      animationNames = this.extractMatches(rule.block.contents, RegexMatcher.ANIMATION_NAME);
     }
 
     if (hasAnimationTimeline && hasAnimationName) {
@@ -184,8 +182,8 @@ export class StyleParser {
     }
 
     if (hasAnimation) {
-      this.extract(rule.block.contents, RegexMatcher.ANIMATION)
-        .split(",").map(shorthand => shorthand.trim()).forEach(shorthand => {
+      this.extractMatches(rule.block.contents, RegexMatcher.ANIMATION)
+        .forEach(shorthand => {
           const animationName = this.extractAnimationName(shorthand);
           const timelineName = this.extractTimelineName(shorthand);
           if (animationName) animationNames.push(animationName);
@@ -232,12 +230,18 @@ export class StyleParser {
   }
 
   extractAnimationName(shorthand) {
-    return shorthand.split(" ").filter(part => this.keyframeNames.has(part))[0];
+    return this.findMatchingEntryInContainer(shorthand, this.keyframeNames);
   }
 
   extractTimelineName(shorthand) {
-    return shorthand.split(" ").filter(part => this.scrollTimelineOptions.has(part))[0];
+    return this.findMatchingEntryInContainer(shorthand, this.scrollTimelineOptions);
   }
+
+  findMatchingEntryInContainer(shorthand, container) {
+    const matches = shorthand.split(" ").filter(part => container.has(part))
+    return matches ? matches[0] : null;
+  }
+
 
   parseIdentifier(p) {
     RegexMatcher.IDENTIFIER.lastIndex = p.index;
@@ -366,8 +370,8 @@ export class StyleParser {
     return p.sheetSrc[p.index];
   }
 
-  extract(contents, matcher) {
-    return matcher.exec(contents)[VALUES_CAPTURE_INDEX].trim();
+  extractMatches(contents, matcher) {
+    return matcher.exec(contents)[VALUES_CAPTURE_INDEX].trim().split(",").map(item => item.trim());
   }
 }
 
