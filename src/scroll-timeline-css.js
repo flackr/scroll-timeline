@@ -1,4 +1,5 @@
 import { StyleParser, RegexMatcher } from "./scroll-timeline-css-parser";
+import { ProxyAnimation } from "./proxy-animation"
 
 const parser = new StyleParser();
 
@@ -32,6 +33,7 @@ function initMutationObserver() {
     if (el.innerHTML.trim().length === 0) {
       return;
     }
+    // TODO: Do with one pass for better performance
     let newSrc = parser.transpileStyleSheet(el.innerHTML, true);
     newSrc = parser.transpileStyleSheet(newSrc, false);
     el.innerHTML = newSrc;
@@ -139,6 +141,7 @@ function createScrollTimeline(name) {
   const sourceElement = getSourceElement(options.source);
   const scrollOffsets = getScrollOffsets(sourceElement, options['scroll-offsets']);
 
+  // TODO: Handle invalid scrollOffsets differently, don't return null for scrollTimeline, should check native implementation
   if (scrollOffsets !== null) {
     const scrollTimeline = new ScrollTimeline({
       ...(sourceElement ? { source: getSourceElement(options.source) } : {}),
@@ -161,27 +164,10 @@ export function initCSSPolyfill() {
       const timelineName = parser.getScrollTimelineName(anim.animationName, evt.target);
       if (timelineName) {
         const scrollTimeline = createScrollTimeline(timelineName);
-
-        // If there is a scrollTimeline name associated to this animation,
-        // cancel it, whether we create a new animation or not
-        // depends on the fact that whether that scrollTimeline was valid or not
-
-        // Current approach (cancelling current animation and creating a new one) results in a
-        // programmatic animation and not a CSS animation.
-        // As a result, composite-order will be incorrect.
-        // TODO: Don't cancel animation, pause and create a proxy for it instead,
-        // this way the native animation is still a CSS animation.
-        // Furthermore, we are not potentially creating a cancel event or a new animation start event.
-        anim.cancel();
-        if (scrollTimeline) {
-          if (anim.timeline != scrollTimeline) {
-            const target = anim.effect.target;
-            const keyframes = anim.effect.getKeyframes();
-            target.animate(keyframes, { timeline: scrollTimeline });
-          }
-        } else {
-          // animation-timeline:none, or unknown timeline
-          // or invalid scroll-offsets
+        if (anim.timeline != scrollTimeline) {
+          const proxyAnimation = new ProxyAnimation(anim, scrollTimeline);
+          anim.pause();
+          proxyAnimation.play();
         }
       }
     });
