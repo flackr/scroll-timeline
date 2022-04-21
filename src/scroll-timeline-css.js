@@ -155,6 +155,11 @@ function createScrollTimeline(name) {
 }
 
 export function initCSSPolyfill() {
+  // Don't load if browser claims support
+  if (CSS.supports("animation-timeline: works")) {
+    return;
+  }
+
   initMutationObserver();
 
   // We are not wrapping capturing 'animationstart' by a 'load' event,
