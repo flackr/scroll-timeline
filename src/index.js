@@ -20,9 +20,12 @@ import {
   animate,
   ProxyAnimation
 } from "./proxy-animation.js";
+
 import { calculateOffset, parseOffset } from "./intersection-based-offset";
+import { initCSSPolyfill } from "./scroll-timeline-css"
 
 installScrollOffsetExtension(parseOffset, calculateOffset);
+initCSSPolyfill();
 
 if (
   !Reflect.defineProperty(window, "ScrollTimeline", { value: ScrollTimeline })
