@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<style>
+    body {
+        height: 2000px;
+        padding-top: 200px;
+    }
+
+    #test {
+        display: block;
+        width: 100px;
+        height: 100px;
+        background: green;
+        position: fixed;
+        top: 0;
+    }
+
+    #container {
+        position: absolute;
+        top: 400px;
+        height: 200px;
+        width: 200px;
+        background: blue;
+    }
+
+    @scroll-timeline scroll-in-document {
+    }
+
+    @keyframes move {
+        from {
+            transform: translateY(0);
+        }
+
+        to {
+            transform: translateY(1000px);
+        }
+    }
+
+    #test {
+	    animation: 1s linear move forwards;
+	    animation-timeline: scroll-in-document;
+    }
+</style>
+<body>
+<h1>ScrollTimeline polyfill</h1>
+<p>A <a href="../parallax/">more advanced demo based on element intersection</a>.</p>
+<div id="test"></div>
+<div id="container"></div>
+<script src="../../dist/scroll-timeline.js"></script>
+</body>
