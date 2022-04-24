@@ -191,9 +191,11 @@ export class StyleParser {
             timelineNames.push(timelineName);
             // Remove timeline name from animation shorthand
             // so the native implementation works with the rest of the properties
+            // Retain length of original name though, to play nice with multiple
+            // animations that might have been applied
             rule.block.contents = rule.block.contents.replace(
               timelineName,
-              ""
+              " ".repeat(timelineName.length)
             );
             this.replacePart(
               rule.block.startIndex,
