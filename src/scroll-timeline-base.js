@@ -114,9 +114,43 @@ export function calculateMaxScrollOffset(source, orientation) {
     return source.scrollWidth - source.clientWidth;
 }
 
+/**
+ * Calculates the maximum pixel value to use
+ * @param cssValue {CSSUnitValue}
+ * @param source {DOMElement}
+ * @param orientation {String}
+ * @returns {number}
+ */
+function calculateMaxValue(cssValue, source, orientation) {
+  if (cssValue instanceof CSSUnitValue) {
+    switch (cssValue.unit) {
+      case 'vw':
+        return Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
+      case 'vh':
+        return Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
+      case 'vmin':
+        return Math.min(
+          Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0),
+          Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0),
+        );
+      case 'vmax':
+        return Math.max(
+          Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0),
+          Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0),
+        );
+      default:
+        // NOOP
+    }
+  }
+
+  return orientation === "vertical"
+    ? source.scrollHeight - source.clientHeight
+    : source.scrollWidth - source.clientWidth;
+}
+
 function resolvePx(cssValue, resolvedLength) {
   if (cssValue instanceof CSSUnitValue) {
-    if (cssValue.unit == "percent")
+    if (['percent', 'vmin', 'vmax', 'vw', 'vh'].includes(cssValue.unit))
       return cssValue.value * resolvedLength / 100;
     else if (cssValue.unit == "px")
       return cssValue.value;
@@ -150,10 +184,7 @@ export function calculateScrollOffset(
   if (orientation === "block") orientation = "vertical";
   else if (orientation === "inline") orientation = "horizontal";
 
-  let maxValue =
-    orientation === "vertical"
-      ? source.scrollHeight - source.clientHeight
-      : source.scrollWidth - source.clientWidth;
+  const maxValue = calculateMaxValue(offset, source, orientation);
   let parsed = parseLength(offset === AUTO ? autoValue : offset);
   return resolvePx(parsed, maxValue);
 }
