@@ -3,7 +3,7 @@ export function parseLength(obj, acceptStr) {
     return obj;
   if (!acceptStr)
     return null;
-  let matches = obj.trim().match(/^(-?[0-9]*\.?[0-9]*)(px|%)$/);
+  let matches = obj.trim().match(/^(-?[0-9]*\.?[0-9]*)(px|%|vw|vh|vmin|vmax)$/);
   if (matches) {
     let value = matches[1];
     // The unit for % is percent.
