@@ -511,7 +511,6 @@ export class ScrollTimeline {
   }
 }
 
-
 function getScrollParent(node) {
   if (node === undefined)
     return undefined;

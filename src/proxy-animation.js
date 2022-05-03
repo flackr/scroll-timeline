@@ -567,6 +567,7 @@ function tickAnimation(timelineTime) {
   const playState = this.playState;
   if (playState == 'running' || playState == 'finished') {
     const timelineTimeMs = fromCssNumberish(details, timelineTime);
+
     details.animation.currentTime =
         (timelineTimeMs - fromCssNumberish(details, this.startTime)) *
             this.playbackRate;
