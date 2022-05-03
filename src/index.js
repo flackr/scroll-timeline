@@ -14,6 +14,7 @@
 
 import {
   ScrollTimeline,
+  ViewTimeline,
   installScrollOffsetExtension
 } from "./scroll-timeline-base";
 import {
@@ -32,6 +33,13 @@ if (
 ) {
   throw Error(
     "Error installing ScrollTimeline polyfill: could not attach ScrollTimeline to window"
+  );
+}
+if (
+  !Reflect.defineProperty(window, "ViewTimeline", { value: ViewTimeline })
+) {
+  throw Error(
+    "Error installing ViewTimeline polyfill: could not attach ViewTimeline to window"
   );
 }
 

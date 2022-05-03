@@ -510,3 +510,162 @@ export class ScrollTimeline {
     return true;
   }
 }
+
+
+function getScrollParent(node) {
+  if (node === undefined)
+    return undefined;
+
+  if (node.scrollHeight > node.clientHeight ||
+      node.scrollWidth > node.clientWidth) {
+    return node;
+  } else {
+    return getScrollParent(node.parentNode);
+  }
+}
+
+// https://fantasai.inkedblade.net/style/specs/scroll-animations-1/#view-progress-timelines
+export class ViewTimeline extends ScrollTimeline {
+  // As specced, ViewTimeline has a subject and a source, but
+  // ViewTimelineOptions only has source. Furthermore, there is a strict
+  // relationship between subject and source (source is nearest scrollable
+  // ancestor of subject).
+
+  // Proceeding under the assumption that subject will be added to
+  // ViewTimelineOptions. Inferring the source from the subject if not
+  // explicitly set.
+  constructor(options) {
+    if (options.subject && !options.source) {
+      options.source = getScrollParent(options.subject.parentNode);
+    }
+    super(options);
+
+    const details = scrollTimelineOptions.get(this);
+    details.subject = options && options.subject ? options.subject : undefined;
+    // TODO: what is the default range?
+    details.range = options && options.range ? options.range : 'contain';
+    // TODO: Handle insets.
+  }
+
+  get subject() {
+    return scrollTimelineOptions.get(this).subject;
+  }
+
+  // Proposing that we do away with before and after phase for a timeline and
+  // simply allow timeline time to extend outside the range of 0 to 100%.
+  get phase() {
+    if (!this.subject)
+      return "inactive";
+
+    const container = this.source;
+    if (!container)
+      return "inactive";
+
+    let scrollerStyle = getComputedStyle(container);
+
+    //   if source does not currently have a CSS layout box
+    if (scrollerStyle.display == "none")
+      return "inactive";
+
+    if (container != document.scrollingElement &&
+        (scrollerStyle.overflow == 'visible' ||
+         scrollerStyle.overflow == "clip")) {
+        return "inactive";
+    }
+
+    return "active";
+  }
+
+  // Currently specced as fit with proposal to rename in order to more naturally
+  // support start and end transitions.
+  get range() {
+    return scrollTimelineOptions.get(this).range;
+  }
+
+  get currentTime() {
+    const unresolved = null;
+    if (this.phase === 'inacitve')
+      return unresolved;
+
+    // Compute the offset of the top-left corner of subject relative to
+    // top-left corner of the container.
+    const container = this.source;
+    const target = this.subject;
+
+    const targetBounds = target.getBoundingClientRect();
+    const containerBounds = container.getBoundingClientRect();
+    const top = targetBounds.top - containerBounds.top;
+    const left = targetBounds.left - containerBounds.left;
+
+    // Determine the view and container size based on the scroll direction.
+    // The view position is the scroll position of the logical starting edge
+    // of the view.
+    const style = getComputedStyle(container);
+    const horizontalWritingMode = style.writingMode == 'horizontal-tb';
+    const rtl = style.direction == 'rtl';
+    let viewSize = undefined;
+    let viewPos = undefined;
+    let containerSize = undefined;
+    const orientation = this.orientation;
+    if (orientation == 'horizontal' ||
+        (orientation == 'inline' && horizontalWritingMode) ||
+        (orientation == 'block' && !horizontalWritingMode)) {
+      viewSize = target.clientWidth;
+      viewPos = left + container.scrollLeft;
+      if (rtl)
+        viewPos += container.scrollWidth - container.clientWidth;
+      containerSize = container.clientWidth;
+    } else {
+      // TODO: support sideways-lr
+      viewSize = target.clientHeight;
+      viewPos = top + container.scrollTop;
+      containerSize = container.clientHeight;
+    }
+
+    const scrollPos = directionAwareScrollOffset(container, orientation);
+    let startOffset = undefined;
+    let endOffset = undefined;
+
+    switch(this.range) {
+      case 'cover':
+        // Range of scroll offsets where the subject element intersects the
+        // source's viewport.
+        startOffset = viewPos - containerSize;
+        endOffset = viewPos + viewSize;
+        break;
+
+      case 'contain':
+        // Range of scroll offsets where the subject element is fully inside of
+        // the container's viewport. If the subject's bounds exceed the size
+        // of the viewport in the scroll direction then the scroll range is
+        // empty.
+        startOffset = viewPos + viewSize - containerSize;
+        endOffset = viewPos;
+        break;
+
+      case 'start':
+        // Range of scroll offsets where the subject element overlaps the
+        // logical-start edge of the viewport.
+        startOffset = viewPos - containerSize;
+        endOffset = viewPos + viewSize - containerSize;
+        break;
+
+      case 'end':
+        // Range of scroll offsets where the subject element overlaps the
+        // logical-end edge of the viewport.
+        startOffset = viewPos;
+        endOffset = viewPos + viewSize;
+        break;
+
+      default:
+        // TODO: support offset pair.
+    }
+
+    if (startOffset < endOffset) {
+      const progress = (scrollPos - startOffset) / (endOffset - startOffset);
+      return CSS.percent(100 * progress);
+    }
+
+    return unresolved;
+  }
+}
