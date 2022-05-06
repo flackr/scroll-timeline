@@ -515,14 +515,16 @@ function getScrollParent(node) {
   if (!node)
     return undefined;
 
-  const style = getComputedStyle(container);
-  let isScrollable = false;
-  style.overflow.split(" ").forEach(part => {
-    if (part == 'auto' || part == 'scroll' || part == 'hidden')
-      isScrollable = true;
-  });
+  const style = getComputedStyle(node);
+  switch(style['overflow-x']) {
+    case 'auto':
+    case 'scroll':
+    case 'hidden':
+      return node;
 
-  return isScrollable ? node : getScrollParent(node.parentNode);
+    default:
+      return getScrollParent(node.parentNode);
+  }
 }
 
 // https://drafts.csswg.org/scroll-animations-1/rewrite#view-progress-timelines
@@ -585,6 +587,16 @@ export class ViewTimeline extends ScrollTimeline {
         return "inactive";
     }
 
+    // This check is not in the spec.
+    // http://github.com/w3c/csswg-drafts/issues/7259
+    // Update once specced.
+    let node = this.subject;
+    while (node && node != container) {
+      node = node.offsetParent;
+    }
+    if (node != container)
+      return "inactive";
+
     return "active";
   }
 
@@ -606,16 +618,13 @@ export class ViewTimeline extends ScrollTimeline {
     const container = this.source;
     const target = this.subject;
 
-    // const targetBounds = target.getBoundingClientRect();
-    // const containerBounds = container.getBoundingClientRect();
-
     let top = 0;
     let left = 0;
     let node = target;
-    while (node != container) {
+    while (node && node != container) {
       left += node.offsetLeft;
       top += node.offsetTop;
-      node = node.parentNode;
+      node = node.offsetParent;
     }
 
     // Determine the view and container size based on the scroll direction.
