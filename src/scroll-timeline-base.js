@@ -510,3 +510,192 @@ export class ScrollTimeline {
     return true;
   }
 }
+
+function getScrollParent(node) {
+  if (!node)
+    return undefined;
+
+  const style = getComputedStyle(node);
+  switch(style['overflow-x']) {
+    case 'auto':
+    case 'scroll':
+    case 'hidden':
+      return node;
+
+    default:
+      return getScrollParent(node.parentNode);
+  }
+}
+
+// https://drafts.csswg.org/scroll-animations-1/rewrite#view-progress-timelines
+export class ViewTimeline extends ScrollTimeline {
+  // As specced, ViewTimeline has a subject and a source, but
+  // ViewTimelineOptions only has source. Furthermore, there is a strict
+  // relationship between subject and source (source is nearest scrollable
+  // ancestor of subject).
+
+  // Proceeding under the assumption that subject will be added to
+  // ViewTimelineOptions. Inferring the source from the subject if not
+  // explicitly set.
+  constructor(options) {
+    // We rely on having source set in order to properly set up the
+    // scroll listener. Ideally, this should be null if left unspecified.
+    // TODO: Add a mutation observer that detects any style change that could
+    // affect resolution of the source container.
+    if (options.subject && !options.source)
+      options.source = getScrollParent(options.subject.parentNode);
+
+    super(options);
+
+    const details = scrollTimelineOptions.get(this);
+    details.subject = options && options.subject ? options.subject : undefined;
+    details.range = options && options.range ? options.range : 'cover';
+    // TODO: Handle insets.
+  }
+
+  get subject() {
+    return scrollTimelineOptions.get(this).subject;
+  }
+
+
+  // As currently specced phase can be in one of 4 states: active, inactive,
+  // before, and after. This creates potential confusion with animation effect
+  // phases. The phase calculation for an animation effect already knows how
+  // to handle currentTime being outside the range of [0, effect end]. The
+  // implementation of phase for the view timeline drops the before and after
+  // phases and simply allows currentTime to extend outside the [0%, 100%]
+  // range. Visually, this produces the correct result and there is a proposal
+  // to update the spec to align with this implementation.
+  // http://github.com/w3c/csswg-drafts/issues/7240
+  // TODO: Update once specced.
+  get phase() {
+    if (!this.subject)
+      return "inactive";
+
+    const container = this.source;
+    if (!container)
+      return "inactive";
+
+    let scrollerStyle = getComputedStyle(container);
+
+    if (scrollerStyle.display == "none")
+      return "inactive";
+
+    if (container != document.scrollingElement &&
+        (scrollerStyle.overflow == 'visible' ||
+         scrollerStyle.overflow == "clip")) {
+        return "inactive";
+    }
+
+    // This check is not in the spec.
+    // http://github.com/w3c/csswg-drafts/issues/7259
+    // TODO: Update once specced.
+    let node = this.subject;
+    while (node && node != container) {
+      node = node.offsetParent;
+    }
+    if (node != container)
+      return "inactive";
+
+    return "active";
+  }
+
+  // Currently specced as fit with proposal to rename in order to more naturally
+  // support start and end transitions.
+  // http://github.com/w3c/csswg-drafts/issues/7044
+  // TODO: Update once specced.
+  get range() {
+    return scrollTimelineOptions.get(this).range;
+  }
+
+  get currentTime() {
+    const unresolved = null;
+    if (this.phase === 'inactive')
+      return unresolved;
+
+    // Compute the offset of the top-left corner of subject relative to
+    // top-left corner of the container.
+    const container = this.source;
+    const target = this.subject;
+
+    let top = 0;
+    let left = 0;
+    let node = target;
+    while (node && node != container) {
+      left += node.offsetLeft;
+      top += node.offsetTop;
+      node = node.offsetParent;
+    }
+
+    // Determine the view and container size based on the scroll direction.
+    // The view position is the scroll position of the logical starting edge
+    // of the view.
+    const style = getComputedStyle(container);
+    const horizontalWritingMode = style.writingMode == 'horizontal-tb';
+    const rtl = style.direction == 'rtl';
+    let viewSize = undefined;
+    let viewPos = undefined;
+    let containerSize = undefined;
+    const orientation = this.orientation;
+    if (orientation == 'horizontal' ||
+        (orientation == 'inline' && horizontalWritingMode) ||
+        (orientation == 'block' && !horizontalWritingMode)) {
+      viewSize = target.clientWidth;
+      viewPos = left;
+      if (rtl)
+        viewPos += container.scrollWidth - container.clientWidth;
+      containerSize = container.clientWidth;
+    } else {
+      // TODO: support sideways-lr
+      viewSize = target.clientHeight;
+      viewPos = top;
+      containerSize = container.clientHeight;
+    }
+
+    const scrollPos = directionAwareScrollOffset(container, orientation);
+    let startOffset = undefined;
+    let endOffset = undefined;
+
+    switch(this.range) {
+      case 'cover':
+        // Range of scroll offsets where the subject element intersects the
+        // source's viewport.
+        startOffset = viewPos - containerSize;
+        endOffset = viewPos + viewSize;
+        break;
+
+      case 'contain':
+        // Range of scroll offsets where the subject element is fully inside of
+        // the container's viewport. If the subject's bounds exceed the size
+        // of the viewport in the scroll direction then the scroll range is
+        // empty.
+        startOffset = viewPos + viewSize - containerSize;
+        endOffset = viewPos;
+        break;
+
+      case 'start':
+        // Range of scroll offsets where the subject element overlaps the
+        // logical-start edge of the viewport.
+        startOffset = viewPos - containerSize;
+        endOffset = viewPos + viewSize - containerSize;
+        break;
+
+      case 'end':
+        // Range of scroll offsets where the subject element overlaps the
+        // logical-end edge of the viewport.
+        startOffset = viewPos;
+        endOffset = viewPos + viewSize;
+        break;
+
+      default:
+        // TODO: support offset pair.
+    }
+
+    if (startOffset < endOffset) {
+      const progress = (scrollPos - startOffset) / (endOffset - startOffset);
+      return CSS.percent(100 * progress);
+    }
+
+    return unresolved;
+  }
+}
