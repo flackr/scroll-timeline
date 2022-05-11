@@ -589,7 +589,7 @@ export class ViewTimeline extends ScrollTimeline {
 
     // This check is not in the spec.
     // http://github.com/w3c/csswg-drafts/issues/7259
-    // Update once specced.
+    // TODO: Update once specced.
     let node = this.subject;
     while (node && node != container) {
       node = node.offsetParent;
