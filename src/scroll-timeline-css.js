@@ -63,36 +63,6 @@ function getSourceElement(source) {
   }
 }
 
-// This implementation is based on https://drafts.csswg.org/scroll-animations-1/
-// 'scroll-offsets' are likely to be deprecated,
-// TODO: Should update accordingly when new spec lands.
-function convertOneScrollOffset(part) {
-  if (part == 'auto') return new CSSKeywordValue('auto');
-
-  const matchesOffsetWithSuffix = RegexMatcher.OFFSET_WITH_SUFFIX.exec(part);
-  const VALUE_CAPTURE_INDEX = 1;
-  const UNIT_CAPTURE_INDEX = 2;
-  if (matchesOffsetWithSuffix) {
-    return new CSSUnitValue(parseInt(matchesOffsetWithSuffix[VALUE_CAPTURE_INDEX]), matchesOffsetWithSuffix[UNIT_CAPTURE_INDEX]);
-  }
-
-  const matchesElementOffset = RegexMatcher.ELEMENT_OFFSET.exec(part);
-  const SOURCE_CAPTURE_INDEX = 1;
-  const EDGE_CAPTURE_INDEX = 2;
-  const THRESHOLD_CAPTURE_INDEX = 3;
-  if (matchesElementOffset) {
-    if (document.getElementById(matchesElementOffset[SOURCE_CAPTURE_INDEX])) {
-      return {
-        target: document.getElementById(matchesElementOffset[SOURCE_CAPTURE_INDEX]),
-        ...(matchesElementOffset.length >= 3 ? { edge: matchesElementOffset[EDGE_CAPTURE_INDEX] } : {}),
-        ...(matchesElementOffset.length >= 4 ? { threshold: parseFloat(matchesElementOffset[THRESHOLD_CAPTURE_INDEX]) } : {})
-      };
-    }
-  }
-
-  return null;
-}
-
 function isDescendant(child, parent) {
   while (child) {
     if (child == parent) return true;
@@ -101,57 +71,17 @@ function isDescendant(child, parent) {
   return false;
 }
 
-// This implementation is based on https://drafts.csswg.org/scroll-animations-1/
-// 'scroll-offsets' are likely to be deprecated,
-// TODO: Should update accordingly when new spec lands.
-function getScrollOffsets(source, offsets) {
-  let scrollOffsets = undefined;
-
-  if (offsets) {
-    if (offsets == "none") {
-      // do nothing
-    } else {
-      scrollOffsets = offsets.split(",")
-        .map(part => part.trim())
-        .filter(part => part != '')
-        .map(part => convertOneScrollOffset(part))
-        .filter(offset => offset);
-
-      // If the available scroll-offsets are not valid,
-      // so we won't create the scrollTimeline,
-      for (let off of scrollOffsets) {
-        if (off.target && off.target instanceof Element &&
-          (window.getComputedStyle(off.target, null).display == "none" || !isDescendant(off.target, source))) {
-          return null;
-        }
-      }
-      if (scrollOffsets.length == 0) {
-        return null;
-      }
-    }
-  }
-
-  return scrollOffsets;
-}
-
 function createScrollTimeline(name) {
   const options = parser.scrollTimelineOptions.get(name);
   if (!options) return null;
 
   const sourceElement = getSourceElement(options.source);
-  const scrollOffsets = getScrollOffsets(sourceElement, options['scroll-offsets']);
 
-  // TODO: Handle invalid scrollOffsets differently, don't return null for scrollTimeline, should check native implementation
-  if (scrollOffsets !== null) {
-    const scrollTimeline = new ScrollTimeline({
-      ...(sourceElement ? { source: getSourceElement(options.source) } : {}),
-      ...(scrollOffsets ? { scrollOffsets: scrollOffsets } : {}),
-      ...(options.orientation != "auto" ? { orientation: options.orientation } : {}),
-    });
-    return scrollTimeline;
-  } else {
-    return null;
-  }
+  const scrollTimeline = new ScrollTimeline({
+    ...(sourceElement ? { source: getSourceElement(options.source) } : {}),
+    ...(options.orientation != "auto" ? { orientation: options.orientation } : {}),
+  });
+  return scrollTimeline;
 }
 
 export function initCSSPolyfill() {
