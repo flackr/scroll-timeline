@@ -204,10 +204,35 @@ export class StyleParser {
               p
             );
           }
+
+          // If there is no duration, animationstart will not happen,
+          // and polyfill will not work which is based on animationstart.
+          // Add 1s as duration to fix this.
+          if(timelineName || hasAnimationTimeline) {
+            if(!this.hasDuration(shorthand)) {
+              // TODO: Should keep track of whether duration is artificial or not,
+              // so that we can later track that we need to update timing to
+              // properly see duration as 'auto' for the polyfill.
+              rule.block.contents = rule.block.contents.replace(
+                "animation:",
+                "animation: 1s "
+              );
+              this.replacePart(
+                rule.block.startIndex,
+                rule.block.endIndex,
+                rule.block.contents,
+                p
+              );
+            }
+          }
         });
     }
 
     this.saveRelationInList(rule, timelineNames, animationNames);
+  }
+
+  hasDuration(shorthand) {
+    return shorthand.split(" ").filter(part => isTime(part)).length >= 1;
   }
 
   saveRelationInList(rule, timelineNames, animationNames) {
