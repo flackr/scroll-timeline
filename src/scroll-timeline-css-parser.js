@@ -210,6 +210,9 @@ export class StyleParser {
           // Add 1s as duration to fix this.
           if(timelineName || hasAnimationTimeline) {
             if(!this.hasDuration(shorthand)) {
+              // TODO: Should keep track of whether duration is artificial or not,
+              // so that we can later track that we need to update timing to
+              // properly see duration as 'auto' for the polyfill.
               rule.block.contents = rule.block.contents.replace(
                 "animation:",
                 "animation: 1s "
