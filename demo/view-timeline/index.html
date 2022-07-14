@@ -96,12 +96,20 @@
   <div id="overlay">
     <div class="progress-bar" style="top: 20px;"><span>cover</span></div>
     <div class="progress-bar" style="top: 70px;"><span>contain</span></div>
-    <div class="progress-bar" style="top: 120px;"><span>start</span></div>
-    <div class="progress-bar" style="top: 170px;"><span>end</span></div>
+    <div class="progress-bar" style="top: 120px;"><span>enter</span></div>
+    <div class="progress-bar" style="top: 170px;"><span>exit</span></div>
+    <div class="progress-bar" style="top: 220px">
+      <span>contain 25% to 75%</span>
+    </div>
+    <div class="progress-bar" style="top: 270px">
+      <span>enter 150% to exit -50%</span>
+    </div>
     <div class="progress-bar-progress" style="top: 20px;"></div>
     <div class="progress-bar-progress" style="top: 70px;"></div>
     <div class="progress-bar-progress" style="top: 120px;"></div>
     <div class="progress-bar-progress" style="top: 170px;"></div>
+    <div class="progress-bar-progress" style="top: 220px;"></div>
+    <div class="progress-bar-progress" style="top: 270px;"></div>
   </div>
   <input type="radio" name="layout" id="vertical-tb" checked>
   <label for="vertical">Vertical top to bottom</label>
@@ -117,11 +125,20 @@
     const target = document.getElementById('target');
     const viewTimeline = new ViewTimeline({
       'subject': target,
-      'range': range,
-      'orientation': orientation
+      'axis': orientation
     });
+    let startTime, endTime;
+    if (range instanceof Array) {
+      startTime = range[0];
+      endTime = range[1];
+    } else {
+      startTime = `${range} 0%`;
+      endTime= `${range} 100%`;
+    }
     bar.animate( { width: ['0px', '200px' ] }, {
       timeline: viewTimeline,
+      startTime: startTime,
+      endTime: endTime,
       fill: 'both'
     });
   }
@@ -132,12 +149,19 @@
     });
     createProgressAnimation(progressBars[0], 'cover', orientation);
     createProgressAnimation(progressBars[1], 'contain', orientation);
-    createProgressAnimation(progressBars[2], 'start', orientation);
-    createProgressAnimation(progressBars[3], 'end', orientation);
+    createProgressAnimation(progressBars[2], 'enter', orientation);
+    createProgressAnimation(progressBars[3], 'exit', orientation);
+    createProgressAnimation(progressBars[4],
+                            ['contain 25%', 'contain 75%'], orientation);
+    createProgressAnimation(progressBars[5],
+                            ['enter 150%', 'exit -50%'], orientation);
   };
 
   document.querySelectorAll('input').forEach(input => {
     input.addEventListener('change', (evt) => {
+      document.getAnimations().forEach(anim => {
+        anim.cancel();
+      });
       const selection = event.target.id;
       switch(selection) {
         case 'vertical-tb':

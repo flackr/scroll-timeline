@@ -2,7 +2,8 @@ import {
   ScrollTimeline,
   installScrollOffsetExtension,
   addAnimation,
-  removeAnimation
+  removeAnimation,
+  relativePosition
 } from "./scroll-timeline-base";
 
 const nativeElementAnimate = window.Element.prototype.animate;
@@ -478,7 +479,7 @@ function playInternal(details, autoRewind) {
   if (playbackRate > 0 && autoRewind && (previousCurrentTime == null ||
                                          previousCurrentTime < 0 ||
                                          previousCurrentTime >= upperBound)) {
-    seekTime = 0;
+    seekTime = 0; // <-- This is not right was it doesn't support start delay.
   } else if (playbackRate < 0 && autoRewind &&
              (previousCurrentTime == null || previousCurrentTime <= 0 ||
              previousCurrentTime > upperBound)) {
@@ -661,19 +662,39 @@ function createProxyEffect(details) {
       details.specifiedTiming = target.apply(effect);
       let timing = Object.assign({}, details.specifiedTiming);
 
+      const timeline = details.timeline;
+      let computedDelays = false;
+      let startDelay;
+      let endDelay;
+      if (timeline instanceof ViewTimeline) {
+        // Compute start and end delay to align with start and end times.
+        // If times not specified use cover 0% to cover 100%.
+        startDelay = fractionalStartDelay(details);
+        endDelay = fractionalEndDelay(details);
+        computedDelays = true;
+      }
+
       let totalDuration;
 
       // Duration 'auto' case.
-      if (timing.duration === null || timing.duration === 'auto') {
+      if (timing.duration === null || timing.duration === 'auto' ||
+          computedDelays) {
         if (details.timeline) {
-          // TODO: start and end delay are specced as doubles and currently
-          // ignored for a progress based animation. Support delay and endDelay
-          // once CSSNumberish.
-          timing.delay = 0;
-          timing.endDelay = 0;
+          if (computedDelays) {
+            timing.delay = startDelay * INTERNAL_DURATION_MS;
+            timing.endDelay = endDelay * INTERNAL_DURATION_MS;
+          } else {
+            // TODO: start and end delay are specced as doubles and currently
+            // ignored for a progress based animation. Support delay and endDelay
+            // once CSSNumberish.
+            timing.delay = 0;
+            timing.endDelay = 0;
+          }
           totalDuration = timing.iterations ? INTERNAL_DURATION_MS : 0;
-          timing.duration =
-              timing.iterations ? totalDuration / timing.iterations : 0;
+          timing.duration = timing.iterations
+             ? (totalDuration - timing.delay - timing.endDelay) /
+                 timing.iterations
+             : 0;
           // Set the timing on the native animation to the normalized values
           // while preserving the specified timing.
           nativeUpdateTiming.apply(effect, [timing]);
@@ -717,6 +738,26 @@ function createProxyEffect(details) {
   proxy.getTiming = new Proxy(effect.getTiming, getTimingHandler);
   proxy.updateTiming = new Proxy(effect.updateTiming, updateTimingHandler);
   return proxy;
+}
+
+// Computes the start delay as a fraction of the active cover range.
+function fractionalStartDelay(details) {
+  if (!(details.timeline instanceof ViewTimeline))
+    return 0;
+
+  const startTime =
+      details.timelineStartTime|| { phase: 'cover', percent: CSS.percent(0) };
+  return relativePosition(details.timeline, startTime.phase, startTime.percent);
+}
+
+// Computes the ends delay as a fraction of the active cover range.
+function fractionalEndDelay(details) {
+  if (!(details.timeline instanceof ViewTimeline))
+    return 0;
+
+  const endTime =
+      details.timelineEndTime || { phase: 'cover', percent: CSS.percent(100) };
+  return 1 - relativePosition(details.timeline, endTime.phase, endTime.percent);
 }
 
 // Create an alternate Animation class which proxies API requests.
@@ -767,6 +808,10 @@ export class ProxyAnimation {
       // Effect proxy that performs the necessary time conversions when using a
       // progress-based timelines.
       effect: null,
+      // Range when using a view-timeline.  The default range is cover 0% to
+      // 100%.
+      timelineStartTime: null,
+      timelineEndTime: null,
       proxy: this
     });
   }
@@ -1542,6 +1587,23 @@ export class ProxyAnimation {
   }
 };
 
+function parseViewTimelineTime(value, defaultPercentage) {
+  const PHASE_INDEX = 1;
+  const PERCENT_INDEX = 3;
+
+  if (!value)
+    return null;
+
+  const match = /(\w+)\s+((\-?\d+)%)?/.exec(value);
+  if (!match)
+    return null;
+
+  const phase = match[PHASE_INDEX];
+  const percent = parseFloat(match[PERCENT_INDEX] || defaultPercentage);
+
+  return { phase: phase, percent: CSS.percent(percent) };
+}
+
 export function animate(keyframes, options) {
   const timeline = options.timeline;
 
@@ -1553,6 +1615,11 @@ export function animate(keyframes, options) {
 
   if (timeline instanceof ScrollTimeline) {
     animation.pause();
+    if (timeline instanceof ViewTimeline) {
+      details = proxyAnimations.get(proxyAnimation);
+      details.timelineStartTime = parseViewTimelineTime(options.startTime);
+      details.timelineEndTime = parseViewTimelineTime(options.endTime);
+    }
     proxyAnimation.play();
   }
 
