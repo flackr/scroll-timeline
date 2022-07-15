@@ -312,7 +312,6 @@ function updateFinishedState(details, didSeek, synchronouslyNotify) {
     const playbackRate = effectivePlaybackRate(details);
     const upperBound = effectEnd(details);
     let boundary = details.previousCurrentTime;
-    // TODO: Support hold phase.
     if (playbackRate > 0 && unconstrainedCurrentTime >= upperBound) {
       if (boundary === null || boundary < upperBound)
         boundary = upperBound;
@@ -382,15 +381,28 @@ function syncCurrentTime(details) {
   if (!details.timeline)
     return;
 
+  let syncTime;
   if (details.startTime !== null) {
     const timelineTime = fromCssNumberish(details,
                                           details.timeline.currentTime);
-    details.animation.currentTime =
-        (timelineTime - details.startTime) *
-            details.animation.playbackRate;
+    setNativeCurrentTime(details,
+                         (timelineTime - details.startTime) *
+                             details.animation.playbackRate);
   } else if (details.holdTime !== null) {
-    details.animation.currentTime = details.holdTime;
+    setNativeCurrentTime(details, details.holdTime);
   }
+}
+
+// Sets the time of the underlying animation, nudging the time slightly if at
+// a scroll-timeline boundary to remain in the active phase.
+function setNativeCurrentTime(details, time) {
+  const timeline = details.timeline;
+  const atScrollTimelineBoundary =
+      timeline.currentTime.value == (this.playbackRate < 0 ? 0 : 100);
+  const delta =
+      atScrollTimelineBoundary ? (this.playbackRate < 0 ? 0.001 : -0.001) : 0;
+
+  details.animation.currentTime = time + delta;
 }
 
 function resetPendingTasks(details) {
@@ -567,11 +579,12 @@ function tickAnimation(timelineTime) {
 
   const playState = this.playState;
   if (playState == 'running' || playState == 'finished') {
-    const timelineTimeMs = fromCssNumberish(details, timelineTime);
+    let timelineTimeMs = fromCssNumberish(details, timelineTime);
 
-    details.animation.currentTime =
+    setNativeCurrentTime(
+        details,
         (timelineTimeMs - fromCssNumberish(details, this.startTime)) *
-            this.playbackRate;
+            this.playbackRate);
 
     // Conditionally reset the hold time so that the finished state can be
     // properly recomputed.
@@ -629,17 +642,6 @@ function createProxyEffect(details) {
         timing.duration = limit ?
             CSS.percent(100 * iteration_duration / limit) :
             CSS.percent(0);
-
-        // Correct for timeline phase.
-        const phase = details.timeline.phase;
-        const fill = timing.fill;
-
-        if(phase == 'before' && fill != 'backwards' && fill != 'both') {
-          timing.progress = null;
-        }
-        if (phase == 'after' && fill != 'forwards' && fill != 'both') {
-          timing.progress = null;
-        }
 
         // Correct for inactive timeline.
         if (details.timeline.currentTime === undefined) {

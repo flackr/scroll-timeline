@@ -36,20 +36,7 @@ function updateInternal(scrollTimelineInstance) {
   let animations = details.animations;
   if (animations.length === 0) return;
   let timelineTime = scrollTimelineInstance.currentTime;
-  const timelineRange = range(scrollTimelineInstance);
-  let forceTimingUpdate = false;
-  if (timelineRange != details.range) {
-    // Force renomalization of effect timing.
-    forceTimingUpdate = true;
-    details.range = timelineRange;
-  }
   for (let i = 0; i < animations.length; i++) {
-    if (forceTimingUpdate) {
-      const effect = animations[i].effect;
-      if (effect)
-        effect.updateTiming({});
-    }
-
     animations[i].tickAnimation(timelineTime);
   }
 }
@@ -116,7 +103,7 @@ export function calculateMaxScrollOffset(source, orientation) {
   // Only one horizontal writing mode: horizontal-tb.  All other writing modes
   // flow vertically.
   const horizontalWritingMode =
-    getComputedStyle(this.source).writingMode == 'horizontal-tb';
+    getComputedStyle(source).writingMode == 'horizontal-tb';
   if (orientation === "block")
     orientation = horizontalWritingMode ? "vertical" : "horizontal";
   else if (orientation === "inline")
@@ -346,7 +333,7 @@ export class ScrollTimeline {
       // Internal members
       animations: [],
       scrollOffsetFns: [],
-      range: undefined
+      range: null
     });
     this.source =
       options && options.source !== undefined ? options.source : document.scrollingElement;
@@ -545,6 +532,8 @@ function getScrollParent(node) {
 
 // Computes the scroll offsets corresponding to the [0, 100]% range for a
 // specific phase on a view timeline.
+// TODO: Track changes to determine when associated animations require their
+// timing to be renormalized.
 function range(timeline, phase) {
   const details = scrollTimelineOptions.get(timeline);
 
@@ -552,12 +541,8 @@ function range(timeline, phase) {
   if (timeline.phase === 'inactive')
     return unresolved;
 
-  if (!(timeline instanceof ViewTimeline)) {
-    return {
-      start: 0,
-      end: calculateMaxScrollOffset(timeline.source, timeline.orientation)
-    }
-  }
+  if (!(timeline instanceof ViewTimeline))
+    return unresolved;
 
   // Compute the offset of the top-left corner of subject relative to
   // top-left corner of the container.
@@ -567,11 +552,14 @@ function range(timeline, phase) {
   let top = 0;
   let left = 0;
   let node = target;
-  while (node && node != container) {
+  const ancestor = container.offsetParent;
+  while (node && node != ancestor) {
     left += node.offsetLeft;
     top += node.offsetTop;
     node = node.offsetParent;
   }
+  left -= container.offsetLeft + container.clientLeft;
+  top -= container.offsetTop + container.clientTop;
 
   // Determine the view and container size based on the scroll direction.
   // The view position is the scroll position of the logical starting edge
@@ -634,6 +622,11 @@ function range(timeline, phase) {
       break;
   }
 
+  // TODO: Clamping of offsets is not specced. Update once ratified.
+  const maxOffset = calculateMaxScrollOffset(container, orientation);
+  startOffset = Math.max(0, startOffset);
+  endOffset = Math.min(maxOffset, endOffset);
+
   return { start: startOffset, end: endOffset };
 }
 
@@ -642,6 +635,9 @@ function range(timeline, phase) {
 export function relativePosition(timeline, phase, percent) {
   const phaseRange = range(timeline, phase);
   const coverRange = range(timeline, 'cover');
+  if (!phaseRange || !coverRange)
+    return 0;
+
   const fraction = percent.value / 100;
   const offset =
       (phaseRange.end - phaseRange.start) * fraction + phaseRange.start;
@@ -707,24 +703,17 @@ export class ViewTimeline extends ScrollTimeline {
         return "inactive";
     }
 
-    // This check is not in the spec.
-    // http://github.com/w3c/csswg-drafts/issues/7259
-    // TODO: Update once specced.
-    let node = this.subject;
-    while (node && node != container) {
-      node = node.offsetParent;
-    }
-    if (node != container)
-      return "inactive";
-
     return "active";
   }
 
   get currentTime() {
     const scrollPos = directionAwareScrollOffset(this.source, this.orientation);
     const offsets = range(this, 'cover');
+    if (!offsets)
+      return undefined;
     const progress =
         (scrollPos - offsets.start) / (offsets.end - offsets.start);
+
     return CSS.percent(100 * progress);
   }
 
