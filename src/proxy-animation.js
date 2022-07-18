@@ -385,6 +385,11 @@ function syncCurrentTime(details) {
   if (details.startTime !== null) {
     const timelineTime = fromCssNumberish(details,
                                           details.timeline.currentTime);
+    if (timelineTime == null) {
+      setNativeCurrentTime(details, 0); // Hack
+      return;
+    }
+
     setNativeCurrentTime(details,
                          (timelineTime - details.startTime) *
                              details.animation.playbackRate);

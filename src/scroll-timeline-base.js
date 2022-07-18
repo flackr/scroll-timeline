@@ -32,6 +32,7 @@ function scrollEventSource(source) {
  * @param scrollTimelineInstance {ScrollTimeline}
  */
 function updateInternal(scrollTimelineInstance) {
+  validateSource(scrollTimelineInstance);
   const details = scrollTimelineOptions.get(scrollTimelineInstance);
   let animations = details.animations;
   if (animations.length === 0) return;
@@ -49,6 +50,9 @@ function updateInternal(scrollTimelineInstance) {
  * @returns {Number}
  */
 function directionAwareScrollOffset(source, orientation) {
+  if (!source)
+    return null;
+
   const style = getComputedStyle(source);
   // All writing modes are vertical except for horizontal-tb.
   // TODO: sideways-lr should flow bottom to top, but is currently unsupported
@@ -130,6 +134,43 @@ function resolvePx(cssValue, resolvedLength) {
     return total;
   }
   throw TypeError("Unsupported value type: " + typeof(cssValue));
+}
+
+// Detects if the cached source is obsolete, and updates if required
+// to ensure the new source has a scroll listener.
+function validateSource(timeline) {
+  if (!(timeline instanceof ViewTimeline))
+    return;
+
+  const node = timeline.subject;
+  if (!node) {
+    updateSource(timeline, null);
+    return;
+  }
+
+  const display  = getComputedStyle(node).display;
+  if (display == 'none') {
+    updateSource(timeline, null);
+    return;
+  }
+
+  const source = getScrollParent(node.parentNode);
+  updateSource(timeline, source);
+}
+
+function updateSource(timeline, source) {
+  const oldSource = scrollTimelineOptions.get(timeline).source;
+  if (oldSource == source)
+    return;
+
+  const listener = () => {
+    updateInternal(timeline);
+  };
+  if (oldSource)
+    scrollEventSource(oldSource).removeEventListener("scroll", listener);
+  scrollTimelineOptions.get(timeline).source = source;
+  if (source)
+    scrollEventSource(source).addEventListener("scroll", listener);
 }
 
 export function calculateScrollOffset(
@@ -330,28 +371,24 @@ export class ScrollTimeline {
       orientation: "block",
       scrollOffsets: [],
 
+      // View timeline
+      subject: null,
+
       // Internal members
       animations: [],
-      scrollOffsetFns: [],
-      range: null
+      scrollOffsetFns: []
     });
-    this.source =
-      options && options.source !== undefined ? options.source : document.scrollingElement;
+    const source =
+      options && options.source !== undefined ? options.source
+                                              : document.scrollingElement;
+    updateSource(this, source);
     this.orientation = (options && options.orientation) || "block";
     this.scrollOffsets = options && options.scrollOffsets !== undefined ? options.scrollOffsets : [];
+    updateInternal(this);
   }
 
   set source(element) {
-    if (this.source)
-      scrollEventSource(this.source).removeEventListener("scroll", () =>
-        updateInternal(this)
-      );
-    scrollTimelineOptions.get(this).source = element;
-    if (element) {
-      scrollEventSource(element).addEventListener("scroll", () =>
-        updateInternal(this)
-      );
-    }
+    updateSource(this, element);
     updateInternal(this);
   }
 
@@ -516,6 +553,11 @@ function getScrollParent(node) {
   if (!node)
     return undefined;
 
+  if (!(node instanceof HTMLElement)) {
+     return node.parentNode ? getScrollParent(node.parentNode)
+                            : document.scrollingElement;
+  }
+
   const style = getComputedStyle(node);
   switch(style['overflow-x']) {
     case 'auto':
@@ -566,7 +608,7 @@ function range(timeline, phase) {
   // of the view.
   const style = getComputedStyle(container);
   const horizontalWritingMode = style.writingMode == 'horizontal-tb';
-  const rtl = style.direction == 'rtl';
+  const rtl = style.direction == 'rtl' || style.writingMode == 'vertical-rl';
   let viewSize = undefined;
   let viewPos = undefined;
   let containerSize = undefined;
@@ -655,23 +697,27 @@ export class ViewTimeline extends ScrollTimeline {
   // ViewTimelineOptions. Inferring the source from the subject if not
   // explicitly set.
   constructor(options) {
-
-    // We rely on having source set in order to properly set up the
-    // scroll listener. Ideally, this should be null if left unspecified.
-    // TODO: Add a mutation observer that detects any style change that could
-    // affect resolution of the source container.
-    options.source = getScrollParent(options.subject.parentNode);
     if (options.axis) {
       // Orientation called axis for a view timeline. Internally we can still
       // call this orientation, since the internal naming is not exposed.
       options.orientation = options.axis;
     }
-
     super(options);
-
     const details = scrollTimelineOptions.get(this);
     details.subject = options && options.subject ? options.subject : undefined;
     // TODO: Handle insets.
+
+    validateSource(this);
+    updateInternal(this);
+  }
+
+  get source() {
+    validateSource(this);
+    return scrollTimelineOptions.get(this).source;
+  }
+
+  set source(source) {
+    throw new Error("Cannot set the source of a view timeline");
   }
 
   get subject() {
@@ -707,10 +753,14 @@ export class ViewTimeline extends ScrollTimeline {
   }
 
   get currentTime() {
+    const unresolved = null;
     const scrollPos = directionAwareScrollOffset(this.source, this.orientation);
+    if (scrollPos == unresolved)
+      return unresolved;
+
     const offsets = range(this, 'cover');
     if (!offsets)
-      return undefined;
+      return unresolved;
     const progress =
         (scrollPos - offsets.start) / (offsets.end - offsets.start);
 
