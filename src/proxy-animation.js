@@ -381,7 +381,6 @@ function syncCurrentTime(details) {
   if (!details.timeline)
     return;
 
-  let syncTime;
   if (details.startTime !== null) {
     const timelineTime = fromCssNumberish(details,
                                           details.timeline.currentTime);
