@@ -493,7 +493,7 @@ function playInternal(details, autoRewind) {
   if (playbackRate > 0 && autoRewind && (previousCurrentTime == null ||
                                          previousCurrentTime < 0 ||
                                          previousCurrentTime >= upperBound)) {
-    seekTime = 0; // <-- This is not right was it doesn't support start delay.
+    seekTime = 0;
   } else if (playbackRate < 0 && autoRewind &&
              (previousCurrentTime == null || previousCurrentTime <= 0 ||
              previousCurrentTime > upperBound)) {
@@ -581,7 +581,7 @@ function tickAnimation(timelineTime) {
 
   const playState = this.playState;
   if (playState == 'running' || playState == 'finished') {
-    let timelineTimeMs = fromCssNumberish(details, timelineTime);
+    const timelineTimeMs = fromCssNumberish(details, timelineTime);
 
     setNativeCurrentTime(
         details,
@@ -750,7 +750,7 @@ function fractionalStartDelay(details) {
     return 0;
 
   const startTime =
-      details.timelineStartTime|| { phase: 'cover', percent: CSS.percent(0) };
+      details.timelineStartTime || { phase: 'cover', percent: CSS.percent(0) };
   return relativePosition(details.timeline, startTime.phase, startTime.percent);
 }
 
