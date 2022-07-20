@@ -458,90 +458,39 @@ export class ScrollTimeline {
   get phase() {
     // Per https://drafts.csswg.org/scroll-animations-1/#phase-algorithm
     // Step 1
-    let unresolved = null;
+    const unresolved = null;
     //   if source is null
-    if (!this.source) return "inactive";
-    let scrollerStyle = getComputedStyle(this.source);
+    const container = this.source;
+    if (!container) return "inactive";
+    let scrollerStyle = getComputedStyle(container);
 
     //   if source does not currently have a CSS layout box
     if (scrollerStyle.display == "none")
       return "inactive";
 
     //   if source's layout box is not a scroll container"
-    if (this.source != document.scrollingElement &&
+    if (container != document.scrollingElement &&
         (scrollerStyle.overflow == 'visible' ||
          scrollerStyle.overflow == "clip")) {
         return "inactive";
     }
 
-    let effectiveScrollOffsets = resolveScrollOffsets(
-      this.source,
-      this.orientation,
-      this.scrollOffsets,
-      scrollTimelineOptions.get(this).scrollOffsetFns
-    );
-
-    //   if source's effective scroll range is null
-    if (effectiveScrollOffsets.length == 0)
-      return "inactive";
-
-    let maxOffset = calculateScrollOffset(
-      new CSSUnitValue(100, 'percent'),
-      this.source,
-      this.orientation,
-      new CSSUnitValue(100, 'percent'),
-      null
-    );
-    let startOffset = effectiveScrollOffsets[0];
-    let endOffset = effectiveScrollOffsets[effectiveScrollOffsets.length - 1];
-
-    // Step 2
-    const currentScrollOffset =
-        directionAwareScrollOffset(this.source, this.orientation);
-
-    // Step 3
-    if (currentScrollOffset < startOffset)
-      return "before";
-    if (currentScrollOffset >= endOffset && endOffset < maxOffset)
-      return "after";
     return "active"
   }
 
   get currentTime() {
-    // Per https://wicg.github.io/scroll-animations/#current-time-algorithm
-    // Step 1
-    let unresolved = null;
-    if (!this.source) return unresolved;
+    const unresolved = null;
+    const container = this.source;
+    if (!container) return unresolved;
     if (this.phase == 'inactive')
       return unresolved;
 
-    let effectiveScrollOffsets = resolveScrollOffsets(
-      this.source,
-      this.orientation,
-      this.scrollOffsets,
-      scrollTimelineOptions.get(this).scrollOffsetFns
-    );
-    let startOffset = effectiveScrollOffsets[0];
-    let endOffset = effectiveScrollOffsets[effectiveScrollOffsets.length - 1];
+    const orientation = this.orientation;
+    const scrollPos = directionAwareScrollOffset(container, orientation);
+    const maxScrollPos = calculateMaxScrollOffset(container, orientation);
 
-    // Step 2
-    const currentScrollOffset =
-        directionAwareScrollOffset(this.source, this.orientation);
-
-    // Step 3
-    if (currentScrollOffset < startOffset)
-      return CSS.percent(0);
-
-    // Step 4
-    if (currentScrollOffset >= endOffset)
-      return CSS.percent(100);
-
-    // Step 5
-    let progress = ComputeProgress(
-      currentScrollOffset,
-      effectiveScrollOffsets
-    );
-    return CSS.percent(100 * progress);
+    return maxScrollPos > 0 ? CSS.percent(100 * scrollPos / maxScrollPos)
+                            : CSS.percent(100);
   }
 
   get __polyfill() {

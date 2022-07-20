@@ -382,13 +382,14 @@ function syncCurrentTime(details) {
     return;
 
   if (details.startTime !== null) {
-    const timelineTime = fromCssNumberish(details,
-                                          details.timeline.currentTime);
+    const timelineTime = details.timeline.currentTime;
     if (timelineTime == null)
       return;
 
+    const timelineTimeMs = fromCssNumberish(details, timelineTime);
+
     setNativeCurrentTime(details,
-                         (timelineTime - details.startTime) *
+                         (timelineTimeMs - details.startTime) *
                              details.animation.playbackRate);
   } else if (details.holdTime !== null) {
     setNativeCurrentTime(details, details.holdTime);
@@ -400,6 +401,7 @@ function syncCurrentTime(details) {
 function setNativeCurrentTime(details, time) {
   const timeline = details.timeline;
   const atScrollTimelineBoundary =
+      timeline.currentTime &&
       timeline.currentTime.value == (this.playbackRate < 0 ? 0 : 100);
   const delta =
       atScrollTimelineBoundary ? (this.playbackRate < 0 ? 0.001 : -0.001) : 0;
