@@ -89,13 +89,13 @@ export function calculateTargetEffectEnd(animation) {
  * @param evaluateFunction {Function}
  * @returns {Array} all currently installed parsers
  */
-export function installScrollOffsetExtension(parseFunction, evaluateFunction) {
-  extensionScrollOffsetFunctions.push({
-    parse: parseFunction,
-    evaluate: evaluateFunction,
-  });
-  return extensionScrollOffsetFunctions;
-}
+// export function installScrollOffsetExtension(parseFunction, evaluateFunction) {
+//   extensionScrollOffsetFunctions.push({
+//     parse: parseFunction,
+//     evaluate: evaluateFunction,
+//   });
+//   return extensionScrollOffsetFunctions;
+// }
 
 /**
  * Calculates scroll offset based on orientation and source geometry
@@ -173,157 +173,6 @@ function updateSource(timeline, source) {
     scrollEventSource(source).addEventListener("scroll", listener);
 }
 
-export function calculateScrollOffset(
-  autoValue,
-  source,
-  orientation,
-  offset,
-  fn
-) {
-  if (fn)
-    return fn(
-      source,
-      orientation,
-      offset,
-      autoValue.value == 0 ? "start" : "end"
-    );
-  // TODO: Support other writing directions.
-  if (orientation === "block") orientation = "vertical";
-  else if (orientation === "inline") orientation = "horizontal";
-
-  let maxValue =
-    orientation === "vertical"
-      ? source.scrollHeight - source.clientHeight
-      : source.scrollWidth - source.clientWidth;
-  let parsed = parseLength(offset === AUTO ? autoValue : offset);
-  return resolvePx(parsed, maxValue);
-}
-
-/**
- * Resolve scroll offsets per
- * https://drafts.csswg.org/scroll-animations-1/#effective-scroll-offsets-algorithm
- * @param source {DOMElement}
- * @param orientation {String}
- * @param scrollOffsets {Array}
- * @param fns {Array}
- * @returns {Array}
- */
-export function resolveScrollOffsets(
-  source,
-  orientation,
-  scrollOffsets,
-  fns
-) {
-  // 1. Let effective scroll offsets be an empty list of effective scroll
-  // offsets.
-  let effectiveScrollOffsets = [];
-  // 2. Let first offset be true.
-  let firstOffset = true;
-
-  // 3. If scrollOffsets is empty
-  if(scrollOffsets.length == 0) {
-    // 3.1 Run the procedure to resolve a scroll timeline offset for auto with
-    // the is first flag set to first offset and add the resulted value into
-    // effective scroll offsets.
-    effectiveScrollOffsets.push(
-      calculateScrollOffset(
-        new CSSUnitValue(0, 'percent'),
-        source,
-        orientation,
-        AUTO
-    ));
-    // 3.2 Set first offset to false.
-    firstOffset = false;
-    // 3.3 Run the procedure to resolve a scroll timeline offset for auto with
-    // the is first flag set to first offset and add the resulted value into
-    // effective scroll offsets.
-    effectiveScrollOffsets.push(
-      calculateScrollOffset(
-        new CSSUnitValue(100, 'percent'),
-        source,
-        orientation,
-        AUTO
-    ));
-  }
-  // 4. If scrollOffsets has exactly one element
-  else if(scrollOffsets.length == 1) {
-    // 4.1 Run the procedure to resolve a scroll timeline offset for auto with
-    // the is first flag set to first offset and add the resulted value into
-    // effective scroll offsets.
-    effectiveScrollOffsets.push(
-      calculateScrollOffset(
-        new CSSUnitValue(0, 'percent'),
-        source,
-        orientation,
-        AUTO
-    ));
-    // 4.2 Set first offset to false.
-    firstOffset = false;
-  }
-  // 5. For each scroll offset in the list of scrollOffsets, perform the
-  // following steps:
-  for (let i = 0; i < scrollOffsets.length; i++) {
-    // 5.1 Let effective offset be the result of applying the procedure
-    // to resolve a scroll timeline offset for scroll offset with the is
-    // first flag set to first offset.
-    let effectiveOffset = calculateScrollOffset(
-      firstOffset ? new CSSUnitValue(0, 'percent') : new CSSUnitValue(100, 'percent'),
-      source,
-      orientation,
-      scrollOffsets[i],
-      fns[i]);
-    //  5.2 If effective offset is null, the effective scroll offsets is empty and abort the remaining steps.
-    if(effectiveOffset === null)
-      return [];
-    // 5.3 Add effective offset into effective scroll offsets.
-    effectiveScrollOffsets.push(effectiveOffset);
-    // 5.4 Set first offset to false.
-    firstOffset = false;
-  }
-  // 6. Return effective scroll offsets.
-  return effectiveScrollOffsets;
-}
-
-/**
- * Compute scroll timeline progress per
- * https://drafts.csswg.org/scroll-animations-1/#progress-calculation-algorithm
- * @param offset {number}
- * @param scrollOffsets {Array}
- * @returns {number}
- */
-export function ComputeProgress(
-  offset,
-  scrollOffsets
-) {
-  // 1. Let scroll offsets be the result of applying the procedure to resolve
-  // scroll timeline offsets for scrollOffsets.
-  // 2. Let offset index correspond to the position of the last offset in
-  // scroll offsets whose value is less than or equal to offset and the value
-  // at the following position greater than offset.
-  let offsetIndex;
-  for (offsetIndex = scrollOffsets.length - 2;
-       offsetIndex >= 0 && 
-         !(scrollOffsets[offsetIndex] <= offset && offset < scrollOffsets[offsetIndex + 1]);
-       offsetIndex--) {
-  }
-  // 3. Let start offset be the offset value at position offset index in
-  // scroll offsets.
-  let startOffset = scrollOffsets[offsetIndex];
-  // 4. Let end offset be the value of next offset in scroll offsets after
-  // start offset.
-  let endOffset = scrollOffsets[offsetIndex + 1];
-  // 5. Let size be the number of offsets in scroll offsets.
-  let size = scrollOffsets.length;
-  // 6. Let offset weight be the result of evaluating 1 / (size - 1).
-  let offsetWeight = 1 / (size - 1);
-  // 7. Let interval progress be the result of evaluating
-  // (offset - start offset) / (end offset - start offset).
-  let intervalProgress =  (offset - startOffset) / (endOffset - startOffset);
-  // 8. Return the result of evaluating
-  // (offset index + interval progress) × offset weight.
-  return (offsetIndex + intervalProgress) * offsetWeight;
-}
-
 /**
  * Removes a Web Animation instance from ScrollTimeline
  * @param scrollTimeline {ScrollTimeline}
@@ -376,7 +225,6 @@ export class ScrollTimeline {
 
       // Internal members
       animations: [],
-      scrollOffsetFns: []
     });
     const source =
       options && options.source !== undefined ? options.source
@@ -408,47 +256,6 @@ export class ScrollTimeline {
 
   get orientation() {
     return scrollTimelineOptions.get(this).orientation;
-  }
-
-  set scrollOffsets(value) {
-    let offsets = [];
-    let fns = [];
-    for (let input of value) {
-      let fn = null;
-      let offset = undefined;
-      if (input == "auto")
-        input = AUTO;
-      for (let i = 0; i < extensionScrollOffsetFunctions.length; i++) {
-        let result = extensionScrollOffsetFunctions[i].parse(input);
-        if (result !== undefined) {
-          offset = result;
-          fn = extensionScrollOffsetFunctions[i].evaluate;
-          break;
-        }
-      }
-      if (!fn) {
-        if (input != AUTO) {
-          let parsed = parseLength(input);
-          // TODO: This should check CSSMathSum values as well.
-          if (!parsed || (parsed instanceof CSSUnitValue && parsed.unit == "number"))
-            throw TypeError("Invalid scrollOffsets entry.");
-        }
-        offset = input;
-      }
-      offsets.push(offset);
-      fns.push(fn);
-    }
-    if (offsets.length == 1 && offsets[0] == AUTO)
-      throw TypeError("Invalid scrollOffsets value.");
-    let data = scrollTimelineOptions.get(this);
-    data.scrollOffsets = offsets;
-    data.scrollOffsetFns = fns;
-    updateInternal(this);
-  }
-
-  get scrollOffsets() {
-    let data = scrollTimelineOptions.get(this);
-    return data.scrollOffsets;
   }
 
   get duration() {

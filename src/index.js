@@ -15,17 +15,14 @@
 import {
   ScrollTimeline,
   ViewTimeline,
-  installScrollOffsetExtension
 } from "./scroll-timeline-base";
 import {
   animate,
   ProxyAnimation
 } from "./proxy-animation.js";
 
-import { calculateOffset, parseOffset } from "./intersection-based-offset";
 import { initCSSPolyfill } from "./scroll-timeline-css"
 
-installScrollOffsetExtension(parseOffset, calculateOffset);
 initCSSPolyfill();
 
 if (

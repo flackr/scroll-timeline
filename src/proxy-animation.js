@@ -1,6 +1,5 @@
 import {
   ScrollTimeline,
-  installScrollOffsetExtension,
   addAnimation,
   removeAnimation,
   relativePosition
@@ -751,9 +750,8 @@ function fractionalStartDelay(details) {
   if (!(details.timeline instanceof ViewTimeline))
     return 0;
 
-  const startTime =
-      details.timelineStartTime || { phase: 'cover', percent: CSS.percent(0) };
-  return relativePosition(details.timeline, startTime.phase, startTime.percent);
+  const startTime = details.timeRange.start;
+  return relativePosition(details.timeline, startTime.name, startTime.offset);
 }
 
 // Computes the ends delay as a fraction of the active cover range.
@@ -761,9 +759,8 @@ function fractionalEndDelay(details) {
   if (!(details.timeline instanceof ViewTimeline))
     return 0;
 
-  const endTime =
-      details.timelineEndTime || { phase: 'cover', percent: CSS.percent(100) };
-  return 1 - relativePosition(details.timeline, endTime.phase, endTime.percent);
+  const endTime = details.timeRange.end;
+  return 1 - relativePosition(details.timeline, endTime.name, endTime.offset);
 }
 
 // Create an alternate Animation class which proxies API requests.
@@ -814,10 +811,9 @@ export class ProxyAnimation {
       // Effect proxy that performs the necessary time conversions when using a
       // progress-based timelines.
       effect: null,
-      // Range when using a view-timeline.  The default range is cover 0% to
+      // Range when using a view-timeline. The default range is cover 0% to
       // 100%.
-      timelineStartTime: null,
-      timelineEndTime: null,
+      timeRange: null,
       proxy: this
     });
   }
@@ -1593,21 +1589,55 @@ export class ProxyAnimation {
   }
 };
 
-function parseViewTimelineTime(value, defaultPercentage) {
-  const PHASE_INDEX = 1;
-  const PERCENT_INDEX = 3;
+function parseTimeRange(value) {
+  const timeRange = {
+    start: {
+      name: 'cover',
+      offset: CSS.percent(0)
+    },
+    end: {
+      name: 'cover',
+      offset: CSS.percent(100)
+    }
+  };
 
   if (!value)
-    return null;
+    return timeRange;
 
-  const match = /(\w+)\s+((\-?\d+)%)?/.exec(value);
-  if (!match)
-    return null;
+  // Format:
+  // <start-name> <start-offset> <end-name> <end-offset>
+  // <name> --> <name> 0% <name> 100%
+  // <name> <start-offset> <end-offset> --> <name> <start-offset>
+  //                                        <name> <end-offset>
+  // <start-offset> <end-offset> --> cover <start-offset> cover <end-offset>
+  // TODO: Support all formatting options once ratified in the spec.
+  const parts = value.split(' ');
+  const names = [];
+  const offsets = [];
 
-  const phase = match[PHASE_INDEX];
-  const percent = parseFloat(match[PERCENT_INDEX] || defaultPercentage);
+  parts.forEach(part => {
+    if (part.endsWith('%'))
+      offsets.push(parseFloat(part));
+    else
+      names.push(part);
+  });
 
-  return { phase: phase, percent: CSS.percent(percent) };
+  if (names.length > 2 || offsets.length > 2 || offsets.length == 1) {
+    // Reject value and use default.
+    return timeRange;
+  }
+
+  if (names.length) {
+    timeRange.start.name = names[0];
+    timeRange.end.name = names.length > 1 ? names[1] : names[0];
+  }
+
+  if (offsets.length > 1) {
+    timeRange.start.offset = CSS.percent(offsets[0]);
+    timeRange.end.offset = CSS.percent(offsets[1]);
+  }
+
+  return timeRange;
 }
 
 export function animate(keyframes, options) {
@@ -1623,8 +1653,7 @@ export function animate(keyframes, options) {
     animation.pause();
     if (timeline instanceof ViewTimeline) {
       details = proxyAnimations.get(proxyAnimation);
-      details.timelineStartTime = parseViewTimelineTime(options.startTime);
-      details.timelineEndTime = parseViewTimelineTime(options.endTime);
+      details.timeRange = parseTimeRange(options.timeRange);
     }
     proxyAnimation.play();
   }

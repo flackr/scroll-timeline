@@ -169,13 +169,9 @@ function animateParallax() {
   let header = $('.header');
   $('.header > .background').animate({
       transform: ['none', 'translateY(30%)']}, {
-      duration: 10000, // Arbitrary duration...
       fill: 'both',
-      timeline: new ScrollTimeline({
-          scrollOffsets: [{target: header, edge: 'end', clamp: true},
-                          {target: header, clamp: true}],
-          fill: 'both',
-      })
+      timeline: new ViewTimeline({subject: header}),
+      timeRange: 'exit'
     });
 }
 
@@ -183,13 +179,9 @@ function animateZoom() {
   let container = $('#zoom');
   $('#zoom > div').animate({
       transform: ['scale(3) translateX(10%)', 'scale(1)']}, {
-      duration: 10000,
       fill: 'both',
-      timeline: new ScrollTimeline({
-          scrollOffsets: [{target: container, edge: 'end', threshold: 1, clamp: true},
-                          {target: container, threshold: 1, clamp: true}],
-          fill: 'both',
-      })
+      timeline: new ViewTimeline({ subject: container }),
+      timeRange: 'contain 20% 80%'
   });
 }
 
@@ -197,13 +189,9 @@ function animatePan() {
   let container = $('#pan');
   $('#pan').animate({
       backgroundPosition: ['left center', 'right center']}, {
-      duration: 10000,
       fill: 'both',
-      timeline: new ScrollTimeline({
-          scrollOffsets: [{target: container, edge: 'end', clamp: true},
-                          {target: container, clamp: true}],
-          fill: 'both',
-      })
+      timeline: new ViewTimeline({ subject: container }),
+      timeRange: 'contain'
   });
 }
 
@@ -211,32 +199,27 @@ function animateWipe() {
   let container = $('#wipe');
   $('#wipe > .top').animate({
       width: ['100%', '0']}, {
-      duration: 10000,
       fill: 'both',
-      timeline: new ScrollTimeline({
-          scrollOffsets: [{target: container, edge: 'end', clamp: true},
-                          {target: container, clamp: true}],
-          fill: 'both',
-      })
+      timeline: new ViewTimeline({ subject: container }),
+      timeRange: 'contain'
   });
 }
 
 function animateHeaders() {
   let headers = document.querySelectorAll('h2, h3');
   for (let i = 0; i < headers.length; i++) {
-    headers[i].animate([
-        {transform: 'translateX(-10px)',
-         opacity: 0},
-        {transform: 'none',
-         opacity: 1}], {
-        duration: 10000,
-        fill: 'both',
-        timeline: new ScrollTimeline({
-            scrollOffsets: [{target: headers[i], edge: 'end', rootMargin: '-20px', clamp: true},
-                            {target: headers[i], edge: 'end', threshold: 1, rootMargin: '-20px', clamp: true}],
-            fill: 'both',
-        })
-    });
+    const keyframes = [
+      { backgroundColor: 'white' },
+      { backgroundColor: 'rgb(183, 220, 233)' },
+      { backgroundColor: 'white' },
+    ];
+    headers[i].animate(
+        keyframes,
+        {
+          fill: 'both',
+          timeline: new ViewTimeline({ subject: headers[i] }),
+          timeRange: 'contain'
+        });
   }
 }
 
@@ -252,7 +235,6 @@ function initCode(functions) {
 }
 
 function init() {
-  // TODO: These should be updated to work with view-timeline polyfill.
   initCode([
     animateParallax,
     animateHeaders,
