@@ -210,7 +210,6 @@ export class ScrollTimeline {
     scrollTimelineOptions.set(this, {
       source: null,
       orientation: "block",
-      scrollOffsets: [],
 
       // View timeline
       subject: null,
@@ -224,7 +223,6 @@ export class ScrollTimeline {
                                               : document.scrollingElement;
     updateSource(this, source);
     this.orientation = (options && options.orientation) || "block";
-    this.scrollOffsets = options && options.scrollOffsets !== undefined ? options.scrollOffsets : [];
     updateInternal(this);
   }
 
