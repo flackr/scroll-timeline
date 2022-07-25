@@ -412,11 +412,8 @@ function range(timeline, phase) {
       break;
   }
 
-  // TODO: Clamping of offsets is not specced. Update once ratified.
+  // TODO: Revisit once the clamping issue is resolved.
   // see github.com/w3c/csswg-drafts/issues/7432.
-  const maxOffset = calculateMaxScrollOffset(container, orientation);
-  startOffset = Math.max(0, startOffset);
-  endOffset = Math.min(maxOffset, endOffset);
 
   return { start: startOffset, end: endOffset };
 }
