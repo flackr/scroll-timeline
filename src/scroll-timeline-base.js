@@ -84,20 +84,6 @@ export function calculateTargetEffectEnd(animation) {
 }
 
 /**
- * Enables the usage of custom parser and evaluator function, utilized by intersection based offset.
- * @param parseFunction {Function}
- * @param evaluateFunction {Function}
- * @returns {Array} all currently installed parsers
- */
-// export function installScrollOffsetExtension(parseFunction, evaluateFunction) {
-//   extensionScrollOffsetFunctions.push({
-//     parse: parseFunction,
-//     evaluate: evaluateFunction,
-//   });
-//   return extensionScrollOffsetFunctions;
-// }
-
-/**
  * Calculates scroll offset based on orientation and source geometry
  * @param source {DOMElement}
  * @param orientation {String}
@@ -159,18 +145,24 @@ function validateSource(timeline) {
 }
 
 function updateSource(timeline, source) {
-  const oldSource = scrollTimelineOptions.get(timeline).source;
+  const details = scrollTimelineOptions.get(timeline);
+  const oldSource = details.source;
+  const oldScrollListener = details.scrollListener;
   if (oldSource == source)
     return;
 
-  const listener = () => {
-    updateInternal(timeline);
-  };
-  if (oldSource)
-    scrollEventSource(oldSource).removeEventListener("scroll", listener);
+  if (oldSource && oldScrollListener) {
+    scrollEventSource(oldSource).removeEventListener("scroll",
+                                                     oldScrollListener);
+  }
   scrollTimelineOptions.get(timeline).source = source;
-  if (source)
+  if (source) {
+    const listener = () => {
+      updateInternal(timeline);
+    };
     scrollEventSource(source).addEventListener("scroll", listener);
+    details.scrollListener = listener;
+  }
 }
 
 /**
@@ -225,6 +217,7 @@ export class ScrollTimeline {
 
       // Internal members
       animations: [],
+      scrollListener: null
     });
     const source =
       options && options.source !== undefined ? options.source
@@ -484,28 +477,6 @@ export class ViewTimeline extends ScrollTimeline {
   // Internally we still call it orientation.
   get axis() {
     return scrollTimelineOptions.get(this).orientation;
-  }
-
-  get phase() {
-    if (!this.subject)
-      return "inactive";
-
-    const container = this.source;
-    if (!container)
-      return "inactive";
-
-    let scrollerStyle = getComputedStyle(container);
-
-    if (scrollerStyle.display == "none")
-      return "inactive";
-
-    if (container != document.scrollingElement &&
-        (scrollerStyle.overflow == 'visible' ||
-         scrollerStyle.overflow == "clip")) {
-        return "inactive";
-    }
-
-    return "active";
   }
 
   get currentTime() {
