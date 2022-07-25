@@ -1623,8 +1623,7 @@ function parseTimeRange(value) {
   });
 
   if (names.length > 2 || offsets.length > 2 || offsets.length == 1) {
-    // Reject value and use default.
-    return timeRange;
+    throw new Error("Invalid time range");
   }
 
   if (names.length) {
