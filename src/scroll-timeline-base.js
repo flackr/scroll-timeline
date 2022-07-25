@@ -300,6 +300,7 @@ function getScrollParent(node) {
   if (!node)
     return undefined;
 
+  // TODO: This is not quite correct.  Need to walk containing block chain.
   if (!(node instanceof HTMLElement)) {
      return node.parentNode ? getScrollParent(node.parentNode)
                             : document.scrollingElement;
@@ -412,6 +413,7 @@ function range(timeline, phase) {
   }
 
   // TODO: Clamping of offsets is not specced. Update once ratified.
+  // see github.com/w3c/csswg-drafts/issues/7432.
   const maxOffset = calculateMaxScrollOffset(container, orientation);
   startOffset = Math.max(0, startOffset);
   endOffset = Math.min(maxOffset, endOffset);
