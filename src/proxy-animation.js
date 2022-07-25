@@ -1652,7 +1652,7 @@ export function animate(keyframes, options) {
   if (timeline instanceof ScrollTimeline) {
     animation.pause();
     if (timeline instanceof ViewTimeline) {
-      details = proxyAnimations.get(proxyAnimation);
+      const details = proxyAnimations.get(proxyAnimation);
       details.timeRange = parseTimeRange(options.timeRange);
     }
     proxyAnimation.play();
