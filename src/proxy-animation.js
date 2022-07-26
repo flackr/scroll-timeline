@@ -1624,7 +1624,7 @@ function parseTimeRange(value) {
   });
 
   if (names.length > 2 || offsets.length > 2 || offsets.length == 1) {
-    throw new Error("Invalid time range");
+    throw TypeError("Invalid time range");
   }
 
   if (names.length) {
