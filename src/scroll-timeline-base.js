@@ -32,10 +32,11 @@ function scrollEventSource(source) {
  * @param scrollTimelineInstance {ScrollTimeline}
  */
 function updateInternal(scrollTimelineInstance) {
-  let animations = scrollTimelineOptions.get(scrollTimelineInstance).animations;
+  validateSource(scrollTimelineInstance);
+  const details = scrollTimelineOptions.get(scrollTimelineInstance);
+  let animations = details.animations;
   if (animations.length === 0) return;
   let timelineTime = scrollTimelineInstance.currentTime;
-
   for (let i = 0; i < animations.length; i++) {
     animations[i].tickAnimation(timelineTime);
   }
@@ -49,6 +50,9 @@ function updateInternal(scrollTimelineInstance) {
  * @returns {Number}
  */
 function directionAwareScrollOffset(source, orientation) {
+  if (!source)
+    return null;
+
   const style = getComputedStyle(source);
   // All writing modes are vertical except for horizontal-tb.
   // TODO: sideways-lr should flow bottom to top, but is currently unsupported
@@ -80,20 +84,6 @@ export function calculateTargetEffectEnd(animation) {
 }
 
 /**
- * Enables the usage of custom parser and evaluator function, utilized by intersection based offset.
- * @param parseFunction {Function}
- * @param evaluateFunction {Function}
- * @returns {Array} all currently installed parsers
- */
-export function installScrollOffsetExtension(parseFunction, evaluateFunction) {
-  extensionScrollOffsetFunctions.push({
-    parse: parseFunction,
-    evaluate: evaluateFunction,
-  });
-  return extensionScrollOffsetFunctions;
-}
-
-/**
  * Calculates scroll offset based on orientation and source geometry
  * @param source {DOMElement}
  * @param orientation {String}
@@ -103,7 +93,7 @@ export function calculateMaxScrollOffset(source, orientation) {
   // Only one horizontal writing mode: horizontal-tb.  All other writing modes
   // flow vertically.
   const horizontalWritingMode =
-    getComputedStyle(this.source).writingMode == 'horizontal-tb';
+    getComputedStyle(source).writingMode == 'horizontal-tb';
   if (orientation === "block")
     orientation = horizontalWritingMode ? "vertical" : "horizontal";
   else if (orientation === "inline")
@@ -132,155 +122,47 @@ function resolvePx(cssValue, resolvedLength) {
   throw TypeError("Unsupported value type: " + typeof(cssValue));
 }
 
-export function calculateScrollOffset(
-  autoValue,
-  source,
-  orientation,
-  offset,
-  fn
-) {
-  if (fn)
-    return fn(
-      source,
-      orientation,
-      offset,
-      autoValue.value == 0 ? "start" : "end"
-    );
-  // TODO: Support other writing directions.
-  if (orientation === "block") orientation = "vertical";
-  else if (orientation === "inline") orientation = "horizontal";
+// Detects if the cached source is obsolete, and updates if required
+// to ensure the new source has a scroll listener.
+function validateSource(timeline) {
+  if (!(timeline instanceof ViewTimeline))
+    return;
 
-  let maxValue =
-    orientation === "vertical"
-      ? source.scrollHeight - source.clientHeight
-      : source.scrollWidth - source.clientWidth;
-  let parsed = parseLength(offset === AUTO ? autoValue : offset);
-  return resolvePx(parsed, maxValue);
+  const node = timeline.subject;
+  if (!node) {
+    updateSource(timeline, null);
+    return;
+  }
+
+  const display  = getComputedStyle(node).display;
+  if (display == 'none') {
+    updateSource(timeline, null);
+    return;
+  }
+
+  const source = getScrollParent(node.parentNode);
+  updateSource(timeline, source);
 }
 
-/**
- * Resolve scroll offsets per
- * https://drafts.csswg.org/scroll-animations-1/#effective-scroll-offsets-algorithm
- * @param source {DOMElement}
- * @param orientation {String}
- * @param scrollOffsets {Array}
- * @param fns {Array}
- * @returns {Array}
- */
-export function resolveScrollOffsets(
-  source,
-  orientation,
-  scrollOffsets,
-  fns
-) {
-  // 1. Let effective scroll offsets be an empty list of effective scroll
-  // offsets.
-  let effectiveScrollOffsets = [];
-  // 2. Let first offset be true.
-  let firstOffset = true;
+function updateSource(timeline, source) {
+  const details = scrollTimelineOptions.get(timeline);
+  const oldSource = details.source;
+  const oldScrollListener = details.scrollListener;
+  if (oldSource == source)
+    return;
 
-  // 3. If scrollOffsets is empty
-  if(scrollOffsets.length == 0) {
-    // 3.1 Run the procedure to resolve a scroll timeline offset for auto with
-    // the is first flag set to first offset and add the resulted value into
-    // effective scroll offsets.
-    effectiveScrollOffsets.push(
-      calculateScrollOffset(
-        new CSSUnitValue(0, 'percent'),
-        source,
-        orientation,
-        AUTO
-    ));
-    // 3.2 Set first offset to false.
-    firstOffset = false;
-    // 3.3 Run the procedure to resolve a scroll timeline offset for auto with
-    // the is first flag set to first offset and add the resulted value into
-    // effective scroll offsets.
-    effectiveScrollOffsets.push(
-      calculateScrollOffset(
-        new CSSUnitValue(100, 'percent'),
-        source,
-        orientation,
-        AUTO
-    ));
+  if (oldSource && oldScrollListener) {
+    scrollEventSource(oldSource).removeEventListener("scroll",
+                                                     oldScrollListener);
   }
-  // 4. If scrollOffsets has exactly one element
-  else if(scrollOffsets.length == 1) {
-    // 4.1 Run the procedure to resolve a scroll timeline offset for auto with
-    // the is first flag set to first offset and add the resulted value into
-    // effective scroll offsets.
-    effectiveScrollOffsets.push(
-      calculateScrollOffset(
-        new CSSUnitValue(0, 'percent'),
-        source,
-        orientation,
-        AUTO
-    ));
-    // 4.2 Set first offset to false.
-    firstOffset = false;
+  scrollTimelineOptions.get(timeline).source = source;
+  if (source) {
+    const listener = () => {
+      updateInternal(timeline);
+    };
+    scrollEventSource(source).addEventListener("scroll", listener);
+    details.scrollListener = listener;
   }
-  // 5. For each scroll offset in the list of scrollOffsets, perform the
-  // following steps:
-  for (let i = 0; i < scrollOffsets.length; i++) {
-    // 5.1 Let effective offset be the result of applying the procedure
-    // to resolve a scroll timeline offset for scroll offset with the is
-    // first flag set to first offset.
-    let effectiveOffset = calculateScrollOffset(
-      firstOffset ? new CSSUnitValue(0, 'percent') : new CSSUnitValue(100, 'percent'),
-      source,
-      orientation,
-      scrollOffsets[i],
-      fns[i]);
-    //  5.2 If effective offset is null, the effective scroll offsets is empty and abort the remaining steps.
-    if(effectiveOffset === null)
-      return [];
-    // 5.3 Add effective offset into effective scroll offsets.
-    effectiveScrollOffsets.push(effectiveOffset);
-    // 5.4 Set first offset to false.
-    firstOffset = false;
-  }
-  // 6. Return effective scroll offsets.
-  return effectiveScrollOffsets;
-}
-
-/**
- * Compute scroll timeline progress per
- * https://drafts.csswg.org/scroll-animations-1/#progress-calculation-algorithm
- * @param offset {number}
- * @param scrollOffsets {Array}
- * @returns {number}
- */
-export function ComputeProgress(
-  offset,
-  scrollOffsets
-) {
-  // 1. Let scroll offsets be the result of applying the procedure to resolve
-  // scroll timeline offsets for scrollOffsets.
-  // 2. Let offset index correspond to the position of the last offset in
-  // scroll offsets whose value is less than or equal to offset and the value
-  // at the following position greater than offset.
-  let offsetIndex;
-  for (offsetIndex = scrollOffsets.length - 2;
-       offsetIndex >= 0 && 
-         !(scrollOffsets[offsetIndex] <= offset && offset < scrollOffsets[offsetIndex + 1]);
-       offsetIndex--) {
-  }
-  // 3. Let start offset be the offset value at position offset index in
-  // scroll offsets.
-  let startOffset = scrollOffsets[offsetIndex];
-  // 4. Let end offset be the value of next offset in scroll offsets after
-  // start offset.
-  let endOffset = scrollOffsets[offsetIndex + 1];
-  // 5. Let size be the number of offsets in scroll offsets.
-  let size = scrollOffsets.length;
-  // 6. Let offset weight be the result of evaluating 1 / (size - 1).
-  let offsetWeight = 1 / (size - 1);
-  // 7. Let interval progress be the result of evaluating
-  // (offset - start offset) / (end offset - start offset).
-  let intervalProgress =  (offset - startOffset) / (endOffset - startOffset);
-  // 8. Return the result of evaluating
-  // (offset index + interval progress) × offset weight.
-  return (offsetIndex + intervalProgress) * offsetWeight;
 }
 
 /**
@@ -328,29 +210,24 @@ export class ScrollTimeline {
     scrollTimelineOptions.set(this, {
       source: null,
       orientation: "block",
-      scrollOffsets: [],
+
+      // View timeline
+      subject: null,
 
       // Internal members
       animations: [],
-      scrollOffsetFns: [],
+      scrollListener: null
     });
-    this.source =
-      options && options.source !== undefined ? options.source : document.scrollingElement;
+    const source =
+      options && options.source !== undefined ? options.source
+                                              : document.scrollingElement;
+    updateSource(this, source);
     this.orientation = (options && options.orientation) || "block";
-    this.scrollOffsets = options && options.scrollOffsets !== undefined ? options.scrollOffsets : [];
+    updateInternal(this);
   }
 
   set source(element) {
-    if (this.source)
-      scrollEventSource(this.source).removeEventListener("scroll", () =>
-        updateInternal(this)
-      );
-    scrollTimelineOptions.get(this).source = element;
-    if (element) {
-      scrollEventSource(element).addEventListener("scroll", () =>
-        updateInternal(this)
-      );
-    }
+    updateSource(this, element);
     updateInternal(this);
   }
 
@@ -372,47 +249,6 @@ export class ScrollTimeline {
     return scrollTimelineOptions.get(this).orientation;
   }
 
-  set scrollOffsets(value) {
-    let offsets = [];
-    let fns = [];
-    for (let input of value) {
-      let fn = null;
-      let offset = undefined;
-      if (input == "auto")
-        input = AUTO;
-      for (let i = 0; i < extensionScrollOffsetFunctions.length; i++) {
-        let result = extensionScrollOffsetFunctions[i].parse(input);
-        if (result !== undefined) {
-          offset = result;
-          fn = extensionScrollOffsetFunctions[i].evaluate;
-          break;
-        }
-      }
-      if (!fn) {
-        if (input != AUTO) {
-          let parsed = parseLength(input);
-          // TODO: This should check CSSMathSum values as well.
-          if (!parsed || (parsed instanceof CSSUnitValue && parsed.unit == "number"))
-            throw TypeError("Invalid scrollOffsets entry.");
-        }
-        offset = input;
-      }
-      offsets.push(offset);
-      fns.push(fn);
-    }
-    if (offsets.length == 1 && offsets[0] == AUTO)
-      throw TypeError("Invalid scrollOffsets value.");
-    let data = scrollTimelineOptions.get(this);
-    data.scrollOffsets = offsets;
-    data.scrollOffsetFns = fns;
-    updateInternal(this);
-  }
-
-  get scrollOffsets() {
-    let data = scrollTimelineOptions.get(this);
-    return data.scrollOffsets;
-  }
-
   get duration() {
     return CSS.percent(100);
   }
@@ -420,90 +256,39 @@ export class ScrollTimeline {
   get phase() {
     // Per https://drafts.csswg.org/scroll-animations-1/#phase-algorithm
     // Step 1
-    let unresolved = null;
+    const unresolved = null;
     //   if source is null
-    if (!this.source) return "inactive";
-    let scrollerStyle = getComputedStyle(this.source);
+    const container = this.source;
+    if (!container) return "inactive";
+    let scrollerStyle = getComputedStyle(container);
 
     //   if source does not currently have a CSS layout box
     if (scrollerStyle.display == "none")
       return "inactive";
 
     //   if source's layout box is not a scroll container"
-    if (this.source != document.scrollingElement &&
+    if (container != document.scrollingElement &&
         (scrollerStyle.overflow == 'visible' ||
          scrollerStyle.overflow == "clip")) {
         return "inactive";
     }
 
-    let effectiveScrollOffsets = resolveScrollOffsets(
-      this.source,
-      this.orientation,
-      this.scrollOffsets,
-      scrollTimelineOptions.get(this).scrollOffsetFns
-    );
-
-    //   if source's effective scroll range is null
-    if (effectiveScrollOffsets.length == 0)
-      return "inactive";
-
-    let maxOffset = calculateScrollOffset(
-      new CSSUnitValue(100, 'percent'),
-      this.source,
-      this.orientation,
-      new CSSUnitValue(100, 'percent'),
-      null
-    );
-    let startOffset = effectiveScrollOffsets[0];
-    let endOffset = effectiveScrollOffsets[effectiveScrollOffsets.length - 1];
-
-    // Step 2
-    const currentScrollOffset =
-        directionAwareScrollOffset(this.source, this.orientation);
-
-    // Step 3
-    if (currentScrollOffset < startOffset)
-      return "before";
-    if (currentScrollOffset >= endOffset && endOffset < maxOffset)
-      return "after";
     return "active"
   }
 
   get currentTime() {
-    // Per https://wicg.github.io/scroll-animations/#current-time-algorithm
-    // Step 1
-    let unresolved = null;
-    if (!this.source) return unresolved;
+    const unresolved = null;
+    const container = this.source;
+    if (!container) return unresolved;
     if (this.phase == 'inactive')
       return unresolved;
 
-    let effectiveScrollOffsets = resolveScrollOffsets(
-      this.source,
-      this.orientation,
-      this.scrollOffsets,
-      scrollTimelineOptions.get(this).scrollOffsetFns
-    );
-    let startOffset = effectiveScrollOffsets[0];
-    let endOffset = effectiveScrollOffsets[effectiveScrollOffsets.length - 1];
+    const orientation = this.orientation;
+    const scrollPos = directionAwareScrollOffset(container, orientation);
+    const maxScrollPos = calculateMaxScrollOffset(container, orientation);
 
-    // Step 2
-    const currentScrollOffset =
-        directionAwareScrollOffset(this.source, this.orientation);
-
-    // Step 3
-    if (currentScrollOffset < startOffset)
-      return CSS.percent(0);
-
-    // Step 4
-    if (currentScrollOffset >= endOffset)
-      return CSS.percent(100);
-
-    // Step 5
-    let progress = ComputeProgress(
-      currentScrollOffset,
-      effectiveScrollOffsets
-    );
-    return CSS.percent(100 * progress);
+    return maxScrollPos > 0 ? CSS.percent(100 * scrollPos / maxScrollPos)
+                            : CSS.percent(100);
   }
 
   get __polyfill() {
@@ -514,6 +299,12 @@ export class ScrollTimeline {
 function getScrollParent(node) {
   if (!node)
     return undefined;
+
+  // TODO: This is not quite correct.  Need to walk containing block chain.
+  if (!(node instanceof HTMLElement)) {
+     return node.parentNode ? getScrollParent(node.parentNode)
+                            : document.scrollingElement;
+  }
 
   const style = getComputedStyle(node);
   switch(style['overflow-x']) {
@@ -527,6 +318,120 @@ function getScrollParent(node) {
   }
 }
 
+// ---- View timelines -----
+
+// Computes the scroll offsets corresponding to the [0, 100]% range for a
+// specific phase on a view timeline.
+// TODO: Track changes to determine when associated animations require their
+// timing to be renormalized.
+function range(timeline, phase) {
+  const details = scrollTimelineOptions.get(timeline);
+
+  const unresolved = null;
+  if (timeline.phase === 'inactive')
+    return unresolved;
+
+  if (!(timeline instanceof ViewTimeline))
+    return unresolved;
+
+  // Compute the offset of the top-left corner of subject relative to
+  // top-left corner of the container.
+  const container = timeline.source;
+  const target = timeline.subject;
+
+  let top = 0;
+  let left = 0;
+  let node = target;
+  const ancestor = container.offsetParent;
+  while (node && node != ancestor) {
+    left += node.offsetLeft;
+    top += node.offsetTop;
+    node = node.offsetParent;
+  }
+  left -= container.offsetLeft + container.clientLeft;
+  top -= container.offsetTop + container.clientTop;
+
+  // Determine the view and container size based on the scroll direction.
+  // The view position is the scroll position of the logical starting edge
+  // of the view.
+  const style = getComputedStyle(container);
+  const horizontalWritingMode = style.writingMode == 'horizontal-tb';
+  const rtl = style.direction == 'rtl' || style.writingMode == 'vertical-rl';
+  let viewSize = undefined;
+  let viewPos = undefined;
+  let containerSize = undefined;
+  const orientation = details.orientation;
+  if (orientation == 'horizontal' ||
+      (orientation == 'inline' && horizontalWritingMode) ||
+      (orientation == 'block' && !horizontalWritingMode)) {
+    viewSize = target.clientWidth;
+    viewPos = left;
+    if (rtl)
+      viewPos += container.scrollWidth - container.clientWidth;
+    containerSize = container.clientWidth;
+  } else {
+    // TODO: support sideways-lr
+    viewSize = target.clientHeight;
+    viewPos = top;
+    containerSize = container.clientHeight;
+  }
+
+  const scrollPos = directionAwareScrollOffset(container, orientation);
+  let startOffset = undefined;
+  let endOffset = undefined;
+
+  switch(phase) {
+    case 'cover':
+      // Range of scroll offsets where the subject element intersects the
+      // source's viewport.
+      startOffset = viewPos - containerSize;
+      endOffset = viewPos + viewSize;
+      break;
+
+    case 'contain':
+      // Range of scroll offsets where the subject element is fully inside of
+      // the container's viewport. If the subject's bounds exceed the size
+      // of the viewport in the scroll direction then the scroll range is
+      // empty.
+      startOffset = viewPos + viewSize - containerSize;
+      endOffset = viewPos;
+      break;
+
+    case 'enter':
+      // Range of scroll offsets where the subject element overlaps the
+      // logical-start edge of the viewport.
+      startOffset = viewPos - containerSize;
+      endOffset = viewPos + viewSize - containerSize;
+      break;
+
+    case 'exit':
+      // Range of scroll offsets where the subject element overlaps the
+      // logical-end edge of the viewport.
+      startOffset = viewPos;
+      endOffset = viewPos + viewSize;
+      break;
+  }
+
+  // TODO: Revisit once the clamping issue is resolved.
+  // see github.com/w3c/csswg-drafts/issues/7432.
+
+  return { start: startOffset, end: endOffset };
+}
+
+// Calculate the fractional offset of a (phase, percent) pair relative to the
+// full cover range.
+export function relativePosition(timeline, phase, percent) {
+  const phaseRange = range(timeline, phase);
+  const coverRange = range(timeline, 'cover');
+  if (!phaseRange || !coverRange)
+    return 0;
+
+  const fraction = percent.value / 100;
+  const offset =
+      (phaseRange.end - phaseRange.start) * fraction + phaseRange.start;
+  return (offset - coverRange.start) / (coverRange.end - coverRange.start);
+}
+
 // https://drafts.csswg.org/scroll-animations-1/rewrite#view-progress-timelines
 export class ViewTimeline extends ScrollTimeline {
   // As specced, ViewTimeline has a subject and a source, but
@@ -538,164 +443,52 @@ export class ViewTimeline extends ScrollTimeline {
   // ViewTimelineOptions. Inferring the source from the subject if not
   // explicitly set.
   constructor(options) {
-    // We rely on having source set in order to properly set up the
-    // scroll listener. Ideally, this should be null if left unspecified.
-    // TODO: Add a mutation observer that detects any style change that could
-    // affect resolution of the source container.
-    if (options.subject && !options.source)
-      options.source = getScrollParent(options.subject.parentNode);
-
+    if (options.axis) {
+      // Orientation called axis for a view timeline. Internally we can still
+      // call this orientation, since the internal naming is not exposed.
+      options.orientation = options.axis;
+    }
     super(options);
-
     const details = scrollTimelineOptions.get(this);
     details.subject = options && options.subject ? options.subject : undefined;
-    details.range = options && options.range ? options.range : 'cover';
     // TODO: Handle insets.
+
+    validateSource(this);
+    updateInternal(this);
+  }
+
+  get source() {
+    validateSource(this);
+    return scrollTimelineOptions.get(this).source;
+  }
+
+  set source(source) {
+    throw new Error("Cannot set the source of a view timeline");
   }
 
   get subject() {
     return scrollTimelineOptions.get(this).subject;
   }
 
-
-  // As currently specced phase can be in one of 4 states: active, inactive,
-  // before, and after. This creates potential confusion with animation effect
-  // phases. The phase calculation for an animation effect already knows how
-  // to handle currentTime being outside the range of [0, effect end]. The
-  // implementation of phase for the view timeline drops the before and after
-  // phases and simply allows currentTime to extend outside the [0%, 100%]
-  // range. Visually, this produces the correct result and there is a proposal
-  // to update the spec to align with this implementation.
-  // http://github.com/w3c/csswg-drafts/issues/7240
-  // TODO: Update once specced.
-  get phase() {
-    if (!this.subject)
-      return "inactive";
-
-    const container = this.source;
-    if (!container)
-      return "inactive";
-
-    let scrollerStyle = getComputedStyle(container);
-
-    if (scrollerStyle.display == "none")
-      return "inactive";
-
-    if (container != document.scrollingElement &&
-        (scrollerStyle.overflow == 'visible' ||
-         scrollerStyle.overflow == "clip")) {
-        return "inactive";
-    }
-
-    // This check is not in the spec.
-    // http://github.com/w3c/csswg-drafts/issues/7259
-    // TODO: Update once specced.
-    let node = this.subject;
-    while (node && node != container) {
-      node = node.offsetParent;
-    }
-    if (node != container)
-      return "inactive";
-
-    return "active";
-  }
-
-  // Currently specced as fit with proposal to rename in order to more naturally
-  // support start and end transitions.
-  // http://github.com/w3c/csswg-drafts/issues/7044
-  // TODO: Update once specced.
-  get range() {
-    return scrollTimelineOptions.get(this).range;
+  // The orientation is called "axis" for a view timeline.
+  // Internally we still call it orientation.
+  get axis() {
+    return scrollTimelineOptions.get(this).orientation;
   }
 
   get currentTime() {
     const unresolved = null;
-    if (this.phase === 'inactive')
+    const scrollPos = directionAwareScrollOffset(this.source, this.orientation);
+    if (scrollPos == unresolved)
       return unresolved;
 
-    // Compute the offset of the top-left corner of subject relative to
-    // top-left corner of the container.
-    const container = this.source;
-    const target = this.subject;
+    const offsets = range(this, 'cover');
+    if (!offsets)
+      return unresolved;
+    const progress =
+        (scrollPos - offsets.start) / (offsets.end - offsets.start);
 
-    let top = 0;
-    let left = 0;
-    let node = target;
-    while (node && node != container) {
-      left += node.offsetLeft;
-      top += node.offsetTop;
-      node = node.offsetParent;
-    }
-
-    // Determine the view and container size based on the scroll direction.
-    // The view position is the scroll position of the logical starting edge
-    // of the view.
-    const style = getComputedStyle(container);
-    const horizontalWritingMode = style.writingMode == 'horizontal-tb';
-    const rtl = style.direction == 'rtl';
-    let viewSize = undefined;
-    let viewPos = undefined;
-    let containerSize = undefined;
-    const orientation = this.orientation;
-    if (orientation == 'horizontal' ||
-        (orientation == 'inline' && horizontalWritingMode) ||
-        (orientation == 'block' && !horizontalWritingMode)) {
-      viewSize = target.clientWidth;
-      viewPos = left;
-      if (rtl)
-        viewPos += container.scrollWidth - container.clientWidth;
-      containerSize = container.clientWidth;
-    } else {
-      // TODO: support sideways-lr
-      viewSize = target.clientHeight;
-      viewPos = top;
-      containerSize = container.clientHeight;
-    }
-
-    const scrollPos = directionAwareScrollOffset(container, orientation);
-    let startOffset = undefined;
-    let endOffset = undefined;
-
-    switch(this.range) {
-      case 'cover':
-        // Range of scroll offsets where the subject element intersects the
-        // source's viewport.
-        startOffset = viewPos - containerSize;
-        endOffset = viewPos + viewSize;
-        break;
-
-      case 'contain':
-        // Range of scroll offsets where the subject element is fully inside of
-        // the container's viewport. If the subject's bounds exceed the size
-        // of the viewport in the scroll direction then the scroll range is
-        // empty.
-        startOffset = viewPos + viewSize - containerSize;
-        endOffset = viewPos;
-        break;
-
-      case 'start':
-        // Range of scroll offsets where the subject element overlaps the
-        // logical-start edge of the viewport.
-        startOffset = viewPos - containerSize;
-        endOffset = viewPos + viewSize - containerSize;
-        break;
-
-      case 'end':
-        // Range of scroll offsets where the subject element overlaps the
-        // logical-end edge of the viewport.
-        startOffset = viewPos;
-        endOffset = viewPos + viewSize;
-        break;
-
-      default:
-        // TODO: support offset pair.
-    }
-
-    if (startOffset < endOffset) {
-      const progress = (scrollPos - startOffset) / (endOffset - startOffset);
-      return CSS.percent(100 * progress);
-    }
-
-    return unresolved;
+    return CSS.percent(100 * progress);
   }
+
 }

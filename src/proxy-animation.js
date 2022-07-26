@@ -1,8 +1,8 @@
 import {
   ScrollTimeline,
-  installScrollOffsetExtension,
   addAnimation,
-  removeAnimation
+  removeAnimation,
+  relativePosition
 } from "./scroll-timeline-base";
 
 const nativeElementAnimate = window.Element.prototype.animate;
@@ -311,7 +311,6 @@ function updateFinishedState(details, didSeek, synchronouslyNotify) {
     const playbackRate = effectivePlaybackRate(details);
     const upperBound = effectEnd(details);
     let boundary = details.previousCurrentTime;
-    // TODO: Support hold phase.
     if (playbackRate > 0 && unconstrainedCurrentTime >= upperBound) {
       if (boundary === null || boundary < upperBound)
         boundary = upperBound;
@@ -382,14 +381,32 @@ function syncCurrentTime(details) {
     return;
 
   if (details.startTime !== null) {
-    const timelineTime = fromCssNumberish(details,
-                                          details.timeline.currentTime);
-    details.animation.currentTime =
-        (timelineTime - details.startTime) *
-            details.animation.playbackRate;
+    const timelineTime = details.timeline.currentTime;
+    if (timelineTime == null)
+      return;
+
+    const timelineTimeMs = fromCssNumberish(details, timelineTime);
+
+    setNativeCurrentTime(details,
+                         (timelineTimeMs - details.startTime) *
+                             details.animation.playbackRate);
   } else if (details.holdTime !== null) {
-    details.animation.currentTime = details.holdTime;
+    setNativeCurrentTime(details, details.holdTime);
   }
+}
+
+// Sets the time of the underlying animation, nudging the time slightly if at
+// a scroll-timeline boundary to remain in the active phase.
+function setNativeCurrentTime(details, time) {
+  const timeline = details.timeline;
+  const playbackRate = details.animation.playbackRate;
+  const atScrollTimelineBoundary =
+      timeline.currentTime &&
+      timeline.currentTime.value == (playbackRate < 0 ? 0 : 100);
+  const delta =
+      atScrollTimelineBoundary ? (playbackRate < 0 ? 0.001 : -0.001) : 0;
+
+  details.animation.currentTime = time + delta;
 }
 
 function resetPendingTasks(details) {
@@ -568,9 +585,10 @@ function tickAnimation(timelineTime) {
   if (playState == 'running' || playState == 'finished') {
     const timelineTimeMs = fromCssNumberish(details, timelineTime);
 
-    details.animation.currentTime =
+    setNativeCurrentTime(
+        details,
         (timelineTimeMs - fromCssNumberish(details, this.startTime)) *
-            this.playbackRate;
+            this.playbackRate);
 
     // Conditionally reset the hold time so that the finished state can be
     // properly recomputed.
@@ -629,17 +647,6 @@ function createProxyEffect(details) {
             CSS.percent(100 * iteration_duration / limit) :
             CSS.percent(0);
 
-        // Correct for timeline phase.
-        const phase = details.timeline.phase;
-        const fill = timing.fill;
-
-        if(phase == 'before' && fill != 'backwards' && fill != 'both') {
-          timing.progress = null;
-        }
-        if (phase == 'after' && fill != 'forwards' && fill != 'both') {
-          timing.progress = null;
-        }
-
         // Correct for inactive timeline.
         if (details.timeline.currentTime === undefined) {
           timing.localTime = null;
@@ -661,19 +668,39 @@ function createProxyEffect(details) {
       details.specifiedTiming = target.apply(effect);
       let timing = Object.assign({}, details.specifiedTiming);
 
+      const timeline = details.timeline;
+      let computedDelays = false;
+      let startDelay;
+      let endDelay;
+      if (timeline instanceof ViewTimeline) {
+        // Compute start and end delay to align with start and end times.
+        // If times not specified use cover 0% to cover 100%.
+        startDelay = fractionalStartDelay(details);
+        endDelay = fractionalEndDelay(details);
+        computedDelays = true;
+      }
+
       let totalDuration;
 
       // Duration 'auto' case.
-      if (timing.duration === null || timing.duration === 'auto') {
+      if (timing.duration === null || timing.duration === 'auto' ||
+          computedDelays) {
         if (details.timeline) {
-          // TODO: start and end delay are specced as doubles and currently
-          // ignored for a progress based animation. Support delay and endDelay
-          // once CSSNumberish.
-          timing.delay = 0;
-          timing.endDelay = 0;
+          if (computedDelays) {
+            timing.delay = startDelay * INTERNAL_DURATION_MS;
+            timing.endDelay = endDelay * INTERNAL_DURATION_MS;
+          } else {
+            // TODO: start and end delay are specced as doubles and currently
+            // ignored for a progress based animation. Support delay and endDelay
+            // once CSSNumberish.
+            timing.delay = 0;
+            timing.endDelay = 0;
+          }
           totalDuration = timing.iterations ? INTERNAL_DURATION_MS : 0;
-          timing.duration =
-              timing.iterations ? totalDuration / timing.iterations : 0;
+          timing.duration = timing.iterations
+             ? (totalDuration - timing.delay - timing.endDelay) /
+                 timing.iterations
+             : 0;
           // Set the timing on the native animation to the normalized values
           // while preserving the specified timing.
           nativeUpdateTiming.apply(effect, [timing]);
@@ -717,6 +744,24 @@ function createProxyEffect(details) {
   proxy.getTiming = new Proxy(effect.getTiming, getTimingHandler);
   proxy.updateTiming = new Proxy(effect.updateTiming, updateTimingHandler);
   return proxy;
+}
+
+// Computes the start delay as a fraction of the active cover range.
+function fractionalStartDelay(details) {
+  if (!(details.timeline instanceof ViewTimeline))
+    return 0;
+
+  const startTime = details.timeRange.start;
+  return relativePosition(details.timeline, startTime.name, startTime.offset);
+}
+
+// Computes the ends delay as a fraction of the active cover range.
+function fractionalEndDelay(details) {
+  if (!(details.timeline instanceof ViewTimeline))
+    return 0;
+
+  const endTime = details.timeRange.end;
+  return 1 - relativePosition(details.timeline, endTime.name, endTime.offset);
 }
 
 // Create an alternate Animation class which proxies API requests.
@@ -767,6 +812,9 @@ export class ProxyAnimation {
       // Effect proxy that performs the necessary time conversions when using a
       // progress-based timelines.
       effect: null,
+      // Range when using a view-timeline. The default range is cover 0% to
+      // 100%.
+      timeRange: null,
       proxy: this
     });
   }
@@ -1542,6 +1590,56 @@ export class ProxyAnimation {
   }
 };
 
+function parseTimeRange(value) {
+  const timeRange = {
+    start: {
+      name: 'cover',
+      offset: CSS.percent(0)
+    },
+    end: {
+      name: 'cover',
+      offset: CSS.percent(100)
+    }
+  };
+
+  if (!value)
+    return timeRange;
+
+  // Format:
+  // <start-name> <start-offset> <end-name> <end-offset>
+  // <name> --> <name> 0% <name> 100%
+  // <name> <start-offset> <end-offset> --> <name> <start-offset>
+  //                                        <name> <end-offset>
+  // <start-offset> <end-offset> --> cover <start-offset> cover <end-offset>
+  // TODO: Support all formatting options once ratified in the spec.
+  const parts = value.split(' ');
+  const names = [];
+  const offsets = [];
+
+  parts.forEach(part => {
+    if (part.endsWith('%'))
+      offsets.push(parseFloat(part));
+    else
+      names.push(part);
+  });
+
+  if (names.length > 2 || offsets.length > 2 || offsets.length == 1) {
+    throw TypeError("Invalid time range");
+  }
+
+  if (names.length) {
+    timeRange.start.name = names[0];
+    timeRange.end.name = names.length > 1 ? names[1] : names[0];
+  }
+
+  if (offsets.length > 1) {
+    timeRange.start.offset = CSS.percent(offsets[0]);
+    timeRange.end.offset = CSS.percent(offsets[1]);
+  }
+
+  return timeRange;
+}
+
 export function animate(keyframes, options) {
   const timeline = options.timeline;
 
@@ -1553,6 +1651,10 @@ export function animate(keyframes, options) {
 
   if (timeline instanceof ScrollTimeline) {
     animation.pause();
+    if (timeline instanceof ViewTimeline) {
+      const details = proxyAnimations.get(proxyAnimation);
+      details.timeRange = parseTimeRange(options.timeRange);
+    }
     proxyAnimation.play();
   }
 
