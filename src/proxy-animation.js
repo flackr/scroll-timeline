@@ -399,7 +399,7 @@ function syncCurrentTime(details) {
 // a scroll-timeline boundary to remain in the active phase.
 function setNativeCurrentTime(details, time) {
   const timeline = details.timeline;
-  const playbackRate = details.playbackRate;
+  const playbackRate = details.animation.playbackRate;
   const atScrollTimelineBoundary =
       timeline.currentTime &&
       timeline.currentTime.value == (playbackRate < 0 ? 0 : 100);
