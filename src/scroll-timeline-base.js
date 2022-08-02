@@ -140,7 +140,7 @@ function validateSource(timeline) {
     return;
   }
 
-  const source = getScrollParent(node.parentNode);
+  const source = getScrollParent(node);
   updateSource(timeline, source);
 }
 
@@ -309,7 +309,7 @@ function findClosestAncestor(element, matcher) {
 }
 
 function isBlockContainer(element) {
-  const style = style.getComputedStyle(element);
+  const style = getComputedStyle(element);
   switch (style.display) {
     case 'block':
     case 'inline-block':
@@ -318,7 +318,7 @@ function isBlockContainer(element) {
     case 'table-caption':
     case 'flow-root':
     case 'flex':
-    case 'grid'
+    case 'grid':
       return true;
   }
 
@@ -343,7 +343,7 @@ function isAbsoluteOrFixedElementContainer(element) {
 }
 
 function getContainingBlock(element) {
-  switch (getComputedStyle(element).posiition) {
+  switch (getComputedStyle(element).position) {
     case 'static':
     case 'relative':
     case 'sticky':
