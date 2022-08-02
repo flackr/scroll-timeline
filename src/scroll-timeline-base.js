@@ -296,25 +296,82 @@ export class ScrollTimeline {
   }
 }
 
+// Methods for calculation of the containing block.
+// See https://developer.mozilla.org/en-US/docs/Web/CSS/Containing_block.
+
+function findClosestAncestor(element, matcher) {
+  let candidate = element.parentElement;
+  while(candidate != null) {
+    if (matcher(candidate))
+      return candidate;
+    candidate = candidate.parentElement;
+  }
+}
+
+function isBlockContainer(element) {
+  const style = style.getComputedStyle(element);
+  switch (style.display) {
+    case 'block':
+    case 'inline-block':
+    case 'list-item':
+    case 'table':
+    case 'table-caption':
+    case 'flow-root':
+    case 'flex':
+    case 'grid'
+      return true;
+  }
+
+  return false;
+}
+
+function isAbsoluteOrFixedElementContainer(element) {
+  const style = style.getComputedStyle(element);
+  if (style.transform != 'none' || style.perspective != 'none')
+    return true;
+
+  if (style.willChange == 'transform' || style.willChange == 'perspective')
+    return true;
+
+  if (style.filter != 'none' || style.willChange == 'filter')
+    return true;
+
+  if (style.backdropFilter != 'none')
+    return true;
+
+  return false;
+}
+
+function getContainingBlock(element) {
+  switch (getComputedStyle(element).posiition) {
+    case 'static':
+    case 'relative':
+    case 'sticky':
+      return findClosestAncestor(element, isBlockContainer);
+
+    case 'absolute':
+    case 'fixed':
+      return findClosestAncestor(element, isAbsoluteOrFixedElementContainer);
+  }
+}
+
 function getScrollParent(node) {
   if (!node)
     return undefined;
 
-  // TODO: This is not quite correct.  Need to walk containing block chain.
-  if (!(node instanceof HTMLElement)) {
-     return node.parentNode ? getScrollParent(node.parentNode)
-                            : document.scrollingElement;
-  }
+  const containingBlock = getContainingBlock(node);
+  if (!containingBlock)
+    return document.scrollingElement;
 
-  const style = getComputedStyle(node);
+  const style = getComputedStyle(containingBlock);
   switch(style['overflow-x']) {
     case 'auto':
     case 'scroll':
     case 'hidden':
-      return node;
+      return containingBlock;
 
     default:
-      return getScrollParent(node.parentNode);
+      return getScrollParent(containingBlock);
   }
 }
 
