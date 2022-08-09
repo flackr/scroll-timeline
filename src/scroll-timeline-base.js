@@ -325,7 +325,7 @@ function isBlockContainer(element) {
   return false;
 }
 
-function isAbsoluteOrFixedElementContainer(element) {
+function isFixedElementContainer(element) {
   const style = style.getComputedStyle(element);
   if (style.transform != 'none' || style.perspective != 'none')
     return true;
@@ -342,6 +342,14 @@ function isAbsoluteOrFixedElementContainer(element) {
   return false;
 }
 
+function isAbsoluteElementContainer(element) {
+  const style = style.getComputedStyle(element);
+  if (style.position != 'static')
+    return true;
+
+  return isFixedElementContainer(element);
+}
+
 function getContainingBlock(element) {
   switch (getComputedStyle(element).position) {
     case 'static':
@@ -350,8 +358,10 @@ function getContainingBlock(element) {
       return findClosestAncestor(element, isBlockContainer);
 
     case 'absolute':
+       return findClosestAncestor(element, isAbsoluteElementContainer);
+
     case 'fixed':
-      return findClosestAncestor(element, isAbsoluteOrFixedElementContainer);
+      return findClosestAncestor(element, isFixedElementContainer);
   }
 }
 
@@ -359,19 +369,19 @@ function getScrollParent(node) {
   if (!node)
     return undefined;
 
-  const containingBlock = getContainingBlock(node);
-  if (!containingBlock)
-    return document.scrollingElement;
+  while (true) {
+    const containingBlock = getContainingBlock(node);
+    if (!containingBlock)
+      return document.scrollingElement;
 
-  const style = getComputedStyle(containingBlock);
-  switch(style['overflow-x']) {
-    case 'auto':
-    case 'scroll':
-    case 'hidden':
-      return containingBlock;
-
-    default:
-      return getScrollParent(containingBlock);
+    const style = getComputedStyle(containingBlock);
+    switch(style['overflow-x']) {
+      case 'auto':
+      case 'scroll':
+      case 'hidden':
+        return containingBlock;
+    }
+    node = containingBlock;
   }
 }
 
