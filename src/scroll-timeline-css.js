@@ -1,5 +1,6 @@
 import { StyleParser, RegexMatcher } from "./scroll-timeline-css-parser";
 import { ProxyAnimation } from "./proxy-animation"
+import { ScrollTimeline, ViewTimeline } from "./scroll-timeline-base";
 
 const parser = new StyleParser();
 
@@ -84,6 +85,18 @@ function createScrollTimeline(name) {
   return scrollTimeline;
 }
 
+function createViewTimeline(timelineName) {
+  const options = parser.getViewTimelineOptions(timelineName);
+  if(!options) return null;
+
+  const viewTimeline = new ViewTimeline({
+    subject: document.querySelector(options.selector),
+    axis: options.axis
+  });
+
+  return viewTimeline;
+}
+
 export function initCSSPolyfill() {
   // Don't load if browser claims support
   if (CSS.supports("animation-timeline: works")) {
@@ -99,8 +112,14 @@ export function initCSSPolyfill() {
       const timelineName = parser.getScrollTimelineName(anim.animationName, evt.target);
       if (timelineName) {
         const scrollTimeline = createScrollTimeline(timelineName);
-        if (anim.timeline != scrollTimeline) {
+        const viewTimeline = createViewTimeline(timelineName);
+
+        if (scrollTimeline && anim.timeline != scrollTimeline) {
           const proxyAnimation = new ProxyAnimation(anim, scrollTimeline);
+          anim.pause();
+          proxyAnimation.play();
+        } else if(viewTimeline && anim.timeline != viewTimeline) {
+          const proxyAnimation = new ProxyAnimation(anim, viewTimeline);
           anim.pause();
           proxyAnimation.play();
         }

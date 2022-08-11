@@ -751,7 +751,7 @@ function fractionalStartDelay(details) {
   if (!(details.timeline instanceof ViewTimeline))
     return 0;
 
-  const startTime = details.timeRange.start;
+  const startTime = details?.timeRange?.start || {name: 'cover', offset: CSS.percent(0)};
   return relativePosition(details.timeline, startTime.name, startTime.offset);
 }
 
@@ -760,7 +760,7 @@ function fractionalEndDelay(details) {
   if (!(details.timeline instanceof ViewTimeline))
     return 0;
 
-  const endTime = details.timeRange.end;
+  const endTime = details?.timeRange?.end || {name: 'cover', offset: CSS.percent(100)};
   return 1 - relativePosition(details.timeline, endTime.name, endTime.offset);
 }
 
