@@ -25,7 +25,7 @@ const ANIMATION_KEYWORDS = [
   'ease', 'linear', 'ease-in', 'ease-out', 'ease-in-out'
 ];
 
-const VIEW_TIMELINE_AXES = ['block', 'inline',  'vertical', 'horizontal'];
+const VIEW_TIMELINE_AXIS_TYPES = ['block', 'inline',  'vertical', 'horizontal'];
 
 // 1 - Extracts @scroll-timeline and saves it in scrollTimelineOptions.
 // 2 - If we find any animation-timeline in any of the CSS Rules, 
@@ -238,7 +238,7 @@ export class StyleParser {
       if(parts.length == 1) {
         viewTimeline.name = parts[0];
       } else if(parts.length == 2) {
-        if(VIEW_TIMELINE_AXES.includes(parts[0])) {
+        if(VIEW_TIMELINE_AXIS_TYPES.includes(parts[0])) {
           viewTimeline.axis = parts[0], viewTimeline.name = parts[1];
         } else {
           viewTimeline.axis = parts[1], viewTimeline.name = parts[0];
@@ -253,7 +253,7 @@ export class StyleParser {
 
     if(hasViewTimelineAxis) {
       const parts = this.extractMatches(rule.block.contents, RegexMatcher.VIEW_TIMELINE_AXIS);
-      if(VIEW_TIMELINE_AXES.includes(parts[0]))
+      if(VIEW_TIMELINE_AXIS_TYPES.includes(parts[0]))
         viewTimeline.axis = parts[0];
     }
 

@@ -73,28 +73,22 @@ function isDescendant(child, parent) {
 }
 
 function createScrollTimeline(name) {
-  const options = parser.scrollTimelineOptions.get(name);
+  let options = parser.scrollTimelineOptions.get(name) ||
+    parser.getViewTimelineOptions(name);
   if (!options) return null;
 
-  const sourceElement = getSourceElement(options.source);
-
-  const scrollTimeline = new ScrollTimeline({
-    ...(sourceElement ? { source: getSourceElement(options.source) } : {}),
-    ...(options.orientation != "auto" ? { orientation: options.orientation } : {}),
-  });
-  return scrollTimeline;
-}
-
-function createViewTimeline(timelineName) {
-  const options = parser.getViewTimelineOptions(timelineName);
-  if(!options) return null;
-
-  const viewTimeline = new ViewTimeline({
-    subject: document.querySelector(options.selector),
-    axis: options.axis
-  });
-
-  return viewTimeline;
+  if(options.source) {
+    const sourceElement = getSourceElement(options.source);
+    return new ScrollTimeline({
+      ...(sourceElement ? { source: getSourceElement(options.source) } : {}),
+      ...(options.orientation != "auto" ? { orientation: options.orientation } : {}),
+    });
+  } else {
+    return new ViewTimeline({
+      subject: document.querySelector(options.selector),
+      axis: options.axis
+    });
+  }
 }
 
 export function initCSSPolyfill() {
@@ -112,14 +106,8 @@ export function initCSSPolyfill() {
       const timelineName = parser.getScrollTimelineName(anim.animationName, evt.target);
       if (timelineName) {
         const scrollTimeline = createScrollTimeline(timelineName);
-        const viewTimeline = createViewTimeline(timelineName);
-
         if (scrollTimeline && anim.timeline != scrollTimeline) {
           const proxyAnimation = new ProxyAnimation(anim, scrollTimeline);
-          anim.pause();
-          proxyAnimation.play();
-        } else if(viewTimeline && anim.timeline != viewTimeline) {
-          const proxyAnimation = new ProxyAnimation(anim, viewTimeline);
           anim.pause();
           proxyAnimation.play();
         }
