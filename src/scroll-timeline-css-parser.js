@@ -271,9 +271,9 @@ export class StyleParser {
 
     if(hasViewTimeline) {
       const parts = this.extractMatches(rule.block.contents, RegexMatcher.VIEW_TIMELINE, separator=' ');
-      if(parts.length == 1)
+      if(parts.length == 1) {
         viewTimeline.name = parts[0];
-      else if(parts.length == 2) {
+      } else if(parts.length == 2) {
         if(VIEW_TIMELINE_AXIS_TYPES.includes(parts[0]))
           viewTimeline.axis = parts[0], viewTimeline.name = parts[1];
         else
