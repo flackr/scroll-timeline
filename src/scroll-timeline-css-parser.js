@@ -100,12 +100,48 @@ export class StyleParser {
     return null;
   }
 
-  getViewTimelineOptions(timelineName) {
+  // This implementation is based on https://drafts.csswg.org/scroll-animations-1/
+  // TODO: Should update accordingly when new spec lands.
+  getSourceElement(source) {
+    const matches = RegexMatcher.SOURCE_ELEMENT.exec(source);
+    const SOURCE_CAPTURE_INDEX = 1;
+    if (matches)
+      return document.getElementById(matches[SOURCE_CAPTURE_INDEX]);
+    else if (source === "auto")
+      return document.scrollingElement;
+    else
+      return null;
+  }
+
+  getScrollTimelineOptions(timelineName) {
+    const options = this.scrollTimelineOptions.get(timelineName);
+
+    if(options?.source) {
+      const sourceElement = this.getSourceElement(options.source);
+      return {
+        ...(sourceElement ? { source: sourceElement } : {}),
+        ...(options.orientation != "auto" ? { orientation: options.orientation } : {}),
+      };
+    }
+
+    return null;
+  }
+
+  getViewTimelineOptions(timelineName, target) {
     // TODO: Take into account the scoping of the ViewTimelines
     // https://github.com/w3c/csswg-drafts/issues/7047
-    for (let i = this.subjectSelectorToViewTimeline.length - 1; i >= 0; i--)
-      if(this.subjectSelectorToViewTimeline[i].name == timelineName)
-        return this.subjectSelectorToViewTimeline[i];
+    for (let i = this.subjectSelectorToViewTimeline.length - 1; i >= 0; i--) {
+      const options = this.subjectSelectorToViewTimeline[i];
+      if(options.name == timelineName) {
+        const allSubjects = target.parentElement.querySelectorAll(options.selector);
+        if(allSubjects.length) {
+          return {
+            subject: allSubjects[allSubjects.length - 1],
+            axis: options.axis
+          }
+        }
+      }
+    }
 
     return null;
   }
@@ -235,14 +271,13 @@ export class StyleParser {
 
     if(hasViewTimeline) {
       const parts = this.extractMatches(rule.block.contents, RegexMatcher.VIEW_TIMELINE, separator=' ');
-      if(parts.length == 1) {
+      if(parts.length == 1)
         viewTimeline.name = parts[0];
-      } else if(parts.length == 2) {
-        if(VIEW_TIMELINE_AXIS_TYPES.includes(parts[0])) {
+      else if(parts.length == 2) {
+        if(VIEW_TIMELINE_AXIS_TYPES.includes(parts[0]))
           viewTimeline.axis = parts[0], viewTimeline.name = parts[1];
-        } else {
+        else
           viewTimeline.axis = parts[1], viewTimeline.name = parts[0];
-        }
       }
     }
 

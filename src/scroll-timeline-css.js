@@ -50,20 +50,6 @@ function initMutationObserver() {
     .forEach((tag) => handleLinkedStylesheet(tag));
 }
 
-// This implementation is based on https://drafts.csswg.org/scroll-animations-1/
-// TODO: Should update accordingly when new spec lands.
-function getSourceElement(source) {
-  const matches = RegexMatcher.SOURCE_ELEMENT.exec(source);
-  const SOURCE_CAPTURE_INDEX = 1;
-  if (matches) {
-    return document.getElementById(matches[SOURCE_CAPTURE_INDEX]);
-  } else if (source === "auto") {
-    return document.scrollingElement;
-  } else {
-    return null;
-  }
-}
-
 function isDescendant(child, parent) {
   while (child) {
     if (child == parent) return true;
@@ -72,23 +58,15 @@ function isDescendant(child, parent) {
   return false;
 }
 
-function createScrollTimeline(name) {
-  let options = parser.scrollTimelineOptions.get(name) ||
-    parser.getViewTimelineOptions(name);
+function createScrollTimeline(animationName, target) {
+  const timelineName = parser.getScrollTimelineName(animationName, target);
+  if(!timelineName) return null;
+
+  let options = parser.getScrollTimelineOptions(timelineName) ||
+    parser.getViewTimelineOptions(timelineName, target);
   if (!options) return null;
 
-  if(options.source) {
-    const sourceElement = getSourceElement(options.source);
-    return new ScrollTimeline({
-      ...(sourceElement ? { source: getSourceElement(options.source) } : {}),
-      ...(options.orientation != "auto" ? { orientation: options.orientation } : {}),
-    });
-  } else {
-    return new ViewTimeline({
-      subject: document.querySelector(options.selector),
-      axis: options.axis
-    });
-  }
+  return options.source ? new ScrollTimeline(options) : new ViewTimeline(options);
 }
 
 export function initCSSPolyfill() {
@@ -103,14 +81,11 @@ export function initCSSPolyfill() {
   // because we may lose some of the 'animationstart' events by the time 'load' is completed.
   window.addEventListener('animationstart', (evt) => {
     evt.target.getAnimations().filter(anim => anim.animationName === evt.animationName).forEach(anim => {
-      const timelineName = parser.getScrollTimelineName(anim.animationName, evt.target);
-      if (timelineName) {
-        const scrollTimeline = createScrollTimeline(timelineName);
-        if (scrollTimeline && anim.timeline != scrollTimeline) {
-          const proxyAnimation = new ProxyAnimation(anim, scrollTimeline);
-          anim.pause();
-          proxyAnimation.play();
-        }
+      const scrollTimeline = createScrollTimeline(anim.animationName, evt.target);
+      if (scrollTimeline && anim.timeline != scrollTimeline) {
+        const proxyAnimation = new ProxyAnimation(anim, scrollTimeline);
+        anim.pause();
+        proxyAnimation.play();
       }
     });
   });
