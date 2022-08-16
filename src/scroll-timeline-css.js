@@ -59,15 +59,18 @@ function isDescendant(child, parent) {
 }
 
 function createScrollTimeline(animationName, target) {
-  const animationOptions = parser.getAnimationTimelineOptions(animationName, target);
-  const timelineName = animationOptions['animation-timeline'];
+  const animOptions = parser.getAnimationTimelineOptions(animationName, target);
+  const timelineName = animOptions['animation-timeline'];
   if(!timelineName) return null;
 
   let options = parser.getScrollTimelineOptions(timelineName) ||
-    parser.getViewTimelineOptions(timelineName, animationOptions);
+    parser.getViewTimelineOptions(timelineName);
   if (!options) return null;
 
-  return options.source ? new ScrollTimeline(options) : new ViewTimeline(options);
+  return {
+    timeline: options.source ? new ScrollTimeline(options) : new ViewTimeline(options),
+    animOptions: animOptions
+  };
 }
 
 export function initCSSPolyfill() {
@@ -82,9 +85,9 @@ export function initCSSPolyfill() {
   // because we may lose some of the 'animationstart' events by the time 'load' is completed.
   window.addEventListener('animationstart', (evt) => {
     evt.target.getAnimations().filter(anim => anim.animationName === evt.animationName).forEach(anim => {
-      const scrollTimeline = createScrollTimeline(anim.animationName, evt.target);
-      if (scrollTimeline && anim.timeline != scrollTimeline) {
-        const proxyAnimation = new ProxyAnimation(anim, scrollTimeline);
+      const result = createScrollTimeline(anim.animationName, evt.target);
+      if (result.timeline && anim.timeline != result.timeline) {
+        const proxyAnimation = new ProxyAnimation(anim, result.timeline, result.animOptions);
         anim.pause();
         proxyAnimation.play();
       }

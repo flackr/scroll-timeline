@@ -1,191 +1,44 @@
 <!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>view-timeline demo</title>
-</head>
-<style type="text/css">
-  
-  @keyframes progress {
-    from { width: 0px }
-    to { width: 200px }
-  }
-
-  #container {
-    display:  flex;
-    flex-direction: column;
-    border:  1px solid black;
-    height:  500px;
-    width:  500px;
-    overflow-x:  hidden;
-    overflow-y:  scroll;
-    position:  relative;
-    align-items:  flex-start;
-  }
-
-  #overlay {
-    position: fixed;
-    top:  10px;
-    left:  10px;
-    width:  500px;
-    height:  500px;
-    pointer-events: none;
-  }
-
-  .spacer {
-    display:  inline-block;
-    flex:  none;
-    height:  120vh;
-    width:  120vw;
-  }
-
-  #subject {
-    background-color:  rgba(0, 0, 255, 0.5);
-    display:  inline-block;
-    flex:  none;
-    height: 125px;
-    width:  90%;
-    view-timeline-name: foo;
-  }
-
-  .progress-bar {
-    border:  1px solid green;
-    height:  20px;
-    width:  200px;
-    position:  absolute;
-    inset-inline-start:  20px;
-    padding:  0;
-  }
-
-  #progress-bar-progress-a {
-    border:  1px solid green;
-    height:  20px;
-    width:  200px;
-    position:  absolute;
-    inset-inline-start:  20px;
-    padding:  0;
-    animation: linear progress;
-    animation-timeline: foo;
-    border-color:  transparent;
-    background-color: rgba(0, 200, 0, 0.3);
-    width: 0px;
-  }
-
-  #progress-bar-progress-b {
-    border:  1px solid green;
-    height:  20px;
-    width:  200px;
-    position:  absolute;
-    inset-inline-start:  20px;
-    padding:  0;
-    animation: linear progress;
-    animation-timeline: foo;
-    border-color:  transparent;
-    background-color: rgba(0, 200, 0, 0.3);
-    width: 0px;
-
-    animation-delay: contain 0%;
-    animation-end-delay: contain 100%;
-  }
-
-  #progress-bar-progress-c {
-    border:  1px solid green;
-    height:  20px;
-    width:  200px;
-    position:  absolute;
-    inset-inline-start:  20px;
-    padding:  0;
-    animation: linear progress;
-    animation-timeline: foo;
-    border-color:  transparent;
-    background-color: rgba(0, 200, 0, 0.3);
-    width: 0px;
-
-    animation-delay: enter 0%;
-    animation-end-delay: enter 100%;
-  }
-
-  #progress-bar-progress-d {
-    border:  1px solid green;
-    height:  20px;
-    width:  200px;
-    position:  absolute;
-    inset-inline-start:  20px;
-    padding:  0;
-    animation: linear progress;
-    animation-timeline: foo;
-    border-color:  transparent;
-    background-color: rgba(0, 200, 0, 0.3);
-    width: 0px;
-
-    animation-delay: exit 0%;
-    animation-end-delay: exit 100%;
-  }
-
-  #progress-bar-progress-e {
-    border:  1px solid green;
-    height:  20px;
-    width:  200px;
-    position:  absolute;
-    inset-inline-start:  20px;
-    padding:  0;
-    animation: linear progress;
-    animation-timeline: foo;
-    border-color:  transparent;
-    background-color: rgba(0, 200, 0, 0.3);
-    width: 0px;
-
-    animation-delay: contain 25%;
-    animation-end-delay: contain 75%;
-  }
-
-  #progress-bar-progress-f {
-    border:  1px solid green;
-    height:  20px;
-    width:  200px;
-    position:  absolute;
-    inset-inline-start:  20px;
-    padding:  0;
-    animation: linear progress;
-    animation-timeline: foo;
-    border-color:  transparent;
-    background-color: rgba(0, 200, 0, 0.3);
-    width: 0px;
-
-    animation-delay: enter 150%;
-    animation-end-delay: exit -50%;
-  }
-
-  .progress-bar > span {
-    padding-left:  5px;
-    padding-right:  5px;
-  }
-</style>
-<body>
-  
-  <div id="container">
-    <div class="spacer"></div>
-    <div id="subject"></div>
-    <div class="spacer"></div>
-
-    <div id="overlay">
-      <div class="progress-bar" style="top: 20px;"><span>cover</span></div>
-      <div class="progress-bar" style="top: 70px;"><span>contain</span></div>
-      <div class="progress-bar" style="top: 120px;"><span>enter</span></div>
-      <div class="progress-bar" style="top: 170px;"><span>exit</span></div>
-      <div class="progress-bar" style="top: 220px"><span>contain 25% 75%</span></div>
-      <div class="progress-bar" style="top: 270px"><span>enter 150% exit -50%</span></div>
-      <div id="progress-bar-progress-a" class="progress-bar-progress" style="top: 20px;"></div>
-      <div id="progress-bar-progress-b" class="progress-bar-progress" style="top: 70px;"></div>
-      <div id="progress-bar-progress-c" class="progress-bar-progress" style="top: 120px;"></div>
-      <div id="progress-bar-progress-d" class="progress-bar-progress" style="top: 170px;"></div>
-      <div id="progress-bar-progress-e" class="progress-bar-progress" style="top: 220px;"></div>
-      <div id="progress-bar-progress-f" class="progress-bar-progress" style="top: 270px;"></div>
-    </div>
-  </div>
-
-
-</body>
 <script src="../../dist/scroll-timeline.js"></script>
-</html>
+
+<style>
+#container {
+  overflow-y: scroll;
+  height:  300px;
+  width: 300px;
+}
+.big-spacer {
+  height:  800px;
+}
+#subject {
+  background-color:  green;
+  height:  100px;
+  width:  100px;
+  view-timeline-name: foo;
+}
+#box {
+  position: fixed;
+  top: 0;
+  background-color: red;
+  width: 50px;
+  height: 50px;
+  animation-timeline: foo;
+  animation-delay: cover 20%;
+  animation-end-delay: contain 80%; 
+  animation: linear anim;
+}
+@keyframes anim {
+  from { top: 0px; left: 0px; }
+  to { top: 100px; left: 200px; }
+}
+</style>
+
+<body>  
+  <div id="container">
+    <div class="big-spacer"></div>
+    <div id="subject"></div>
+    <div class="big-spacer"></div>
+  </div>
+  <div id=box></div>
+</body>
+

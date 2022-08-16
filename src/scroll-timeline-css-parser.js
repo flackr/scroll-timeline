@@ -1,5 +1,3 @@
-import { defaultAnimationDelay, defaultAnimationEndDelay, parseTimeRange } from "./proxy-animation";
-
 // This is also used in scroll-timeline-css.js
 export const RegexMatcher = {
   IDENTIFIER: /[\w\\\@_-]+/g,
@@ -135,16 +133,7 @@ export class StyleParser {
     return null;
   }
 
-  concatAnimationDelays(animOptions) {
-    const animationDelay = animOptions['animation-delay'] ? animOptions['animation-delay'] :
-      defaultAnimationDelay();
-    const animationEndDelay = animOptions['animation-end-delay'] ? animOptions['animation-end-delay'] :
-      defaultAnimationEndDelay();
-
-    return `${animationDelay} ${animationEndDelay}`;
-  }
-
-  getViewTimelineOptions(timelineName, animOptions) {
+  getViewTimelineOptions(timelineName) {
     // TODO: Take into account the scoping of the ViewTimelines
     // https://github.com/w3c/csswg-drafts/issues/7047
     for (let i = this.subjectSelectorToViewTimeline.length - 1; i >= 0; i--) {
@@ -155,7 +144,6 @@ export class StyleParser {
           return {
             subject: allSubjects[allSubjects.length - 1],
             axis: options.axis,
-            timeRange: parseTimeRange(this.concatAnimationDelays(animOptions))
           }
         }
       }

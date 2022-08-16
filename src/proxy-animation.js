@@ -770,7 +770,7 @@ function fractionalEndDelay(details) {
 let proxyAnimations = new WeakMap();
 
 export class ProxyAnimation {
-  constructor(effect, timeline) {
+  constructor(effect, timeline, animOptions={}) {
     const animation =
         (effect instanceof nativeAnimation) ?
            effect : new nativeAnimation(effect, animationTimeline);
@@ -814,7 +814,7 @@ export class ProxyAnimation {
       effect: null,
       // Range when using a view-timeline. The default range is cover 0% to
       // 100%.
-      timeRange: timeline instanceof ScrollTimeline ? timeline.timeRange : null,
+      timeRange: timeline instanceof ViewTimeline ? parseTimeRange(concatAnimationDelays(animOptions)) : null,
       proxy: this
     });
   }
@@ -1590,11 +1590,20 @@ export class ProxyAnimation {
   }
 };
 
-export function defaultAnimationDelay() { return 'cover 0%'; }
+function defaultAnimationDelay() { return 'cover 0%'; }
 
-export function defaultAnimationEndDelay() { return 'cover 100%'; }
+function defaultAnimationEndDelay() { return 'cover 100%'; }
 
-export function parseTimeRange(value) {
+function concatAnimationDelays(animOptions) {
+  const animationDelay = animOptions['animation-delay'] ? animOptions['animation-delay'] :
+    defaultAnimationDelay();
+  const animationEndDelay = animOptions['animation-end-delay'] ? animOptions['animation-end-delay'] :
+    defaultAnimationEndDelay();
+
+  return `${animationDelay} ${animationEndDelay}`;
+}
+
+function parseTimeRange(value) {
   const timeRange = {
     start: { offset: CSS.percent(0) },
     end: { offset: CSS.percent(100) }
