@@ -1,3 +1,5 @@
+import { defaultAnimationDelay, defaultAnimationEndDelay, parseTimeRange } from "./proxy-animation";
+
 // This is also used in scroll-timeline-css.js
 export const RegexMatcher = {
   IDENTIFIER: /[\w\\\@_-]+/g,
@@ -8,6 +10,8 @@ export const RegexMatcher = {
   VIEW_TIMELINE_NAME: /view-timeline-name\s*:([^;}]+)/,
   VIEW_TIMELINE_AXIS: /view-timeline-axis\s*:([^;}]+)/,
   ANIMATION_TIMELINE: /animation-timeline\s*:([^;}]+)/,
+  ANIMATION_DELAY: /animation-delay\s*:([^;}]+)/,
+  ANIMATION_END_DELAY: /animation-end-delay\s*:([^;}]+)/,
   ANIMATION_NAME: /animation-name\s*:([^;}]+)/,
   ANIMATION: /animation\s*:([^;}]+)/,
   SOURCE_ELEMENT: /selector\(#([^)]+)\)/,
@@ -83,7 +87,7 @@ export class StyleParser {
     return p.sheetSrc;
   }
 
-  getScrollTimelineName(animationName, target) {
+  getAnimationTimelineOptions(animationName, target) {
     // Rules are pushed to cssRulesWithTimelineName list in the same order as they appear in style sheet.
     // We are traversing backwards to take the last sample of a rule in a style sheet.
     // TODO: Rule specificity should be taken into account, i.e. don't just take the last
@@ -92,7 +96,11 @@ export class StyleParser {
       const current = this.cssRulesWithTimelineName[i];
       if (target.matches(current.selector)) {
         if (!current['animation-name'] || current['animation-name'] == animationName) {
-          return current['animation-timeline'];
+          return {
+            'animation-timeline': current['animation-timeline'],
+            'animation-delay': current['animation-delay'],
+            'animation-end-delay': current['animation-end-delay']
+          }
         }
       }
     }
@@ -127,17 +135,27 @@ export class StyleParser {
     return null;
   }
 
-  getViewTimelineOptions(timelineName, target) {
+  concatAnimationDelays(animOptions) {
+    const animationDelay = animOptions['animation-delay'] ? animOptions['animation-delay'] :
+      defaultAnimationDelay();
+    const animationEndDelay = animOptions['animation-end-delay'] ? animOptions['animation-end-delay'] :
+      defaultAnimationEndDelay();
+
+    return `${animationDelay} ${animationEndDelay}`;
+  }
+
+  getViewTimelineOptions(timelineName, animOptions) {
     // TODO: Take into account the scoping of the ViewTimelines
     // https://github.com/w3c/csswg-drafts/issues/7047
     for (let i = this.subjectSelectorToViewTimeline.length - 1; i >= 0; i--) {
       const options = this.subjectSelectorToViewTimeline[i];
       if(options.name == timelineName) {
-        const allSubjects = target.parentElement.querySelectorAll(options.selector);
+        const allSubjects = document.querySelectorAll(options.selector);
         if(allSubjects.length) {
           return {
             subject: allSubjects[allSubjects.length - 1],
-            axis: options.axis
+            axis: options.axis,
+            timeRange: parseTimeRange(this.concatAnimationDelays(animOptions))
           }
         }
       }
@@ -197,13 +215,11 @@ export class StyleParser {
     let timelineNames = [];
     let animationNames = [];
 
-    if (hasAnimationTimeline) {
+    if (hasAnimationTimeline)
       timelineNames = this.extractMatches(rule.block.contents, RegexMatcher.ANIMATION_TIMELINE);
-    }
 
-    if (hasAnimationName) {
+    if (hasAnimationName)
       animationNames = this.extractMatches(rule.block.contents, RegexMatcher.ANIMATION_NAME);
-    }
 
     if (hasAnimationTimeline && hasAnimationName) {
       this.saveRelationInList(rule, timelineNames, animationNames);
@@ -300,24 +316,29 @@ export class StyleParser {
   }
 
   saveRelationInList(rule, timelineNames, animationNames) {
-    if (animationNames.length == 0) {
-      for (let i = 0; i < timelineNames.length; i++) {
-        this.cssRulesWithTimelineName.push({
-          selector: rule.selector,
-          'animation-name': undefined,
-          'animation-timeline': timelineNames[i]
-        });
-      }
-    } else {
-      for (let i = 0; i < Math.max(timelineNames.length, animationNames.length); i++) {
-        this.cssRulesWithTimelineName.push({
-          selector: rule.selector,
-          'animation-name': animationNames[i % animationNames.length],
-          'animation-timeline': timelineNames[i % timelineNames.length]
-        });
-      }
-    }
+    const hasAnimationDelay = rule.block.contents.includes("animation-delay:");
+    const hasAnimationEndDelay = rule.block.contents.includes("animation-end-delay:");
 
+    let animationDelays = [];
+    let animationEndDelays = [];
+
+    if (hasAnimationDelay)
+      animationDelays = this.extractMatches(rule.block.contents, RegexMatcher.ANIMATION_DELAY);
+
+    if (hasAnimationEndDelay)
+      animationEndDelays = this.extractMatches(rule.block.contents, RegexMatcher.ANIMATION_END_DELAY);
+
+    const maxLength = Math.max(timelineNames.length, animationNames.length, animationDelays.length, animationEndDelays.length);
+
+    for (let i = 0; i < maxLength; i++) {
+      this.cssRulesWithTimelineName.push({
+        selector: rule.selector,
+        'animation-timeline': timelineNames[i % timelineNames.length],
+        ...(animationNames.length ? {'animation-name': animationNames[i % animationNames.length]}: {}),
+        ...(animationDelays.length ? {'animation-delay': animationDelays[i % animationDelays.length]}: {}),
+        ...(animationEndDelays.length ? {'animation-end-delay': animationEndDelays[i % animationEndDelays.length]}: {}),
+      });
+    }
   }
 
   extractAnimationName(shorthand) {

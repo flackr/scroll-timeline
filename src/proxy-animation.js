@@ -751,9 +751,7 @@ function fractionalStartDelay(details) {
   if (!(details.timeline instanceof ViewTimeline))
     return 0;
 
-  // TODO: Consolidate setting default values in parseTimeRange()
-  // after adding support for animation-delay & animation-end-delay
-  const startTime = details?.timeRange?.start || {name: 'cover', offset: CSS.percent(0)};
+  const startTime = details.timeRange.start;
   return relativePosition(details.timeline, startTime.name, startTime.offset);
 }
 
@@ -762,9 +760,7 @@ function fractionalEndDelay(details) {
   if (!(details.timeline instanceof ViewTimeline))
     return 0;
 
-  // TODO: Consolidate setting default values in parseTimeRange()
-  // after adding support for animation-delay & animation-end-delay
-  const endTime = details?.timeRange?.end || {name: 'cover', offset: CSS.percent(100)};
+  const endTime = details.timeRange.end;
   return 1 - relativePosition(details.timeline, endTime.name, endTime.offset);
 }
 
@@ -818,7 +814,7 @@ export class ProxyAnimation {
       effect: null,
       // Range when using a view-timeline. The default range is cover 0% to
       // 100%.
-      timeRange: null,
+      timeRange: timeline instanceof ScrollTimeline ? timeline.timeRange : null,
       proxy: this
     });
   }
@@ -1594,20 +1590,18 @@ export class ProxyAnimation {
   }
 };
 
-function parseTimeRange(value) {
+export function defaultAnimationDelay() { return 'cover 0%'; }
+
+export function defaultAnimationEndDelay() { return 'cover 100%'; }
+
+export function parseTimeRange(value) {
   const timeRange = {
-    start: {
-      name: 'cover',
-      offset: CSS.percent(0)
-    },
-    end: {
-      name: 'cover',
-      offset: CSS.percent(100)
-    }
+    start: { offset: CSS.percent(0) },
+    end: { offset: CSS.percent(100) }
   };
 
   if (!value)
-    return timeRange;
+    value = `${defaultAnimationDelay()} ${defaultAnimationEndDelay()}`;
 
   // Format:
   // <start-name> <start-offset> <end-name> <end-offset>

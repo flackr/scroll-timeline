@@ -59,11 +59,12 @@ function isDescendant(child, parent) {
 }
 
 function createScrollTimeline(animationName, target) {
-  const timelineName = parser.getScrollTimelineName(animationName, target);
+  const animationOptions = parser.getAnimationTimelineOptions(animationName, target);
+  const timelineName = animationOptions['animation-timeline'];
   if(!timelineName) return null;
 
   let options = parser.getScrollTimelineOptions(timelineName) ||
-    parser.getViewTimelineOptions(timelineName, target);
+    parser.getViewTimelineOptions(timelineName, animationOptions);
   if (!options) return null;
 
   return options.source ? new ScrollTimeline(options) : new ViewTimeline(options);

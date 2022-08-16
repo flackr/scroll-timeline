@@ -213,6 +213,7 @@ export class ScrollTimeline {
 
       // View timeline
       subject: null,
+      timeRange: null,
 
       // Internal members
       animations: [],
@@ -451,6 +452,8 @@ export class ViewTimeline extends ScrollTimeline {
     super(options);
     const details = scrollTimelineOptions.get(this);
     details.subject = options && options.subject ? options.subject : undefined;
+
+    this.timeRange = options.timeRange;
     // TODO: Handle insets.
 
     validateSource(this);
