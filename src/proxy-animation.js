@@ -814,7 +814,7 @@ export class ProxyAnimation {
       effect: null,
       // Range when using a view-timeline. The default range is cover 0% to
       // 100%.
-      timeRange: timeline instanceof ViewTimeline ? parseTimeRange(concatAnimationDelays(animOptions)) : null,
+      timeRange: timeline instanceof ViewTimeline ? parseAnimationDelays(animOptions) : null,
       proxy: this
     });
   }
@@ -1590,27 +1590,45 @@ export class ProxyAnimation {
   }
 };
 
-function defaultAnimationDelay() { return 'cover 0%'; }
+// animation-delay or animation-end-delay should be in the form of "name percentage"
+function parseOneAnimationDelay(delay) {
+  if(!delay) return null;
 
-function defaultAnimationEndDelay() { return 'cover 100%'; }
+  const parts = delay.split(' ');
 
-function concatAnimationDelays(animOptions) {
-  const animationDelay = animOptions['animation-delay'] ? animOptions['animation-delay'] :
+  if(parts.length != 2 || !parts[1].endsWith('%'))
+    throw TypeError("Invalid animation delay");
+
+  return {
+    name: parts[0],
+    offset: CSS.percent(parseFloat(parts[1]))
+  };
+}
+
+function defaultAnimationDelay() { return { name: 'cover', offset: CSS.percent(0) }; }
+
+function defaultAnimationEndDelay() { return { name: 'cover', offset: CSS.percent(100) }; }
+
+function parseAnimationDelays(animOptions) {
+  const animationDelay = animOptions['animation-delay'] ?
+    parseOneAnimationDelay(animOptions['animation-delay']) :
     defaultAnimationDelay();
-  const animationEndDelay = animOptions['animation-end-delay'] ? animOptions['animation-end-delay'] :
+
+  const animationEndDelay = animOptions['animation-end-delay'] ?
+    parseOneAnimationDelay(animOptions['animation-end-delay']) :
     defaultAnimationEndDelay();
 
-  return `${animationDelay} ${animationEndDelay}`;
+  return { start: animationDelay, end: animationEndDelay };
 }
 
 function parseTimeRange(value) {
   const timeRange = {
-    start: { offset: CSS.percent(0) },
-    end: { offset: CSS.percent(100) }
+    start: defaultAnimationDelay(),
+    end: defaultAnimationEndDelay()
   };
 
   if (!value)
-    value = `${defaultAnimationDelay()} ${defaultAnimationEndDelay()}`;
+    return timeRange;
 
   // Format:
   // <start-name> <start-offset> <end-name> <end-offset>
