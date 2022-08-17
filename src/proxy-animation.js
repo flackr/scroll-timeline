@@ -1602,7 +1602,15 @@ function parseOneAnimationDelay(delay, defaultOffset) {
     (parts.length == 2 && !parts[1].endsWith('%')))
     throw TypeError("Invalid animation delay");
 
-  const offset = parts.length == 2 ? CSS.percent(parseFloat(parts[1])) : defaultOffset;
+  let offset = defaultOffset;
+  if(parts.length == 2) {
+    const percentage = parseFloat(parts[1]);
+    if(Number.isNaN(percentage))
+      throw TypeError(`\"${parts[1]}\" is not a valid percentage for animation delay`);
+    else
+      offset = CSS.percent(percentage);
+  }
+
   return { name: parts[0], offset: offset };
 }
 
