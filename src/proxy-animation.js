@@ -1607,8 +1607,8 @@ function parseOneAnimationDelay(delay, defaultOffset) {
     const percentage = parseFloat(parts[1]);
     if(Number.isNaN(percentage))
       throw TypeError(`\"${parts[1]}\" is not a valid percentage for animation delay`);
-    else
-      offset = CSS.percent(percentage);
+
+    offset = CSS.percent(percentage);
   }
 
   return { name: parts[0], offset: offset };
