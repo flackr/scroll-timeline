@@ -1590,19 +1590,17 @@ export class ProxyAnimation {
   }
 };
 
-// animation-delay or animation-end-delay should be in the form of "name percentage"
-function parseOneAnimationDelay(delay) {
+// animation-delay or animation-end-delay should be in the form of a name and an optional percentage
+function parseOneAnimationDelay(delay, defaultOffset) {
   if(!delay) return null;
 
   const parts = delay.split(' ');
 
-  if(parts.length != 2 || !parts[1].endsWith('%'))
+  if(parts.length == 2 && !parts[1].endsWith('%'))
     throw TypeError("Invalid animation delay");
 
-  return {
-    name: parts[0],
-    offset: CSS.percent(parseFloat(parts[1]))
-  };
+  const offset = parts.length == 2 ? CSS.percent(parseFloat(parts[1])) : defaultOffset;
+  return { name: parts[0], offset: offset };
 }
 
 function defaultAnimationDelay() { return { name: 'cover', offset: CSS.percent(0) }; }
@@ -1611,11 +1609,11 @@ function defaultAnimationEndDelay() { return { name: 'cover', offset: CSS.percen
 
 function parseAnimationDelays(animOptions) {
   const animationDelay = animOptions['animation-delay'] ?
-    parseOneAnimationDelay(animOptions['animation-delay']) :
+    parseOneAnimationDelay(animOptions['animation-delay'], defaultAnimationDelay().offset) :
     defaultAnimationDelay();
 
   const animationEndDelay = animOptions['animation-end-delay'] ?
-    parseOneAnimationDelay(animOptions['animation-end-delay']) :
+    parseOneAnimationDelay(animOptions['animation-end-delay'], defaultAnimationEndDelay().offset) :
     defaultAnimationEndDelay();
 
   return { start: animationDelay, end: animationEndDelay };
