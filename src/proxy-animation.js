@@ -8,6 +8,8 @@ import {
 const nativeElementAnimate = window.Element.prototype.animate;
 const nativeAnimation = window.Animation;
 
+const ANIMATION_DELAY_NAMES = ['enter', 'exit', 'cover', 'contain'];
+
 class PromiseWrapper {
   constructor() {
     this.state = 'pending';
@@ -1596,7 +1598,8 @@ function parseOneAnimationDelay(delay, defaultOffset) {
 
   const parts = delay.split(' ');
 
-  if(parts.length == 2 && !parts[1].endsWith('%'))
+  if(!ANIMATION_DELAY_NAMES.includes(parts[0]) ||
+    (parts.length == 2 && !parts[1].endsWith('%')))
     throw TypeError("Invalid animation delay");
 
   const offset = parts.length == 2 ? CSS.percent(parseFloat(parts[1])) : defaultOffset;
