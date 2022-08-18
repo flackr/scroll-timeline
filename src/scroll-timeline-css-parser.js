@@ -10,6 +10,7 @@ export const RegexMatcher = {
   ANIMATION_TIMELINE: /animation-timeline\s*:([^;}]+)/,
   ANIMATION_DELAY: /animation-delay\s*:([^;}]+)/,
   ANIMATION_END_DELAY: /animation-end-delay\s*:([^;}]+)/,
+  ANIMATION_TIME_RANGE: /animation-time-range\s*:([^;}]+)/,
   ANIMATION_NAME: /animation-name\s*:([^;}]+)/,
   ANIMATION: /animation\s*:([^;}]+)/,
   SOURCE_ELEMENT: /selector\(#([^)]+)\)/,
@@ -97,7 +98,8 @@ export class StyleParser {
           return {
             'animation-timeline': current['animation-timeline'],
             'animation-delay': current['animation-delay'],
-            'animation-end-delay': current['animation-end-delay']
+            'animation-end-delay': current['animation-end-delay'],
+            'animation-time-range': current['animation-time-range']
           }
         }
       }
@@ -306,9 +308,11 @@ export class StyleParser {
   saveRelationInList(rule, timelineNames, animationNames) {
     const hasAnimationDelay = rule.block.contents.includes("animation-delay:");
     const hasAnimationEndDelay = rule.block.contents.includes("animation-end-delay:");
+    const hasAnimationTimeRange = rule.block.contents.includes("animation-time-range:");
 
     let animationDelays = [];
     let animationEndDelays = [];
+    let animationTimeRanges = [];
 
     if (hasAnimationDelay)
       animationDelays = this.extractMatches(rule.block.contents, RegexMatcher.ANIMATION_DELAY);
@@ -316,7 +320,11 @@ export class StyleParser {
     if (hasAnimationEndDelay)
       animationEndDelays = this.extractMatches(rule.block.contents, RegexMatcher.ANIMATION_END_DELAY);
 
-    const maxLength = Math.max(timelineNames.length, animationNames.length, animationDelays.length, animationEndDelays.length);
+    if (hasAnimationTimeRange)
+      animationTimeRanges = this.extractMatches(rule.block.contents, RegexMatcher.ANIMATION_TIME_RANGE);
+
+    const maxLength = Math.max(timelineNames.length, animationNames.length,
+      animationDelays.length, animationEndDelays.length, animationTimeRanges.length);
 
     for (let i = 0; i < maxLength; i++) {
       this.cssRulesWithTimelineName.push({
@@ -325,6 +333,7 @@ export class StyleParser {
         ...(animationNames.length ? {'animation-name': animationNames[i % animationNames.length]}: {}),
         ...(animationDelays.length ? {'animation-delay': animationDelays[i % animationDelays.length]}: {}),
         ...(animationEndDelays.length ? {'animation-end-delay': animationEndDelays[i % animationEndDelays.length]}: {}),
+        ...(animationTimeRanges.length ? {'animation-time-range': animationTimeRanges[i % animationTimeRanges.length]}: {}),
       });
     }
   }
