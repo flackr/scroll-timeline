@@ -1619,18 +1619,15 @@ function defaultAnimationDelay() { return { name: 'cover', offset: CSS.percent(0
 function defaultAnimationEndDelay() { return { name: 'cover', offset: CSS.percent(100) }; }
 
 function parseAnimationDelays(animOptions) {
-  if(animOptions['animation-time-range'])
-    return parseTimeRange(animOptions['animation-time-range']);
+  const timeRange = parseTimeRange(animOptions['animation-time-range']);
 
-  const animationDelay = animOptions['animation-delay'] ?
-    parseOneAnimationDelay(animOptions['animation-delay'], defaultAnimationDelay().offset) :
-    defaultAnimationDelay();
+  if(animOptions['animation-delay'])
+    timeRange.start = parseOneAnimationDelay(animOptions['animation-delay'], defaultAnimationDelay().offset);
 
-  const animationEndDelay = animOptions['animation-end-delay'] ?
-    parseOneAnimationDelay(animOptions['animation-end-delay'], defaultAnimationEndDelay().offset) :
-    defaultAnimationEndDelay();
+  if(animOptions['animation-end-delay'])
+    timeRange.end = parseOneAnimationDelay(animOptions['animation-end-delay'], defaultAnimationEndDelay().offset);
 
-  return { start: animationDelay, end: animationEndDelay };
+  return timeRange;
 }
 
 function parseTimeRange(value) {

@@ -154,6 +154,43 @@
     animation-time-range: enter 150% exit -50%;
   }
 
+  #progress-bar-progress-g {
+    border:  1px solid green;
+    height:  20px;
+    width:  200px;
+    position:  absolute;
+    inset-inline-start:  20px;
+    padding:  0;
+    animation: linear progress;
+    animation-timeline: foo;
+    border-color:  transparent;
+    background-color: rgba(0, 200, 0, 0.3);
+    width: 0px;
+
+    /* mixed shorthand and longhands */
+    animation-time-range: enter;
+    animation-delay: cover;
+    animation-end-delay: contain;
+  }
+
+  #progress-bar-progress-h {
+    border:  1px solid green;
+    height:  20px;
+    width:  200px;
+    position:  absolute;
+    inset-inline-start:  20px;
+    padding:  0;
+    animation: linear progress;
+    animation-timeline: foo;
+    border-color:  transparent;
+    background-color: rgba(0, 200, 0, 0.3);
+    width: 0px;
+
+    /* mixed shorthand and longhands */
+    animation-time-range: enter 100% exit 200%;
+    animation-end-delay: contain;
+  }
+
   .progress-bar > span {
     padding-left:  5px;
     padding-right:  5px;
@@ -173,15 +210,20 @@
       <div class="progress-bar" style="top: 170px;"><span>exit</span></div>
       <div class="progress-bar" style="top: 220px"><span>contain 25% 75%</span></div>
       <div class="progress-bar" style="top: 270px"><span>enter 150% exit -50%</span></div>
+      <div class="progress-bar" style="top: 320px"><span>* cover 0% contain 100%</span></div>
+      <div class="progress-bar" style="top: 370px"><span>* enter 100% contain 100%</span></div>
       <div id="progress-bar-progress-a" class="progress-bar-progress" style="top: 20px;"></div>
       <div id="progress-bar-progress-b" class="progress-bar-progress" style="top: 70px;"></div>
       <div id="progress-bar-progress-c" class="progress-bar-progress" style="top: 120px;"></div>
       <div id="progress-bar-progress-d" class="progress-bar-progress" style="top: 170px;"></div>
       <div id="progress-bar-progress-e" class="progress-bar-progress" style="top: 220px;"></div>
       <div id="progress-bar-progress-f" class="progress-bar-progress" style="top: 270px;"></div>
+      <div id="progress-bar-progress-g" class="progress-bar-progress" style="top: 320px;"></div>
+      <div id="progress-bar-progress-h" class="progress-bar-progress" style="top: 370px;"></div>
     </div>
   </div>
 
+  <div>* Look at CSS, there are some mixed examples that contain both shorthand and longhands</div>
 
 </body>
 <script src="../../dist/scroll-timeline.js"></script>
