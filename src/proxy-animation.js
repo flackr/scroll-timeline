@@ -1619,6 +1619,9 @@ function defaultAnimationDelay() { return { name: 'cover', offset: CSS.percent(0
 function defaultAnimationEndDelay() { return { name: 'cover', offset: CSS.percent(100) }; }
 
 function parseAnimationDelays(animOptions) {
+  if(animOptions['animation-time-range'])
+    return parseTimeRange(animOptions['animation-time-range']);
+
   const animationDelay = animOptions['animation-delay'] ?
     parseOneAnimationDelay(animOptions['animation-delay'], defaultAnimationDelay().offset) :
     defaultAnimationDelay();
