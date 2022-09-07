@@ -379,7 +379,15 @@ function getScrollParent(node) {
       case 'auto':
       case 'scroll':
       case 'hidden':
-        return containingBlock;
+        // https://drafts.csswg.org/css-overflow-3/#overflow-propagation
+        // The UA must apply the overflow from the root element to the viewport;
+        // however, if the overflow is visible in both axis, then the overflow
+        // of the first visible child body is applied instead.
+        if (containingBlock.tagName != "BODY" ||
+            getComputedStyle(document.scrollingElement).overflow != "visible")
+          return containingBlock;
+
+        return document.scrollingElement;
     }
     node = containingBlock;
   }
