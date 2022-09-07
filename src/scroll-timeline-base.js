@@ -369,12 +369,8 @@ function getScrollParent(node) {
   if (!node)
     return undefined;
 
-  while (true) {
-    const containingBlock = getContainingBlock(node);
-    if (!containingBlock)
-      return document.scrollingElement;
-
-    const style = getComputedStyle(containingBlock);
+  while (node = getContainingBlock(node)) {
+    const style = getComputedStyle(node);
     switch(style['overflow-x']) {
       case 'auto':
       case 'scroll':
@@ -383,14 +379,14 @@ function getScrollParent(node) {
         // The UA must apply the overflow from the root element to the viewport;
         // however, if the overflow is visible in both axis, then the overflow
         // of the first visible child body is applied instead.
-        if (containingBlock.tagName != "BODY" ||
+        if (node.tagName != "BODY" ||
             getComputedStyle(document.scrollingElement).overflow != "visible")
-          return containingBlock;
+          return node;
 
         return document.scrollingElement;
     }
-    node = containingBlock;
   }
+  return document.scrollingElement;
 }
 
 // ---- View timelines -----
