@@ -8,6 +8,8 @@ import {
 const nativeElementAnimate = window.Element.prototype.animate;
 const nativeAnimation = window.Animation;
 
+const ANIMATION_DELAY_NAMES = ['enter', 'exit', 'cover', 'contain'];
+
 class PromiseWrapper {
   constructor() {
     this.state = 'pending';
@@ -770,7 +772,7 @@ function fractionalEndDelay(details) {
 let proxyAnimations = new WeakMap();
 
 export class ProxyAnimation {
-  constructor(effect, timeline) {
+  constructor(effect, timeline, animOptions={}) {
     const animation =
         (effect instanceof nativeAnimation) ?
            effect : new nativeAnimation(effect, animationTimeline);
@@ -814,7 +816,7 @@ export class ProxyAnimation {
       effect: null,
       // Range when using a view-timeline. The default range is cover 0% to
       // 100%.
-      timeRange: null,
+      timeRange: timeline instanceof ViewTimeline ? parseAnimationDelays(animOptions) : null,
       proxy: this
     });
   }
@@ -1590,16 +1592,48 @@ export class ProxyAnimation {
   }
 };
 
+// animation-delay or animation-end-delay should be in the form of a name and an optional percentage
+function parseOneAnimationDelay(delay, defaultOffset) {
+  if(!delay) return null;
+
+  const parts = delay.split(' ');
+
+  if(!ANIMATION_DELAY_NAMES.includes(parts[0]) ||
+    (parts.length == 2 && !parts[1].endsWith('%')))
+    throw TypeError("Invalid animation delay");
+
+  let offset = defaultOffset;
+  if(parts.length == 2) {
+    const percentage = parseFloat(parts[1]);
+    if(Number.isNaN(percentage))
+      throw TypeError(`\"${parts[1]}\" is not a valid percentage for animation delay`);
+
+    offset = CSS.percent(percentage);
+  }
+
+  return { name: parts[0], offset: offset };
+}
+
+function defaultAnimationDelay() { return { name: 'cover', offset: CSS.percent(0) }; }
+
+function defaultAnimationEndDelay() { return { name: 'cover', offset: CSS.percent(100) }; }
+
+function parseAnimationDelays(animOptions) {
+  const timeRange = parseTimeRange(animOptions['animation-time-range']);
+
+  if(animOptions['animation-delay'])
+    timeRange.start = parseOneAnimationDelay(animOptions['animation-delay'], defaultAnimationDelay().offset);
+
+  if(animOptions['animation-end-delay'])
+    timeRange.end = parseOneAnimationDelay(animOptions['animation-end-delay'], defaultAnimationEndDelay().offset);
+
+  return timeRange;
+}
+
 function parseTimeRange(value) {
   const timeRange = {
-    start: {
-      name: 'cover',
-      offset: CSS.percent(0)
-    },
-    end: {
-      name: 'cover',
-      offset: CSS.percent(100)
-    }
+    start: defaultAnimationDelay(),
+    end: defaultAnimationEndDelay()
   };
 
   if (!value)

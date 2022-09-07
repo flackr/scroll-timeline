@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<script src="../../dist/scroll-timeline.js"></script>
+
+<style>
+#container {
+  overflow-y: scroll;
+  height:  300px;
+  width: 300px;
+}
+.big-spacer {
+  height:  800px;
+}
+#subject {
+  background-color:  green;
+  height:  100px;
+  width:  100px;
+  view-timeline-name: foo;
+  animation-timeline: foo;
+  animation: linear anim;
+}
+@keyframes anim {
+  from { opacity: 0 }
+  to { opacity: 1 }
+}
+</style>
+
+<body>  
+  <div id="container">
+    <div class="big-spacer"></div>
+    <div id="subject"></div>
+    <div class="big-spacer"></div>
+  </div>
+</body>
