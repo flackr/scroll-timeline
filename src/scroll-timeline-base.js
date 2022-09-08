@@ -379,11 +379,11 @@ function getScrollParent(node) {
         // The UA must apply the overflow from the root element to the viewport;
         // however, if the overflow is visible in both axis, then the overflow
         // of the first visible child body is applied instead.
-        if (node.tagName != "BODY" ||
-            getComputedStyle(document.scrollingElement).overflow != "visible")
-          return node;
+        if (node == document.body &&
+            getComputedStyle(document.scrollingElement).overflow == "visible")
+          return  document.scrollingElement;
 
-        return document.scrollingElement;
+        return node;
     }
   }
   return document.scrollingElement;
