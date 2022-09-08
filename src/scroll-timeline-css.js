@@ -1,5 +1,6 @@
 import { StyleParser, RegexMatcher } from "./scroll-timeline-css-parser";
 import { ProxyAnimation } from "./proxy-animation"
+import { ScrollTimeline, ViewTimeline } from "./scroll-timeline-base";
 
 const parser = new StyleParser();
 
@@ -49,20 +50,6 @@ function initMutationObserver() {
     .forEach((tag) => handleLinkedStylesheet(tag));
 }
 
-// This implementation is based on https://drafts.csswg.org/scroll-animations-1/
-// TODO: Should update accordingly when new spec lands.
-function getSourceElement(source) {
-  const matches = RegexMatcher.SOURCE_ELEMENT.exec(source);
-  const SOURCE_CAPTURE_INDEX = 1;
-  if (matches) {
-    return document.getElementById(matches[SOURCE_CAPTURE_INDEX]);
-  } else if (source === "auto") {
-    return document.scrollingElement;
-  } else {
-    return null;
-  }
-}
-
 function isDescendant(child, parent) {
   while (child) {
     if (child == parent) return true;
@@ -71,17 +58,19 @@ function isDescendant(child, parent) {
   return false;
 }
 
-function createScrollTimeline(name) {
-  const options = parser.scrollTimelineOptions.get(name);
+function createScrollTimeline(animationName, target) {
+  const animOptions = parser.getAnimationTimelineOptions(animationName, target);
+  const timelineName = animOptions['animation-timeline'];
+  if(!timelineName) return null;
+
+  let options = parser.getScrollTimelineOptions(timelineName) ||
+    parser.getViewTimelineOptions(timelineName);
   if (!options) return null;
 
-  const sourceElement = getSourceElement(options.source);
-
-  const scrollTimeline = new ScrollTimeline({
-    ...(sourceElement ? { source: getSourceElement(options.source) } : {}),
-    ...(options.orientation != "auto" ? { orientation: options.orientation } : {}),
-  });
-  return scrollTimeline;
+  return {
+    timeline: options.source ? new ScrollTimeline(options) : new ViewTimeline(options),
+    animOptions: animOptions
+  };
 }
 
 export function initCSSPolyfill() {
@@ -96,14 +85,11 @@ export function initCSSPolyfill() {
   // because we may lose some of the 'animationstart' events by the time 'load' is completed.
   window.addEventListener('animationstart', (evt) => {
     evt.target.getAnimations().filter(anim => anim.animationName === evt.animationName).forEach(anim => {
-      const timelineName = parser.getScrollTimelineName(anim.animationName, evt.target);
-      if (timelineName) {
-        const scrollTimeline = createScrollTimeline(timelineName);
-        if (anim.timeline != scrollTimeline) {
-          const proxyAnimation = new ProxyAnimation(anim, scrollTimeline);
-          anim.pause();
-          proxyAnimation.play();
-        }
+      const result = createScrollTimeline(anim.animationName, evt.target);
+      if (result.timeline && anim.timeline != result.timeline) {
+        const proxyAnimation = new ProxyAnimation(anim, result.timeline, result.animOptions);
+        anim.pause();
+        proxyAnimation.play();
       }
     });
   });

@@ -4,7 +4,13 @@ export const RegexMatcher = {
   WHITE_SPACE: /\s*/g,
   NUMBER: /^[0-9]+/,
   TIME: /^[0-9]+(s|ms)/,
+  VIEW_TIMELINE: /view-timeline\s*:([^;}]+)/,
+  VIEW_TIMELINE_NAME: /view-timeline-name\s*:([^;}]+)/,
+  VIEW_TIMELINE_AXIS: /view-timeline-axis\s*:([^;}]+)/,
   ANIMATION_TIMELINE: /animation-timeline\s*:([^;}]+)/,
+  ANIMATION_DELAY: /animation-delay\s*:([^;}]+)/,
+  ANIMATION_END_DELAY: /animation-end-delay\s*:([^;}]+)/,
+  ANIMATION_TIME_RANGE: /animation-time-range\s*:([^;}]+)/,
   ANIMATION_NAME: /animation-name\s*:([^;}]+)/,
   ANIMATION: /animation\s*:([^;}]+)/,
   SOURCE_ELEMENT: /selector\(#([^)]+)\)/,
@@ -22,6 +28,8 @@ const ANIMATION_KEYWORDS = [
   'ease', 'linear', 'ease-in', 'ease-out', 'ease-in-out'
 ];
 
+const VIEW_TIMELINE_AXIS_TYPES = ['block', 'inline',  'vertical', 'horizontal'];
+
 // 1 - Extracts @scroll-timeline and saves it in scrollTimelineOptions.
 // 2 - If we find any animation-timeline in any of the CSS Rules, 
 // we will save objects in a list named cssRulesWithTimelineName
@@ -29,6 +37,7 @@ export class StyleParser {
   constructor() {
     this.cssRulesWithTimelineName = [];
     this.scrollTimelineOptions = new Map(); // save options by name
+    this.subjectSelectorToViewTimeline = [];
     this.keyframeNames = new Set();
   }
 
@@ -77,7 +86,7 @@ export class StyleParser {
     return p.sheetSrc;
   }
 
-  getScrollTimelineName(animationName, target) {
+  getAnimationTimelineOptions(animationName, target) {
     // Rules are pushed to cssRulesWithTimelineName list in the same order as they appear in style sheet.
     // We are traversing backwards to take the last sample of a rule in a style sheet.
     // TODO: Rule specificity should be taken into account, i.e. don't just take the last
@@ -86,7 +95,58 @@ export class StyleParser {
       const current = this.cssRulesWithTimelineName[i];
       if (target.matches(current.selector)) {
         if (!current['animation-name'] || current['animation-name'] == animationName) {
-          return current['animation-timeline'];
+          return {
+            'animation-timeline': current['animation-timeline'],
+            'animation-delay': current['animation-delay'],
+            'animation-end-delay': current['animation-end-delay'],
+            'animation-time-range': current['animation-time-range']
+          }
+        }
+      }
+    }
+
+    return null;
+  }
+
+  // This implementation is based on https://drafts.csswg.org/scroll-animations-1/
+  // TODO: Should update accordingly when new spec lands.
+  getSourceElement(source) {
+    const matches = RegexMatcher.SOURCE_ELEMENT.exec(source);
+    const SOURCE_CAPTURE_INDEX = 1;
+    if (matches)
+      return document.getElementById(matches[SOURCE_CAPTURE_INDEX]);
+    else if (source === "auto")
+      return document.scrollingElement;
+    else
+      return null;
+  }
+
+  getScrollTimelineOptions(timelineName) {
+    const options = this.scrollTimelineOptions.get(timelineName);
+
+    if(options?.source) {
+      const sourceElement = this.getSourceElement(options.source);
+      return {
+        ...(sourceElement ? { source: sourceElement } : {}),
+        ...(options.orientation != "auto" ? { orientation: options.orientation } : {}),
+      };
+    }
+
+    return null;
+  }
+
+  getViewTimelineOptions(timelineName) {
+    // TODO: Take into account the scoping of the ViewTimelines
+    // https://github.com/w3c/csswg-drafts/issues/7047
+    for (let i = this.subjectSelectorToViewTimeline.length - 1; i >= 0; i--) {
+      const options = this.subjectSelectorToViewTimeline[i];
+      if(options.name == timelineName) {
+        const allSubjects = document.querySelectorAll(options.selector);
+        if(allSubjects.length) {
+          return {
+            subject: allSubjects[allSubjects.length - 1],
+            axis: options.axis,
+          }
         }
       }
     }
@@ -140,16 +200,16 @@ export class StyleParser {
     const hasAnimationTimeline = rule.block.contents.includes("animation-timeline:");
     const hasAnimation = rule.block.contents.includes("animation:");
 
+    this.saveSubjectSelectorToViewTimeline(rule);
+
     let timelineNames = [];
     let animationNames = [];
 
-    if (hasAnimationTimeline) {
+    if (hasAnimationTimeline)
       timelineNames = this.extractMatches(rule.block.contents, RegexMatcher.ANIMATION_TIMELINE);
-    }
 
-    if (hasAnimationName) {
+    if (hasAnimationName)
       animationNames = this.extractMatches(rule.block.contents, RegexMatcher.ANIMATION_NAME);
-    }
 
     if (hasAnimationTimeline && hasAnimationName) {
       this.saveRelationInList(rule, timelineNames, animationNames);
@@ -206,29 +266,76 @@ export class StyleParser {
     this.saveRelationInList(rule, timelineNames, animationNames);
   }
 
+  saveSubjectSelectorToViewTimeline(rule) {
+    const hasViewTimeline = rule.block.contents.includes("view-timeline:");
+    const hasViewTimelineName = rule.block.contents.includes("view-timeline-name:");
+    const hasViewTimelineAxis = rule.block.contents.includes("view-timeline-axis:");
+
+    if(!hasViewTimeline && !hasViewTimelineName) return;
+
+    let viewTimeline = {selector: rule.selector, name: '', axis: 'block'};
+
+    if(hasViewTimeline) {
+      const parts = this.extractMatches(rule.block.contents, RegexMatcher.VIEW_TIMELINE, separator=' ');
+      if(parts.length == 1) {
+        viewTimeline.name = parts[0];
+      } else if(parts.length == 2) {
+        if(VIEW_TIMELINE_AXIS_TYPES.includes(parts[0]))
+          viewTimeline.axis = parts[0], viewTimeline.name = parts[1];
+        else
+          viewTimeline.axis = parts[1], viewTimeline.name = parts[0];
+      }
+    }
+
+    if(hasViewTimelineName) {
+      const parts = this.extractMatches(rule.block.contents, RegexMatcher.VIEW_TIMELINE_NAME);
+      viewTimeline.name = parts[0];
+    }
+
+    if(hasViewTimelineAxis) {
+      const parts = this.extractMatches(rule.block.contents, RegexMatcher.VIEW_TIMELINE_AXIS);
+      if(VIEW_TIMELINE_AXIS_TYPES.includes(parts[0]))
+        viewTimeline.axis = parts[0];
+    }
+
+    this.subjectSelectorToViewTimeline.push(viewTimeline);
+  }
+
   hasDuration(shorthand) {
     return shorthand.split(" ").filter(part => isTime(part)).length >= 1;
   }
 
   saveRelationInList(rule, timelineNames, animationNames) {
-    if (animationNames.length == 0) {
-      for (let i = 0; i < timelineNames.length; i++) {
-        this.cssRulesWithTimelineName.push({
-          selector: rule.selector,
-          'animation-name': undefined,
-          'animation-timeline': timelineNames[i]
-        });
-      }
-    } else {
-      for (let i = 0; i < Math.max(timelineNames.length, animationNames.length); i++) {
-        this.cssRulesWithTimelineName.push({
-          selector: rule.selector,
-          'animation-name': animationNames[i % animationNames.length],
-          'animation-timeline': timelineNames[i % timelineNames.length]
-        });
-      }
-    }
+    const hasAnimationDelay = rule.block.contents.includes("animation-delay:");
+    const hasAnimationEndDelay = rule.block.contents.includes("animation-end-delay:");
+    const hasAnimationTimeRange = rule.block.contents.includes("animation-time-range:");
 
+    let animationDelays = [];
+    let animationEndDelays = [];
+    let animationTimeRanges = [];
+
+    if (hasAnimationDelay)
+      animationDelays = this.extractMatches(rule.block.contents, RegexMatcher.ANIMATION_DELAY);
+
+    if (hasAnimationEndDelay)
+      animationEndDelays = this.extractMatches(rule.block.contents, RegexMatcher.ANIMATION_END_DELAY);
+
+    if (hasAnimationTimeRange)
+      animationTimeRanges = this.extractMatches(rule.block.contents, RegexMatcher.ANIMATION_TIME_RANGE);
+
+    const maxLength = Math.max(timelineNames.length, animationNames.length,
+      animationDelays.length, animationEndDelays.length, animationTimeRanges.length);
+
+    for (let i = 0; i < maxLength; i++) {
+      this.cssRulesWithTimelineName.push({
+        selector: rule.selector,
+        'animation-timeline': timelineNames[i % timelineNames.length],
+        ...(animationNames.length ? {'animation-name': animationNames[i % animationNames.length]}: {}),
+        ...(animationDelays.length ? {'animation-delay': animationDelays[i % animationDelays.length]}: {}),
+        ...(animationEndDelays.length ? {'animation-end-delay': animationEndDelays[i % animationEndDelays.length]}: {}),
+        ...(animationTimeRanges.length ? {'animation-time-range': animationTimeRanges[i % animationTimeRanges.length]}: {}),
+      });
+    }
   }
 
   extractAnimationName(shorthand) {
@@ -372,8 +479,8 @@ export class StyleParser {
     return p.sheetSrc[p.index];
   }
 
-  extractMatches(contents, matcher) {
-    return matcher.exec(contents)[VALUES_CAPTURE_INDEX].trim().split(",").map(item => item.trim());
+  extractMatches(contents, matcher, separator=',') {
+    return matcher.exec(contents)[VALUES_CAPTURE_INDEX].trim().split(separator).map(item => item.trim());
   }
 }
 
