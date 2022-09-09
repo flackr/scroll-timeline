@@ -326,7 +326,7 @@ function isBlockContainer(element) {
 }
 
 function isFixedElementContainer(element) {
-  const style = style.getComputedStyle(element);
+  const style = getComputedStyle(element);
   if (style.transform != 'none' || style.perspective != 'none')
     return true;
 
@@ -343,7 +343,7 @@ function isFixedElementContainer(element) {
 }
 
 function isAbsoluteElementContainer(element) {
-  const style = style.getComputedStyle(element);
+  const style = getComputedStyle(element);
   if (style.position != 'static')
     return true;
 
