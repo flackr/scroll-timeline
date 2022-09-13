@@ -174,7 +174,9 @@ function animateParallax() {
       transform: ['none', 'translateY(30%)']}, {
       fill: 'both',
       timeline: new ViewTimeline({subject: header}),
-      timeRange: 'exit'
+      delay: { phase: 'exit', percent: CSS.percent(0) },
+      endDelay: { phase: 'exit', percent: CSS.percent(100) },
+      // timeRange: 'exit'
     });
 }
 
@@ -184,7 +186,9 @@ function animateZoom() {
       transform: ['scale(3) translateX(10%)', 'scale(1)']}, {
       fill: 'both',
       timeline: new ViewTimeline({ subject: container }),
-      timeRange: 'contain 20% 80%'
+      delay: { phase: 'contain', percent: CSS.percent(30) },
+      endDelay: { phase: 'contain', percent: CSS.percent(80) },
+      // timeRange: 'contain 20% 80%'
   });
 }
 
@@ -194,7 +198,9 @@ function animatePan() {
       backgroundPosition: ['left center', 'right center']}, {
       fill: 'both',
       timeline: new ViewTimeline({ subject: container }),
-      timeRange: 'contain'
+      delay: { phase: 'contain', percent: CSS.percent(0) },
+      endDelay: { phase: 'contain', percent: CSS.percent(100) },
+      // timeRange: 'contain'
   });
 }
 
@@ -204,7 +210,9 @@ function animateWipe() {
       width: ['100%', '0']}, {
       fill: 'both',
       timeline: new ViewTimeline({ subject: container }),
-      timeRange: 'contain'
+      delay: { phase: 'enter', percent: CSS.percent(100) },
+      endDelay: { phase: 'enter', percent: CSS.percent(120) },
+      // timeRange: 'enter 100% 120%'
   });
 }
 
@@ -221,7 +229,9 @@ function animateHeaders() {
         {
           fill: 'both',
           timeline: new ViewTimeline({ subject: headers[i] }),
-          timeRange: 'contain'
+          delay: { phase: 'contain', percent: CSS.percent(0) },
+          endDelay: { phase: 'contain', percent: CSS.percent(100) },
+          // timeRange: 'contain'
         });
   }
 }

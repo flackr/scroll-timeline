@@ -1697,10 +1697,10 @@ export function animate(keyframes, options) {
 
     // TODO(kevers): Update property names once ratified.
     if (value.phase)
-      timelineOffset.anme = value.phase;
+      timelineOffset.name = value.phase;
 
     if (value.percent)
-      timelineOffset.offset = percent;
+      timelineOffset.offset = value.percent;
   };
 
   const delayTimelineOffset = timelineOffset(options, 'delay');
