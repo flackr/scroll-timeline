@@ -44,6 +44,15 @@
     direction:  rtl;
   }
 
+  #dividers_overlay {
+    position: absolute;
+    top:  10px;
+    left:  10px;
+    width:  500px;
+    height:  500px;
+    pointer-events: none;
+  }
+
   .spacer {
     display:  inline-block;
     flex:  none;
@@ -69,7 +78,7 @@
   .progress-bar-progress {
     border:  1px solid green;
     height:  20px;
-    width:  200px;
+    width:  250px;
     position:  absolute;
     inset-inline-start:  20px;
     padding:  0;
@@ -95,13 +104,17 @@
   </div>
   <div id="overlay">
     <div class="progress-bar" style="top: 20px;"><span>cover</span></div>
-    <div class="progress-bar" style="top: 70px;"><span>contain</span></div>
-    <div class="progress-bar" style="top: 120px;"><span>enter</span></div>
-    <div class="progress-bar" style="top: 170px;"><span>exit</span></div>
-    <div class="progress-bar" style="top: 220px">
+    <div class="progress-bar" style="top: 70px;"><span>cover, inset 100px 200px</span></div>
+    <div class="progress-bar" style="top: 120px;"><span>contain</span></div>
+    <div class="progress-bar" style="top: 170px;"><span>enter</span></div>
+    <div class="progress-bar" style="top: 220px;"><span>enter, inset 100px</span></div>
+    <div class="progress-bar" style="top: 270px;"><span>exit</span></div>
+    <div class="progress-bar" style="top: 320px;"><span>exit, inset 50% 20%</span></div>
+    <div class="progress-bar" style="top: 370px;"><span>exit 50% 100%, inset 100px</span></div>
+    <div class="progress-bar" style="top: 420px">
       <span>contain 25% 75%</span>
     </div>
-    <div class="progress-bar" style="top: 270px">
+    <div class="progress-bar" style="top: 470px">
       <span>enter 150% exit -50%</span>
     </div>
     <div class="progress-bar-progress" style="top: 20px;"></div>
@@ -110,7 +123,23 @@
     <div class="progress-bar-progress" style="top: 170px;"></div>
     <div class="progress-bar-progress" style="top: 220px;"></div>
     <div class="progress-bar-progress" style="top: 270px;"></div>
+    <div class="progress-bar-progress" style="top: 320px;"></div>
+    <div class="progress-bar-progress" style="top: 370px;"></div>
+    <div class="progress-bar-progress" style="top: 420px;"></div>
+    <div class="progress-bar-progress" style="top: 470px;"></div>
   </div>
+
+  <div id="dividers_overlay">
+    <div style="height: 99px"></div>
+    <div style="border-top: 1px solid red"></div>
+    <div style="height: 99px"></div>
+    <div style="border-top: 1px solid red"></div>
+    <div style="height: 99px"></div>
+    <div style="border-top: 1px solid red"></div>
+    <div style="height: 99px"></div>
+    <div style="border-top: 1px solid red"></div>
+  </div>
+
   <input type="radio" name="layout" id="vertical-tb" checked>
   <label for="vertical">Vertical top to bottom</label>
   <input type="radio" name="layout" id="horizontal-ltr">
@@ -123,13 +152,14 @@
   "use strict";
 
   const progressBars = document.querySelectorAll('.progress-bar-progress');
-  const createProgressAnimation = (bar, range, orientation) => {
+  const createProgressAnimation = (bar, range, orientation, inset=null) => {
     const target = document.getElementById('target');
     const viewTimeline = new ViewTimeline({
       'subject': target,
-      'axis': orientation
+      'axis': orientation,
+      'inset': inset
     });
-    bar.animate( { width: ['0px', '200px' ] }, {
+    bar.animate( { width: ['0px', '250px' ] }, {
       timeline: viewTimeline,
       timeRange: `${range}`,
       fill: 'both'
@@ -141,11 +171,15 @@
       anim.cancel();
     });
     createProgressAnimation(progressBars[0], 'cover', orientation);
-    createProgressAnimation(progressBars[1], 'contain', orientation);
-    createProgressAnimation(progressBars[2], 'enter', orientation);
-    createProgressAnimation(progressBars[3], 'exit', orientation);
-    createProgressAnimation(progressBars[4], 'contain 25% 75%', orientation);
-    createProgressAnimation(progressBars[5], 'enter 150% exit -50%',
+    createProgressAnimation(progressBars[1], 'cover', orientation, '100px 200px');
+    createProgressAnimation(progressBars[2], 'contain', orientation);
+    createProgressAnimation(progressBars[3], 'enter', orientation);
+    createProgressAnimation(progressBars[4], 'enter', orientation, '100px');
+    createProgressAnimation(progressBars[5], 'exit', orientation);
+    createProgressAnimation(progressBars[6], 'exit', orientation, '50% 20%');
+    createProgressAnimation(progressBars[7], 'exit 50% 100%', orientation, '100px');
+    createProgressAnimation(progressBars[8], 'contain 25% 75%', orientation);
+    createProgressAnimation(progressBars[9], 'enter 150% exit -50%',
                             orientation);
   };
 
