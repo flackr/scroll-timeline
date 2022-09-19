@@ -457,30 +457,29 @@ function range(timeline, phase) {
   switch(phase) {
     case 'cover':
       // Range of scroll offsets where the subject element intersects the
-      // source's viewport, with inset/outset considered.
+      // source's adjusted viewport.
       startOffset = coverStartOffset;
       endOffset = coverEndOffset;
       break;
 
     case 'contain':
       // Range of scroll offsets where the subject element is fully inside of
-      // the container's viewport, with inset/outset considered. 
-      // If the subject's bounds exceed the size of the viewport in the scroll 
-      // direction then the scroll range is empty.
+      // the container's adjusted viewport. If the subject's bounds exceed the
+      // size of the viewport in the scroll direction then the scroll range is empty.
       startOffset = coverStartOffset + viewSize;
       endOffset = coverEndOffset - viewSize;
       break;
 
     case 'enter':
       // Range of scroll offsets where the subject element overlaps the
-      // logical-start edge of the viewport, with inset/outset considered.
+      // logical-start edge of the adjusted viewport.
       startOffset = coverStartOffset;
       endOffset = coverStartOffset + viewSize;
       break;
 
     case 'exit':
       // Range of scroll offsets where the subject element overlaps the
-      // logical-end edge of the viewport, with inset/outset considered.
+      // logical-end edge of the adjusted viewport.
       startOffset = coverEndOffset - viewSize;
       endOffset = coverEndOffset;
       break;
