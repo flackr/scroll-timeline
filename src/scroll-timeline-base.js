@@ -449,38 +449,40 @@ function range(timeline, phase) {
   }
 
   const inset = parseInset(details.inset, containerSize);
+  const coverStartOffset = viewPos - containerSize + inset.end;
+  const coverEndOffset = viewPos + viewSize - inset.start;
   let startOffset = undefined;
   let endOffset = undefined;
 
   switch(phase) {
     case 'cover':
       // Range of scroll offsets where the subject element intersects the
-      // source's viewport.
-      startOffset = viewPos - containerSize + inset.end;
-      endOffset = viewPos + viewSize - inset.start;
+      // source's viewport, with inset/outset considered.
+      startOffset = coverStartOffset;
+      endOffset = coverEndOffset;
       break;
 
     case 'contain':
       // Range of scroll offsets where the subject element is fully inside of
-      // the container's viewport. If the subject's bounds exceed the size
-      // of the viewport in the scroll direction then the scroll range is
-      // empty.
-      startOffset = viewPos + viewSize - containerSize + inset.end;
-      endOffset = viewPos - inset.start;
+      // the container's viewport, with inset/outset considered. 
+      // If the subject's bounds exceed the size of the viewport in the scroll 
+      // direction then the scroll range is empty.
+      startOffset = coverStartOffset + viewSize;
+      endOffset = coverEndOffset - viewSize;
       break;
 
     case 'enter':
       // Range of scroll offsets where the subject element overlaps the
-      // logical-start edge of the viewport.
-      startOffset = viewPos - containerSize + inset.end;
-      endOffset = viewPos + viewSize - containerSize + inset.end;
+      // logical-start edge of the viewport, with inset/outset considered.
+      startOffset = coverStartOffset;
+      endOffset = coverStartOffset + viewSize;
       break;
 
     case 'exit':
       // Range of scroll offsets where the subject element overlaps the
-      // logical-end edge of the viewport.
-      startOffset = viewPos - inset.start;
-      endOffset = viewPos + viewSize - inset.start;
+      // logical-end edge of the viewport, with inset/outset considered.
+      startOffset = coverEndOffset - viewSize;
+      endOffset = coverEndOffset;
       break;
   }
 
