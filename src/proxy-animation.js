@@ -1696,6 +1696,7 @@ export function animate(keyframes, options) {
       return;
 
     // TODO(kevers): Update property names once ratified.
+    // https://github.com/w3c/csswg-drafts/issues/7589
     if (value.phase)
       timelineOffset.name = value.phase;
 
