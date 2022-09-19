@@ -1680,6 +1680,33 @@ export function animate(keyframes, options) {
   if (timeline instanceof ScrollTimeline)
     delete options.timeline;
 
+  const timelineOffset = (options, property) => {
+     if (property in options) {
+        const value = options[property];
+        if (typeof value != 'number') {
+          delete options[property];
+          return value;
+        }
+        return null;
+     }
+  };
+
+  const updateDelay = (timelineOffset, value) => {
+    if (!value)
+      return;
+
+    // TODO(kevers): Update property names once ratified.
+    // https://github.com/w3c/csswg-drafts/issues/7589
+    if (value.phase)
+      timelineOffset.name = value.phase;
+
+    if (value.percent)
+      timelineOffset.offset = value.percent;
+  };
+
+  const delayTimelineOffset = timelineOffset(options, 'delay');
+  const endDelayTimelineOffset = timelineOffset(options, 'endDelay');
+
   const animation = nativeElementAnimate.apply(this, [keyframes, options]);
   const proxyAnimation = new ProxyAnimation(animation, timeline);
 
@@ -1688,6 +1715,8 @@ export function animate(keyframes, options) {
     if (timeline instanceof ViewTimeline) {
       const details = proxyAnimations.get(proxyAnimation);
       details.timeRange = parseTimeRange(options.timeRange);
+      updateDelay(details.timeRange.start, delayTimelineOffset);
+      updateDelay(details.timeRange.end, endDelayTimelineOffset);
     }
     proxyAnimation.play();
   }
