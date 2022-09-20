@@ -213,6 +213,7 @@ export class ScrollTimeline {
 
       // View timeline
       subject: null,
+      inset: options.inset,
 
       // Internal members
       animations: [],
@@ -358,7 +359,7 @@ function getContainingBlock(element) {
       return findClosestAncestor(element, isBlockContainer);
 
     case 'absolute':
-       return findClosestAncestor(element, isAbsoluteElementContainer);
+      return findClosestAncestor(element, isAbsoluteElementContainer);
 
     case 'fixed':
       return findClosestAncestor(element, isFixedElementContainer);
@@ -447,9 +448,8 @@ function range(timeline, phase) {
     containerSize = container.clientHeight;
   }
 
-  const scrollPos = directionAwareScrollOffset(container, orientation);
-  let startOffset = undefined;
-  let endOffset = undefined;
+  const inset = parseInset(details.inset, containerSize);
+
 
   // Cover:
   // 0% progress represents the position at which the start border edge of the
@@ -458,8 +458,8 @@ function range(timeline, phase) {
   // 100% progress represents the position at which the end border edge of the
   // element’s principal box coincides with the start edge of its view progress
   // visibility range.
-  const coverStart = viewPos - containerSize;
-  const coverEnd = viewPos + viewSize;
+  const coverStartOffset = viewPos - containerSize + inset.end;
+  const coverEndOffset = viewPos + viewSize - inset.start;
 
   // Contain:
   // The 0% progress represents the earlier of the following positions:
@@ -472,38 +472,43 @@ function range(timeline, phase) {
   //  the start edge of its view progress visibility range.
   // 2. The end border edge of the element’s principal box coincides with
   //    the end edge of its view progress visibility range.
-  const contain1 = viewPos + viewSize - containerSize;;
-  const contain2 =  viewPos;
-  const containStart = Math.min(contain1, contain2);
-  const containEnd = Math.max(contain1, contain2);
+  const enterEndOffset = coverStartOffset + viewSize;
+  const exitStartOffset = coverEndOffset - viewSize;
+  const containStartOffset = Math.min(enterEndOffset, exitStartOffset);
+  const containEndOffset = Math.max(enterEndOffset, exitStartOffset);
+
+  let startOffset = undefined;
+  let endOffset = undefined;
 
   switch(phase) {
     case 'cover':
       // Range of scroll offsets where the subject element intersects the
-      // source's viewport.
-      startOffset = coverStart;
-      endOffset = coverEnd;
+      // source's adjusted viewport.
+      startOffset = coverStartOffset;
+      endOffset = coverEndOffset;
       break;
 
     case 'contain':
       // Range of scroll offsets where the subject element is fully inside of
-      // the container's viewport.
-      startOffset = containStart;
-      endOffset = containEnd;
+      // the container's adjusted viewport (e.g. enter 100% to exit 0%). In the
+      //  event that the subject element cannot be fully contained, then the
+      // offsets are reversed to maintain a positive animation duration.
+      startOffset = containStartOffset;
+      endOffset = containEndOffset;
       break;
 
     case 'enter':
       // Range of scroll offsets where the subject element overlaps the
-      // logical-start edge of the viewport.
-      startOffset = coverStart;
-      endOffset = containStart;
+      // logical-start edge of the adjusted viewport.
+      startOffset = coverStartOffset;
+      endOffset = containStartOffset;
       break;
 
     case 'exit':
       // Range of scroll offsets where the subject element overlaps the
-      // logical-end edge of the viewport.
-      startOffset = containEnd;
-      endOffset = coverEnd;
+      // logical-end edge of the adjusted viewport.
+      startOffset = containEndOffset;
+      endOffset = coverEndOffset;
       break;
   }
 
@@ -511,6 +516,39 @@ function range(timeline, phase) {
   // see github.com/w3c/csswg-drafts/issues/7432.
 
   return { start: startOffset, end: endOffset };
+}
+
+function parseInset(value, containerSize) {
+  const inset = { start: 0, end: 0 };
+
+  if(!value)
+    return inset;
+
+  const parts = value.split(' ');
+  const insetParts = [];
+  parts.forEach(part => {
+    // TODO: Add support for relative lengths (e.g. em)
+    if(part.endsWith("%"))
+      insetParts.push(containerSize / 100 * parseFloat(part));
+    else if(part.endsWith("px"))
+      insetParts.push(parseFloat(part));
+    else if(part === "auto")
+      insetParts.push(0);
+  });
+
+  if (insetParts.length > 2) {
+    throw TypeError("Invalid inset");
+  }
+
+  if(insetParts.length == 1) {
+    inset.start = insetParts[0];
+    inset.end = insetParts[0];
+  } else if(insetParts.length == 2) {
+    inset.start = insetParts[0];
+    inset.end = insetParts[1];
+  }
+
+  return inset;
 }
 
 // Calculate the fractional offset of a (phase, percent) pair relative to the
