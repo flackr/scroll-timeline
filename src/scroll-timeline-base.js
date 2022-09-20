@@ -451,35 +451,59 @@ function range(timeline, phase) {
   let startOffset = undefined;
   let endOffset = undefined;
 
+  // Cover:
+  // 0% progress represents the position at which the start border edge of the
+  // element’s principal box coincides with the end edge of its view progress
+  // visibility range.
+  // 100% progress represents the position at which the end border edge of the
+  // element’s principal box coincides with the start edge of its view progress
+  // visibility range.
+  const coverStart = viewPos - containerSize;
+  const coverEnd = viewPos + viewSize;
+
+  // Contain:
+  // The 0% progress represents the earlier of the following positions:
+  // 1. The start border edge of the element’s principal box coincides with
+  //    the start edge of its view progress visibility range.
+  // 2. The end border edge of the element’s principal box coincides with
+  //    the end edge of its view progress visibility range.
+  // The 100% progress represents the greater of the following positions:
+  // 1. The start border edge of the element’s principal box coincides with
+  //  the start edge of its view progress visibility range.
+  // 2. The end border edge of the element’s principal box coincides with
+  //    the end edge of its view progress visibility range.
+  const contain1 = viewPos + viewSize - containerSize;;
+  const contain2 =  viewPos;
+  const containStart = Math.min(contain1, contain2);
+  const containEnd = Math.max(contain1, contain2);
+
   switch(phase) {
     case 'cover':
       // Range of scroll offsets where the subject element intersects the
       // source's viewport.
-      startOffset = viewPos - containerSize;
-      endOffset = viewPos + viewSize;
+      startOffset = coverStart;
+      endOffset = coverEnd;
       break;
 
     case 'contain':
       // Range of scroll offsets where the subject element is fully inside of
-      // the container's viewport. If the subject's bounds exceed the size
-      // of the viewport in the scroll direction then the scroll range is
-      // empty.
-      startOffset = viewPos + viewSize - containerSize;
-      endOffset = viewPos;
+      // the container's viewport.
+      startOffset = containStart;
+      endOffset = containEnd;
       break;
 
     case 'enter':
       // Range of scroll offsets where the subject element overlaps the
       // logical-start edge of the viewport.
-      startOffset = viewPos - containerSize;
-      endOffset = viewPos + viewSize - containerSize;
+      startOffset = coverStart;
+      endOffset = containStart;
       break;
 
     case 'exit':
       // Range of scroll offsets where the subject element overlaps the
       // logical-end edge of the viewport.
-      startOffset = viewPos;
-      endOffset = viewPos + viewSize;
+      startOffset = containEnd;
+      endOffset = coverEnd;
       break;
   }
 
