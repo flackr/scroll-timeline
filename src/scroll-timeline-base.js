@@ -213,6 +213,7 @@ export class ScrollTimeline {
 
       // View timeline
       subject: null,
+      inset: options.inset,
 
       // Internal members
       animations: [],
@@ -358,7 +359,7 @@ function getContainingBlock(element) {
       return findClosestAncestor(element, isBlockContainer);
 
     case 'absolute':
-       return findClosestAncestor(element, isAbsoluteElementContainer);
+      return findClosestAncestor(element, isAbsoluteElementContainer);
 
     case 'fixed':
       return findClosestAncestor(element, isFixedElementContainer);
@@ -447,39 +448,40 @@ function range(timeline, phase) {
     containerSize = container.clientHeight;
   }
 
-  const scrollPos = directionAwareScrollOffset(container, orientation);
+  const inset = parseInset(details.inset, containerSize);
+  const coverStartOffset = viewPos - containerSize + inset.end;
+  const coverEndOffset = viewPos + viewSize - inset.start;
   let startOffset = undefined;
   let endOffset = undefined;
 
   switch(phase) {
     case 'cover':
       // Range of scroll offsets where the subject element intersects the
-      // source's viewport.
-      startOffset = viewPos - containerSize;
-      endOffset = viewPos + viewSize;
+      // source's adjusted viewport.
+      startOffset = coverStartOffset;
+      endOffset = coverEndOffset;
       break;
 
     case 'contain':
       // Range of scroll offsets where the subject element is fully inside of
-      // the container's viewport. If the subject's bounds exceed the size
-      // of the viewport in the scroll direction then the scroll range is
-      // empty.
-      startOffset = viewPos + viewSize - containerSize;
-      endOffset = viewPos;
+      // the container's adjusted viewport. If the subject's bounds exceed the
+      // size of the viewport in the scroll direction then the scroll range is empty.
+      startOffset = coverStartOffset + viewSize;
+      endOffset = coverEndOffset - viewSize;
       break;
 
     case 'enter':
       // Range of scroll offsets where the subject element overlaps the
-      // logical-start edge of the viewport.
-      startOffset = viewPos - containerSize;
-      endOffset = viewPos + viewSize - containerSize;
+      // logical-start edge of the adjusted viewport.
+      startOffset = coverStartOffset;
+      endOffset = coverStartOffset + viewSize;
       break;
 
     case 'exit':
       // Range of scroll offsets where the subject element overlaps the
-      // logical-end edge of the viewport.
-      startOffset = viewPos;
-      endOffset = viewPos + viewSize;
+      // logical-end edge of the adjusted viewport.
+      startOffset = coverEndOffset - viewSize;
+      endOffset = coverEndOffset;
       break;
   }
 
@@ -487,6 +489,39 @@ function range(timeline, phase) {
   // see github.com/w3c/csswg-drafts/issues/7432.
 
   return { start: startOffset, end: endOffset };
+}
+
+function parseInset(value, containerSize) {
+  const inset = { start: 0, end: 0 };
+
+  if(!value)
+    return inset;
+
+  const parts = value.split(' ');
+  const insetParts = [];
+  parts.forEach(part => {
+    // TODO: Add support for relative lengths (e.g. em)
+    if(part.endsWith("%"))
+      insetParts.push(containerSize / 100 * parseFloat(part));
+    else if(part.endsWith("px"))
+      insetParts.push(parseFloat(part));
+    else if(part === "auto")
+      insetParts.push(0);
+  });
+
+  if (insetParts.length > 2) {
+    throw TypeError("Invalid inset");
+  }
+
+  if(insetParts.length == 1) {
+    inset.start = insetParts[0];
+    inset.end = insetParts[0];
+  } else if(insetParts.length == 2) {
+    inset.start = insetParts[0];
+    inset.end = insetParts[1];
+  }
+
+  return inset;
 }
 
 // Calculate the fractional offset of a (phase, percent) pair relative to the
