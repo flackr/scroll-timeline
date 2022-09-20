@@ -500,6 +500,7 @@ function parseInset(value, containerSize) {
   const parts = value.split(' ');
   const insetParts = [];
   parts.forEach(part => {
+    // TODO: Add support for relative lengths (e.g. em)
     if(part.endsWith("%"))
       insetParts.push(containerSize / 100 * parseFloat(part));
     else if(part.endsWith("px"))
