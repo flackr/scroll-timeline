@@ -703,8 +703,6 @@ function createProxyEffect(details) {
              ? (totalDuration - timing.delay - timing.endDelay) /
                  timing.iterations
              : 0;
-          if (timing.duration < 0)
-            timing.duration = 0;
           // Set the timing on the native animation to the normalized values
           // while preserving the specified timing.
           nativeUpdateTiming.apply(effect, [timing]);

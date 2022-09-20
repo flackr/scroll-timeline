@@ -472,48 +472,37 @@ function range(timeline, phase) {
   //  the start edge of its view progress visibility range.
   // 2. The end border edge of the element’s principal box coincides with
   //    the end edge of its view progress visibility range.
-  const enterEndOffset = coverStartOffset + viewSize;
-  const exitStartOffset = coverEndOffset - viewSize;
-  const containStartOffset = Math.min(enterEndOffset, exitStartOffset);
-  const containEndOffset = Math.max(enterEndOffset, exitStartOffset);
+  const alignStartOffset = coverStartOffset + viewSize;
+  const alignEndOffset = coverEndOffset - viewSize;
+  const containStartOffset = Math.min(alignStartOffset, alignEndOffset);
+  const containEndOffset = Math.max(alignStartOffset, alignEndOffset);
+
+  // Enter and Exit bounds align with cover and contains bounds.
 
   let startOffset = undefined;
   let endOffset = undefined;
 
   switch(phase) {
     case 'cover':
-      // Range of scroll offsets where the subject element intersects the
-      // source's adjusted viewport.
       startOffset = coverStartOffset;
       endOffset = coverEndOffset;
       break;
 
     case 'contain':
-      // Range of scroll offsets where the subject element is fully inside of
-      // the container's adjusted viewport (e.g. enter 100% to exit 0%). In the
-      //  event that the subject element cannot be fully contained, then the
-      // offsets are reversed to maintain a positive animation duration.
       startOffset = containStartOffset;
       endOffset = containEndOffset;
       break;
 
     case 'enter':
-      // Range of scroll offsets where the subject element overlaps the
-      // logical-start edge of the adjusted viewport.
       startOffset = coverStartOffset;
       endOffset = containStartOffset;
       break;
 
     case 'exit':
-      // Range of scroll offsets where the subject element overlaps the
-      // logical-end edge of the adjusted viewport.
       startOffset = containEndOffset;
       endOffset = coverEndOffset;
       break;
   }
-
-  // TODO: Revisit once the clamping issue is resolved.
-  // see github.com/w3c/csswg-drafts/issues/7432.
 
   return { start: startOffset, end: endOffset };
 }
