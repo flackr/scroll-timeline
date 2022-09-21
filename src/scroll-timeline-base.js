@@ -449,44 +449,60 @@ function range(timeline, phase) {
   }
 
   const inset = parseInset(details.inset, containerSize);
+
+
+  // Cover:
+  // 0% progress represents the position at which the start border edge of the
+  // element’s principal box coincides with the end edge of its view progress
+  // visibility range.
+  // 100% progress represents the position at which the end border edge of the
+  // element’s principal box coincides with the start edge of its view progress
+  // visibility range.
   const coverStartOffset = viewPos - containerSize + inset.end;
   const coverEndOffset = viewPos + viewSize - inset.start;
+
+  // Contain:
+  // The 0% progress represents the earlier of the following positions:
+  // 1. The start border edge of the element’s principal box coincides with
+  //    the start edge of its view progress visibility range.
+  // 2. The end border edge of the element’s principal box coincides with
+  //    the end edge of its view progress visibility range.
+  // The 100% progress represents the greater of the following positions:
+  // 1. The start border edge of the element’s principal box coincides with
+  //  the start edge of its view progress visibility range.
+  // 2. The end border edge of the element’s principal box coincides with
+  //    the end edge of its view progress visibility range.
+  const alignStartOffset = coverStartOffset + viewSize;
+  const alignEndOffset = coverEndOffset - viewSize;
+  const containStartOffset = Math.min(alignStartOffset, alignEndOffset);
+  const containEndOffset = Math.max(alignStartOffset, alignEndOffset);
+
+  // Enter and Exit bounds align with cover and contains bounds.
+
   let startOffset = undefined;
   let endOffset = undefined;
 
   switch(phase) {
     case 'cover':
-      // Range of scroll offsets where the subject element intersects the
-      // source's adjusted viewport.
       startOffset = coverStartOffset;
       endOffset = coverEndOffset;
       break;
 
     case 'contain':
-      // Range of scroll offsets where the subject element is fully inside of
-      // the container's adjusted viewport. If the subject's bounds exceed the
-      // size of the viewport in the scroll direction then the scroll range is empty.
-      startOffset = coverStartOffset + viewSize;
-      endOffset = coverEndOffset - viewSize;
+      startOffset = containStartOffset;
+      endOffset = containEndOffset;
       break;
 
     case 'enter':
-      // Range of scroll offsets where the subject element overlaps the
-      // logical-start edge of the adjusted viewport.
       startOffset = coverStartOffset;
-      endOffset = coverStartOffset + viewSize;
+      endOffset = containStartOffset;
       break;
 
     case 'exit':
-      // Range of scroll offsets where the subject element overlaps the
-      // logical-end edge of the adjusted viewport.
-      startOffset = coverEndOffset - viewSize;
+      startOffset = containEndOffset;
       endOffset = coverEndOffset;
       break;
   }
-
-  // TODO: Revisit once the clamping issue is resolved.
-  // see github.com/w3c/csswg-drafts/issues/7432.
 
   return { start: startOffset, end: endOffset };
 }
