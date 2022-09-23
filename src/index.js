@@ -25,6 +25,10 @@ import { initCSSPolyfill } from "./scroll-timeline-css"
 
 initCSSPolyfill();
 
+if ([...document.styleSheets].filter(s => s.href !== null).length) {
+  console.warn("Non-Inline StyleSheets detected: ScrollTimeline polyfill currently only supports inline styles within style tags");
+}
+
 if (
   !Reflect.defineProperty(window, "ScrollTimeline", { value: ScrollTimeline })
 ) {
