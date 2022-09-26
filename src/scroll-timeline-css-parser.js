@@ -415,7 +415,7 @@ export class StyleParser {
 
   eatComment(p) {
     this.assertString(p, "/*");
-    this.eatUntil("*/", p);
+    this.eatUntil("*/", p, true);
     this.assertString(p, "*/");
   }
 
@@ -424,6 +424,11 @@ export class StyleParser {
     this.assertString(p, "{");
     let level = 1;
     while (level != 0) {
+      if(this.lookAhead("/*", p)) {
+        this.eatComment(p);
+        continue;
+      }
+
       if (p.sheetSrc[p.index] === "{") {
         level++;
       } else if (p.sheetSrc[p.index] === "}") {
@@ -444,10 +449,16 @@ export class StyleParser {
     }
   }
 
-  eatUntil(s, p) {
+  eatUntil(s, p, replaceWithSpace=false) {
     const startIndex = p.index;
     while (!this.lookAhead(s, p)) {
       this.advance(p);
+    }
+
+    if(replaceWithSpace) {
+      p.sheetSrc = p.sheetSrc.slice(0, startIndex)
+        + " ".repeat(p.index - startIndex)
+        + p.sheetSrc.slice(p.index);
     }
     return p.sheetSrc.slice(startIndex, p.index);
   }
