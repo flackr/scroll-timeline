@@ -136,24 +136,13 @@ export class StyleParser {
   }
 
   findPreviousSiblingOrAncestorMatchingSelector(target, selector) {
-    // Target self is eligible, use that
-    if (target.matches(selector)) return target;
-
-    // Walk previous siblings
-    let prevSibling = target.previousElementSibling;
-    while (prevSibling) {
-      if (prevSibling.matches(selector)) {
-        return prevSibling;
-      }
-      prevSibling = prevSibling.previousElementSibling;
+    let candidate = target;
+    while (candidate) {
+      if (candidate.matches(selector)) 
+        return candidate;
+      candidate = candidate.previousElementSibling || candidate.parentElement;
     }
 
-    // Move up to parent
-    if (target.parentElement) {
-      return this.findPreviousSiblingOrAncestorMatchingSelector(target.parentElement, selector);
-    }
-
-    // No match
     return null;
   }
 
