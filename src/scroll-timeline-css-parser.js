@@ -135,16 +135,29 @@ export class StyleParser {
     return null;
   }
 
-  getViewTimelineOptions(timelineName) {
-    // TODO: Take into account the scoping of the ViewTimelines
-    // https://github.com/w3c/csswg-drafts/issues/7047
+  findPreviousSiblingOrAncestorMatchingSelector(target, selector) {
+    // Target self
+    let candidate = target;
+    
+    // Walk the DOM tree: preceding siblings and ancestors
+    while (candidate) {
+      if (candidate.matches(selector)) 
+        return candidate;
+      candidate = candidate.previousElementSibling || candidate.parentElement;
+    }
+
+    // No match
+    return null;
+  }
+
+  getViewTimelineOptions(timelineName, target) {
     for (let i = this.subjectSelectorToViewTimeline.length - 1; i >= 0; i--) {
       const options = this.subjectSelectorToViewTimeline[i];
       if(options.name == timelineName) {
-        const allSubjects = document.querySelectorAll(options.selector);
-        if(allSubjects.length) {
+        const subject = this.findPreviousSiblingOrAncestorMatchingSelector(target, options.selector);
+        if(subject) {
           return {
-            subject: allSubjects[allSubjects.length - 1],
+            subject,
             axis: options.axis,
           }
         }
