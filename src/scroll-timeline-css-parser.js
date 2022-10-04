@@ -135,16 +135,14 @@ export class StyleParser {
     return null;
   }
 
-  getViewTimelineOptions(timelineName) {
-    // TODO: Take into account the scoping of the ViewTimelines
-    // https://github.com/w3c/csswg-drafts/issues/7047
+  getViewTimelineOptions(timelineName, target) {
     for (let i = this.subjectSelectorToViewTimeline.length - 1; i >= 0; i--) {
       const options = this.subjectSelectorToViewTimeline[i];
       if(options.name == timelineName) {
-        const allSubjects = document.querySelectorAll(options.selector);
-        if(allSubjects.length) {
+        const subject = target.closest(options.selector);
+        if(subject) {
           return {
-            subject: allSubjects[allSubjects.length - 1],
+            subject,
             axis: options.axis,
           }
         }

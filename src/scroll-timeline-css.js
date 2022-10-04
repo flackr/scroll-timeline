@@ -64,7 +64,7 @@ function createScrollTimeline(animationName, target) {
   if(!timelineName) return null;
 
   let options = parser.getScrollTimelineOptions(timelineName) ||
-    parser.getViewTimelineOptions(timelineName);
+    parser.getViewTimelineOptions(timelineName, target);
   if (!options) return null;
 
   return {
