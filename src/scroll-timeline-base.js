@@ -366,7 +366,7 @@ function getContainingBlock(element) {
   }
 }
 
-function getScrollParent(node) {
+export function getScrollParent(node) {
   if (!node)
     return undefined;
 
@@ -411,6 +411,10 @@ function range(timeline, phase) {
   const container = timeline.source;
   const target = timeline.subject;
 
+  return calculateRange(phase, container, target, details.orientation, details.inset);
+}
+
+export function calculateRange(phase, container, target, orientation, optionsInset) {
   let top = 0;
   let left = 0;
   let node = target;
@@ -432,7 +436,6 @@ function range(timeline, phase) {
   let viewSize = undefined;
   let viewPos = undefined;
   let containerSize = undefined;
-  const orientation = details.orientation;
   if (orientation == 'horizontal' ||
       (orientation == 'inline' && horizontalWritingMode) ||
       (orientation == 'block' && !horizontalWritingMode)) {
@@ -448,7 +451,7 @@ function range(timeline, phase) {
     containerSize = container.clientHeight;
   }
 
-  const inset = parseInset(details.inset, containerSize);
+  const inset = parseInset(optionsInset, containerSize);
 
 
   // Cover:
@@ -507,7 +510,7 @@ function range(timeline, phase) {
   return { start: startOffset, end: endOffset };
 }
 
-function parseInset(value, containerSize) {
+export function parseInset(value, containerSize) {
   const inset = { start: 0, end: 0 };
 
   if(!value)
@@ -545,6 +548,10 @@ function parseInset(value, containerSize) {
 export function relativePosition(timeline, phase, percent) {
   const phaseRange = range(timeline, phase);
   const coverRange = range(timeline, 'cover');
+  return calculateRelativePosition(phaseRange, percent, coverRange);
+}
+
+export function calculateRelativePosition(phaseRange, percent, coverRange) {
   if (!phaseRange || !coverRange)
     return 0;
 

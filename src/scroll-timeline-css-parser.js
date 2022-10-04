@@ -1,3 +1,5 @@
+import { ANIMATION_DELAY_NAMES } from './proxy-animation';
+
 // This is also used in scroll-timeline-css.js
 export const RegexMatcher = {
   IDENTIFIER: /[\w\\\@_-]+/g,
@@ -38,7 +40,7 @@ export class StyleParser {
     this.cssRulesWithTimelineName = [];
     this.scrollTimelineOptions = new Map(); // save options by name
     this.subjectSelectorToViewTimeline = [];
-    this.keyframeNames = new Set();
+    this.keyframeNamesSelectors = new Map();
   }
 
   // Inspired by
@@ -73,7 +75,7 @@ export class StyleParser {
         const rule = this.parseQualifiedRule(p);
         if (!rule) continue;
         if (firstPass) {
-          this.extractAndSaveKeyframeName(rule.selector);
+          this.parseKeyframesAndSaveNameMapping(rule, p);
         } else {
           this.handleScrollTimelineProps(rule, p);
         }
@@ -159,6 +161,7 @@ export class StyleParser {
           return {
             subject,
             axis: options.axis,
+            inset: options.inset
           }
         }
       }
@@ -352,7 +355,7 @@ export class StyleParser {
   }
 
   extractAnimationName(shorthand) {
-    return this.findMatchingEntryInContainer(shorthand, this.keyframeNames);
+    return this.findMatchingEntryInContainer(shorthand, this.keyframeNamesSelectors);
   }
 
   extractTimelineName(shorthand) {
@@ -375,16 +378,107 @@ export class StyleParser {
     return match[WHOLE_MATCH_INDEX];
   }
 
-  /**
-   * @param {String} selector contains everything upto '{', eg: "@keyframes expand"
-   */
-  extractAndSaveKeyframeName(selector) {
-    if (selector.startsWith("@keyframes")) {
-      selector.split(" ").forEach((item, index) => {
-        if (index > 0) {
-          this.keyframeNames.add(item);
-        }
+  parseKeyframesAndSaveNameMapping(rule, p) {
+    if (rule.selector.startsWith("@keyframes")) {
+      const mapping = this.replaceKeyframesAndGetMapping(rule, p);
+      rule.selector.split(" ").forEach((item, index) => {
+        if (index > 0)
+          this.keyframeNamesSelectors.set(item, mapping);
       })
+    }
+  }
+
+  /*
+  Replaces this:
+    {
+      enter 0% { opacity: 0 }
+      enter 100% { opacity: 1 }
+      exit 0% { opacity: 1 }
+      exit 100% { opacity: 0 }
+    }
+  with this:
+    {
+      0% { opacity: 0 }
+      1% { opacity: 1 }
+      2% { opacity: 1 }
+      3% { opacity: 0 }
+    }
+  and returns a mapping of { "0%": "enter 0%", "1%":"enter 100%", ... }
+  If there are no phases in the keyframe selectors, nothing will happen
+  and an empty map is returned.
+  */
+  replaceKeyframesAndGetMapping(rule, p) {
+    function hasPhase(selector) {
+      return ANIMATION_DELAY_NAMES.some(phase => selector.startsWith(phase));
+    }
+
+    function cleanFrameSelector(selector) {
+      return selector.split(" ").map(h => h.trim()).filter(p => p != "").join(" ");
+    }
+
+    function getFrameSelectorIndexes(contents) {
+      let open = 0;
+      let startIndex = -1;
+      let endIndex = -1;
+      const indexes = [];
+
+      for(let i = 0; i < contents.length; i++) {
+        if(contents[i] == '{')
+          open++;
+        else if(contents[i] == '}')
+          open--;
+
+        if(open == 1 && contents[i] != '{' && contents[i] != '}') {
+          if(startIndex == -1)
+            startIndex = i;
+        }
+
+        if(open == 2 && contents[i] == '{') {
+          endIndex = i;
+          indexes.push({start: startIndex, end: endIndex});
+          startIndex = endIndex = -1;
+        }
+      }
+      return indexes;
+    }
+
+    const contents = rule.block.contents;
+    const parts = getFrameSelectorIndexes(contents);
+
+    if(parts.length == 0)
+      return new Map();
+
+    const mapping = new Map();
+    let foundPhaseLinkedOffset = false;
+    const newContents = [];
+    newContents.push(contents.substring(0, parts[0].start));
+    for(let i = 0; i < parts.length; i++) {
+      const currentFrameSelector = contents.substring(parts[i].start, parts[i].end);
+      const trimmedFrameSelector = cleanFrameSelector(currentFrameSelector);
+      const newFrameSelector = `${mapping.size}%`;
+      mapping.set(newFrameSelector, trimmedFrameSelector);
+      newContents.push(newFrameSelector);
+
+      if(hasPhase(trimmedFrameSelector))
+        foundPhaseLinkedOffset = true;
+
+      if(i == parts.length-1)
+        newContents.push(contents.substring(parts[i].end));
+      else
+        newContents.push(contents.substring(parts[i].end, parts[i+1].start));
+    }
+
+    if(foundPhaseLinkedOffset) {
+      rule.block.contents = newContents.join("");
+      this.replacePart(
+        rule.block.startIndex,
+        rule.block.endIndex,
+        rule.block.contents,
+        p
+      );
+      return mapping;
+    } else {
+      return new Map();
     }
   }
 
