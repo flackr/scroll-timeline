@@ -459,7 +459,7 @@ export class StyleParser {
     for(let i = 0; i < parts.length; i++) {
       const currentFrameSelector = contents.substring(parts[i].start, parts[i].end);
       const trimmedFrameSelector = cleanFrameSelector(currentFrameSelector);
-      const newPercent = (i * 100 / (parts.length)).toFixed(2);
+      const newPercent = (i * 100 / parts.length).toFixed(2);
       const newFrameSelector = `${newPercent}%`;
       mapping.set(newFrameSelector, trimmedFrameSelector);
       newContents.push(newFrameSelector);

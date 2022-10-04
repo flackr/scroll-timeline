@@ -87,10 +87,12 @@ function createScrollTimeline(anim, animationName, target) {
           newOffset = 100;
         } else {
           const tokens = value.split(" ");
-          if(tokens.length == 1)
+          if(tokens.length == 1) {
             newOffset = parseFloat(tokens[0]);
-          else
-            newOffset = Math.round(relativePosition(tokens[0], container, options.subject, orientation, options.inset, CSS.percent(parseFloat(tokens[1]))) * 100);
+          } else {
+            newOffset = relativePosition(tokens[0], container, options.subject,
+              orientation, options.inset, CSS.percent(parseFloat(tokens[1]))) * 100;
+          }
         }
         break;
       }

@@ -453,7 +453,6 @@ export function calculateRange(phase, container, target, orientation, optionsIns
 
   const inset = parseInset(optionsInset, containerSize);
 
-
   // Cover:
   // 0% progress represents the position at which the start border edge of the
   // element’s principal box coincides with the end edge of its view progress
@@ -510,7 +509,7 @@ export function calculateRange(phase, container, target, orientation, optionsIns
   return { start: startOffset, end: endOffset };
 }
 
-export function parseInset(value, containerSize) {
+function parseInset(value, containerSize) {
   const inset = { start: 0, end: 0 };
 
   if(!value)
