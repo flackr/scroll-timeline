@@ -136,13 +136,17 @@ export class StyleParser {
   }
 
   findPreviousSiblingOrAncestorMatchingSelector(target, selector) {
+    // Target self
     let candidate = target;
+    
+    // Walk the DOM tree: preceding siblings and ancestors
     while (candidate) {
       if (candidate.matches(selector)) 
         return candidate;
       candidate = candidate.previousElementSibling || candidate.parentElement;
     }
 
+    // No match
     return null;
   }
 
