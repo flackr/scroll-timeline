@@ -391,21 +391,25 @@ export class StyleParser {
   /*
   Replaces this:
     {
-      enter 0% { opacity: 0 }
+      0% { opacity: 0 }
       enter 100% { opacity: 1 }
       exit 0% { opacity: 1 }
       exit 100% { opacity: 0 }
+      to { opacity: 1 }
     }
   with this:
     {
       0% { opacity: 0 }
-      1% { opacity: 1 }
-      2% { opacity: 1 }
-      3% { opacity: 0 }
+      20% { opacity: 1 }
+      40% { opacity: 1 }
+      60% { opacity: 0 }
+      80% { opacity: 1 }
     }
-  and returns a mapping of { "0%": "enter 0%", "1%":"enter 100%", ... }
+  and returns a mapping of { "0.00%": "0%", "20.00%" : "enter 100%", "40.00%" : "exit 0%", ... }
   If there are no phases in the keyframe selectors, nothing will happen
   and an empty map is returned.
+  This change in keyframes is temporary, and when we are creating ScrollTimeline,
+  if the underlying animation has a mapping, we will calculate new offsets and set new keyframes.
   */
   replaceKeyframesAndGetMapping(rule, p) {
     function hasPhase(selector) {
@@ -455,7 +459,8 @@ export class StyleParser {
     for(let i = 0; i < parts.length; i++) {
       const currentFrameSelector = contents.substring(parts[i].start, parts[i].end);
       const trimmedFrameSelector = cleanFrameSelector(currentFrameSelector);
-      const newFrameSelector = `${mapping.size}%`;
+      const newPercent = (i * 100 / (parts.length)).toFixed(2);
+      const newFrameSelector = `${newPercent}%`;
       mapping.set(newFrameSelector, trimmedFrameSelector);
       newContents.push(newFrameSelector);
 
