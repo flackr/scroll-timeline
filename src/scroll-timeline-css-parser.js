@@ -135,11 +135,33 @@ export class StyleParser {
     return null;
   }
 
+  findPreviousSiblingOrAncestorMatchingSelector(target, selector) {
+    // Target self is eligible, use that
+    if (target.matches(selector)) return target;
+
+    // Walk previous siblings
+    let prevSibling = target.previousElementSibling;
+    while (prevSibling) {
+      if (prevSibling.matches(selector)) {
+        return prevSibling;
+      }
+      prevSibling = prevSibling.previousElementSibling;
+    }
+
+    // Move up to parent
+    if (target.parentElement) {
+      return this.findPreviousSiblingOrAncestorMatchingSelector(target.parentElement, selector);
+    }
+
+    // No match
+    return null;
+  }
+
   getViewTimelineOptions(timelineName, target) {
     for (let i = this.subjectSelectorToViewTimeline.length - 1; i >= 0; i--) {
       const options = this.subjectSelectorToViewTimeline[i];
       if(options.name == timelineName) {
-        const subject = target.closest(options.selector);
+        const subject = this.findPreviousSiblingOrAncestorMatchingSelector(target, options.selector);
         if(subject) {
           return {
             subject,
