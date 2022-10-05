@@ -91,7 +91,7 @@ function updateKeyframesIfNecessary(anim, options) {
   function calculateNewOffset(mapping, keyframe) {
     let newOffset = null;
     for(const [key, value] of mapping) {
-      if(parseFloat(key) == keyframe.offset * 100) {
+      if(key == keyframe.offset * 100) {
         if(value == 'from') {
           newOffset = 0;
         } else if(value == 'to') {
