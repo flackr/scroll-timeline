@@ -1,4 +1,5 @@
 import { ANIMATION_DELAY_NAMES } from './proxy-animation';
+import { getScrollParent } from './scroll-timeline-base';
 
 // This is also used in scroll-timeline-css.js
 export const RegexMatcher = {
@@ -30,7 +31,8 @@ const ANIMATION_KEYWORDS = [
   'ease', 'linear', 'ease-in', 'ease-out', 'ease-in-out'
 ];
 
-const VIEW_TIMELINE_AXIS_TYPES = ['block', 'inline',  'vertical', 'horizontal'];
+const TIMELINE_AXIS_TYPES = ['block', 'inline',  'vertical', 'horizontal'];
+const ANONYMOUS_TIMELINE_SOURCE_TYPES = ['nearest', 'root'];
 
 // 1 - Extracts @scroll-timeline and saves it in scrollTimelineOptions.
 // 2 - If we find any animation-timeline in any of the CSS Rules, 
@@ -39,6 +41,7 @@ export class StyleParser {
   constructor() {
     this.cssRulesWithTimelineName = [];
     this.scrollTimelineOptions = new Map(); // save options by name
+    this.anonymousScrollTimelineOptions = new Map(); // save anonymous options by name
     this.subjectSelectorToViewTimeline = [];
     this.keyframeNamesSelectors = new Map();
   }
@@ -123,7 +126,23 @@ export class StyleParser {
       return null;
   }
 
-  getScrollTimelineOptions(timelineName) {
+  getAnonymousScrollTimelineOptions(timelineName, target) {
+    const options = this.anonymousScrollTimelineOptions.get(timelineName);
+    if(options) {
+      return {
+        source: (options.source == 'root' ? document.scrollingElement : getScrollParent(target)),
+        orientation: (options.orientation ? options.orientation : 'block'),
+      };
+    }
+
+    return null;
+  }
+
+  getScrollTimelineOptions(timelineName, target) {
+    const anonymousTimelineOptions = this.getAnonymousScrollTimelineOptions(timelineName, target);
+    if(anonymousTimelineOptions)
+      return anonymousTimelineOptions;
+
     const options = this.scrollTimelineOptions.get(timelineName);
 
     if(options?.source) {
@@ -222,7 +241,7 @@ export class StyleParser {
     let animationNames = [];
 
     if (hasAnimationTimeline)
-      timelineNames = this.extractMatches(rule.block.contents, RegexMatcher.ANIMATION_TIMELINE);
+      timelineNames = this.extractScrollTimelineNames(rule.block.contents);
 
     if (hasAnimationName)
       animationNames = this.extractMatches(rule.block.contents, RegexMatcher.ANIMATION_NAME);
@@ -296,7 +315,7 @@ export class StyleParser {
       if(parts.length == 1) {
         viewTimeline.name = parts[0];
       } else if(parts.length == 2) {
-        if(VIEW_TIMELINE_AXIS_TYPES.includes(parts[0]))
+        if(TIMELINE_AXIS_TYPES.includes(parts[0]))
           viewTimeline.axis = parts[0], viewTimeline.name = parts[1];
         else
           viewTimeline.axis = parts[1], viewTimeline.name = parts[0];
@@ -310,7 +329,7 @@ export class StyleParser {
 
     if(hasViewTimelineAxis) {
       const parts = this.extractMatches(rule.block.contents, RegexMatcher.VIEW_TIMELINE_AXIS);
-      if(VIEW_TIMELINE_AXIS_TYPES.includes(parts[0]))
+      if(TIMELINE_AXIS_TYPES.includes(parts[0]))
         viewTimeline.axis = parts[0];
     }
 
@@ -352,6 +371,49 @@ export class StyleParser {
         ...(animationTimeRanges.length ? {'animation-time-range': animationTimeRanges[i % animationTimeRanges.length]}: {}),
       });
     }
+  }
+
+  extractScrollTimelineNames(contents) {
+    const value = RegexMatcher.ANIMATION_TIMELINE.exec(contents)[1].trim();
+    const timelineNames = [];
+
+    value.split(",").map(part => part.trim()).forEach(part => {
+      if(isAnonymousScrollTimeline(part)) {
+        const name = this.saveAnonymousTimelineName(part);
+        timelineNames.push(name);
+      } else {
+        timelineNames.push(part);
+      }
+    });
+
+    return timelineNames;
+  }
+
+  saveAnonymousTimelineName(part) {
+    const name = `t${this.anonymousScrollTimelineOptions.size}`;
+    this.anonymousScrollTimelineOptions.set(name, this.parseAnonymousTimeline(part));
+    return name;
+  }
+
+  parseAnonymousTimeline(part) {
+    const openIndex = part.indexOf("(");
+    const closeIndex = part.indexOf(")");
+
+    if(!part.startsWith("scroll") || openIndex == -1 || closeIndex == -1)
+      return null;
+
+    const value = part.substring(openIndex+1, closeIndex);
+    const options = {};
+
+    value.split(" ").forEach(token => {
+      if(TIMELINE_AXIS_TYPES.includes(token)) {
+        options['orientation'] = token;
+      } else if(ANONYMOUS_TIMELINE_SOURCE_TYPES.includes(token)) {
+        options['source'] = token;
+      }
+    });
+
+    return options;
   }
 
   extractAnimationName(shorthand) {
@@ -609,6 +671,10 @@ export class StyleParser {
   extractMatches(contents, matcher, separator=',') {
     return matcher.exec(contents)[VALUES_CAPTURE_INDEX].trim().split(separator).map(item => item.trim());
   }
+}
+
+function isAnonymousScrollTimeline(part) {
+  return part.startsWith("scroll") && part.includes("(");
 }
 
 function isTime(s) {
