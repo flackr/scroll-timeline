@@ -213,7 +213,7 @@ export class ScrollTimeline {
 
       // View timeline
       subject: null,
-      inset: options.inset,
+      inset: (options ? options.inset : null),
 
       // Internal members
       animations: [],

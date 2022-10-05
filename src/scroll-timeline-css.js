@@ -74,6 +74,17 @@ function createScrollTimeline(anim, animationName, target) {
     parser.getViewTimelineOptions(timelineName, target);
   if (!options) return null;
 
+  // If this is a ViewTimeline
+  if(options.subject)
+    updateKeyframesIfNecessary(anim, options);
+
+  return {
+    timeline: options.source ? new ScrollTimeline(options) : new ViewTimeline(options),
+    animOptions: animOptions
+  };
+}
+
+function updateKeyframesIfNecessary(anim, options) {
   const container = getScrollParent(options.subject);
   const orientation = (options.axis || options.orientation);
 
@@ -123,11 +134,6 @@ function createScrollTimeline(anim, animationName, target) {
     // Since the mapping has been applied to these @keyframes, we no longer need them.
     parser.keyframeNamesSelectors.set(anim.animationName, null);
   }
-
-  return {
-    timeline: options.source ? new ScrollTimeline(options) : new ViewTimeline(options),
-    animOptions: animOptions
-  };
 }
 
 export function initCSSPolyfill() {
