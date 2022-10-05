@@ -213,7 +213,7 @@ export class ScrollTimeline {
 
       // View timeline
       subject: null,
-      inset: options.inset,
+      inset: (options ? options.inset : null),
 
       // Internal members
       animations: [],
@@ -366,7 +366,7 @@ function getContainingBlock(element) {
   }
 }
 
-function getScrollParent(node) {
+export function getScrollParent(node) {
   if (!node)
     return undefined;
 
@@ -411,6 +411,10 @@ function range(timeline, phase) {
   const container = timeline.source;
   const target = timeline.subject;
 
+  return calculateRange(phase, container, target, details.orientation, details.inset);
+}
+
+export function calculateRange(phase, container, target, orientation, optionsInset) {
   let top = 0;
   let left = 0;
   let node = target;
@@ -432,7 +436,6 @@ function range(timeline, phase) {
   let viewSize = undefined;
   let viewPos = undefined;
   let containerSize = undefined;
-  const orientation = details.orientation;
   if (orientation == 'horizontal' ||
       (orientation == 'inline' && horizontalWritingMode) ||
       (orientation == 'block' && !horizontalWritingMode)) {
@@ -448,8 +451,7 @@ function range(timeline, phase) {
     containerSize = container.clientHeight;
   }
 
-  const inset = parseInset(details.inset, containerSize);
-
+  const inset = parseInset(optionsInset, containerSize);
 
   // Cover:
   // 0% progress represents the position at which the start border edge of the
@@ -545,6 +547,10 @@ function parseInset(value, containerSize) {
 export function relativePosition(timeline, phase, percent) {
   const phaseRange = range(timeline, phase);
   const coverRange = range(timeline, 'cover');
+  return calculateRelativePosition(phaseRange, percent, coverRange);
+}
+
+export function calculateRelativePosition(phaseRange, percent, coverRange) {
   if (!phaseRange || !coverRange)
     return 0;
 
