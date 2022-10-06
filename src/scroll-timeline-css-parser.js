@@ -1,5 +1,5 @@
 import { ANIMATION_DELAY_NAMES } from './proxy-animation';
-import { getScrollParent } from './scroll-timeline-base';
+import { getAnonymousSourceElement } from './scroll-timeline-base';
 
 // This is also used in scroll-timeline-css.js
 export const RegexMatcher = {
@@ -130,7 +130,9 @@ export class StyleParser {
     const options = this.anonymousScrollTimelineOptions.get(timelineName);
     if(options) {
       return {
-        source: (options.source == 'root' ? document.scrollingElement : getScrollParent(target)),
+        anonymousSource: options.source,
+        anonymousTarget: target,
+        source: getAnonymousSourceElement(options.source, target),
         orientation: (options.orientation ? options.orientation : 'block'),
       };
     }
@@ -404,7 +406,6 @@ export class StyleParser {
 
     const value = part.substring(openIndex+1, closeIndex);
     const options = {};
-
     value.split(" ").forEach(token => {
       if(TIMELINE_AXIS_TYPES.includes(token)) {
         options['orientation'] = token;

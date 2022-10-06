@@ -125,8 +125,10 @@ function resolvePx(cssValue, resolvedLength) {
 // Detects if the cached source is obsolete, and updates if required
 // to ensure the new source has a scroll listener.
 function validateSource(timeline) {
-  if (!(timeline instanceof ViewTimeline))
+  if (!(timeline instanceof ViewTimeline)) {
+    validateAnonymousSource(timeline);
     return;
+  }
 
   const node = timeline.subject;
   if (!node) {
@@ -141,6 +143,15 @@ function validateSource(timeline) {
   }
 
   const source = getScrollParent(node);
+  updateSource(timeline, source);
+}
+
+function validateAnonymousSource(timeline) {
+  const details = scrollTimelineOptions.get(timeline);
+  if(!details.anonymousSource)
+    return;
+
+  const source = getAnonymousSourceElement(details.anonymousSource, details.anonymousTarget);
   updateSource(timeline, source);
 }
 
@@ -210,6 +221,8 @@ export class ScrollTimeline {
     scrollTimelineOptions.set(this, {
       source: null,
       orientation: "block",
+      anonymousSource: (options ? options.anonymousSource : null),
+      anonymousTarget: (options ? options.anonymousTarget : null),
 
       // View timeline
       subject: null,
@@ -307,6 +320,10 @@ function findClosestAncestor(element, matcher) {
       return candidate;
     candidate = candidate.parentElement;
   }
+}
+
+export function getAnonymousSourceElement(sourceType, node) {
+  return sourceType == 'root' ? document.scrollingElement : getScrollParent(node);
 }
 
 function isBlockContainer(element) {
