@@ -392,7 +392,7 @@ export class StyleParser {
   }
 
   saveAnonymousTimelineName(part) {
-    const name = `t${this.anonymousScrollTimelineOptions.size}`;
+    const name = `:t${this.anonymousScrollTimelineOptions.size}`;
     this.anonymousScrollTimelineOptions.set(name, this.parseAnonymousTimeline(part));
     return name;
   }
