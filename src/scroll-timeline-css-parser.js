@@ -392,6 +392,8 @@ export class StyleParser {
   }
 
   saveAnonymousTimelineName(part) {
+    // Anonymous scroll timelines are given a name that starts with ':' to
+    // prevent collision with named scroll timelines.
     const name = `:t${this.anonymousScrollTimelineOptions.size}`;
     this.anonymousScrollTimelineOptions.set(name, this.parseAnonymousTimeline(part));
     return name;
