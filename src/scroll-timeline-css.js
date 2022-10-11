@@ -147,7 +147,7 @@ export function initCSSPolyfill() {
   // We are not wrapping capturing 'animationstart' by a 'load' event,
   // because we may lose some of the 'animationstart' events by the time 'load' is completed.
   window.addEventListener('animationstart', (evt) => {
-    evt.target.getAnimations().filter(anim => anim.animationName === evt.animationName).forEach((anim, i) => {
+    evt.target.getAnimations().filter(anim => anim.animationName === evt.animationName).forEach(anim => {
       if (!evt.target.proxiedAnimations) {
         evt.target.proxiedAnimations = {};
       }
