@@ -18,6 +18,8 @@ import {
 } from "./scroll-timeline-base";
 import {
   animate,
+  elementGetAnimations,
+  documentGetAnimations,
   ProxyAnimation
 } from "./proxy-animation.js";
 
@@ -52,4 +54,14 @@ if (!Reflect.defineProperty(Element.prototype, "animate", { value: animate })) {
 }
 if (!Reflect.defineProperty(window, "Animation", {value: ProxyAnimation})) {
   throw Error("Error installing Animation constructor.");
+}
+if (!Reflect.defineProperty(Element.prototype, "getAnimations", { value: elementGetAnimations })) {
+  throw Error(
+    "Error installing ScrollTimeline polyfill: could not attach WAAPI's getAnimations to DOM Element"
+  );
+}
+if (!Reflect.defineProperty(document, "getAnimations", { value: documentGetAnimations })) {
+  throw Error(
+    "Error installing ScrollTimeline polyfill: could not attach WAAPI's getAnimations to document"
+  );
 }

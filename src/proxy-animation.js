@@ -5,6 +5,8 @@ import {
   relativePosition
 } from "./scroll-timeline-base";
 
+const nativeDocumentGetAnimations = document.getAnimations;
+const nativeElementGetAnimations = window.Element.prototype.getAnimations;
 const nativeElementAnimate = window.Element.prototype.animate;
 const nativeAnimation = window.Animation;
 
@@ -766,11 +768,16 @@ function fractionalEndDelay(details) {
   return 1 - relativePosition(details.timeline, endTime.name, endTime.offset);
 }
 
+// Map from an instance of ProxyAnimation to internal details about that animation.
+// See ProxyAnimation constructor for details.
+let proxyAnimations = new WeakMap();
+
+// Map from the real underlying native animation to the ProxyAnimation proxy of it.
+let proxiedAnimations = new WeakMap();
+
 // Create an alternate Animation class which proxies API requests.
 // TODO: Create a full-fledged proxy so missing methods are automatically
 // fetched from Animation.
-let proxyAnimations = new WeakMap();
-
 export class ProxyAnimation {
   constructor(effect, timeline, animOptions={}) {
     const animation =
@@ -778,6 +785,7 @@ export class ProxyAnimation {
            effect : new nativeAnimation(effect, animationTimeline);
     const isScrollAnimation = timeline instanceof ScrollTimeline;
     const animationTimeline = isScrollAnimation ? undefined : timeline;
+    proxiedAnimations.set(animation, this);
     proxyAnimations.set(this, {
       animation: animation,
       timeline: isScrollAnimation ? timeline : undefined,
@@ -1722,4 +1730,24 @@ export function animate(keyframes, options) {
   }
 
   return proxyAnimation;
-};
+}
+
+function replaceProxiedAnimations(animationsList) {
+  for (let i = 0; i < animationsList.length; ++i) {
+    let proxyAnimation = proxiedAnimations.get(animationsList[i]);
+    if (proxyAnimation) {
+      animationsList[i] = proxyAnimation;
+    }
+  }
+  return animationsList;
+}
+
+export function elementGetAnimations(options) {
+  let animations = nativeElementGetAnimations.apply(this, [options]);
+  return replaceProxiedAnimations(animations);
+}
+
+export function documentGetAnimations(options) {
+  let animations = nativeDocumentGetAnimations.apply(this, [options]);
+  return replaceProxiedAnimations(animations);
+}
