@@ -148,21 +148,29 @@ export function initCSSPolyfill() {
   // because we may lose some of the 'animationstart' events by the time 'load' is completed.
   window.addEventListener('animationstart', (evt) => {
     evt.target.getAnimations().filter(anim => anim.animationName === evt.animationName).forEach(anim => {
+      // Create a cache on the element, to store all Proxy Animations in
       if (!evt.target.proxiedAnimations) {
-        evt.target.proxiedAnimations = {};
+        evt.target.proxiedAnimations = new Map();
       }
 
-      if (!evt.target.proxiedAnimations[anim.animationName]) {
+      // Store Proxy Animation in the cache, if one was created
+      if (!evt.target.proxiedAnimations.has(anim.animationName)) {
         const result = createScrollTimeline(anim, anim.animationName, evt.target);
         if (result.timeline && anim.timeline != result.timeline) {
-          evt.target.proxiedAnimations[anim.animationName] = new ProxyAnimation(anim, result.timeline, result.animOptions);
+          evt.target.proxiedAnimations.set(anim.animationName, new ProxyAnimation(anim, result.timeline, result.animOptions));
         } else {
-          return;
+          evt.target.proxiedAnimations.set(anim.animationName, null);
         }
       }
+      
+      // Get Proxy Animation from cache
+      const proxiedAnimation = evt.target.proxiedAnimations.get(anim.animationName);
 
-      anim.pause();
-      evt.target.proxiedAnimations[anim.animationName].play();
+      // Swap the original animation with the proxied one
+      if (proxiedAnimation !== null) {
+        anim.pause();
+        proxiedAnimation.play();
+      }
     });
   });
 }
