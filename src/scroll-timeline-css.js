@@ -144,13 +144,34 @@ export function initCSSPolyfill() {
 
   initMutationObserver();
 
+  // Cache all Proxy Animations
+  let proxyAnimations = new WeakMap();
+
   // We are not wrapping capturing 'animationstart' by a 'load' event,
   // because we may lose some of the 'animationstart' events by the time 'load' is completed.
   window.addEventListener('animationstart', (evt) => {
     evt.target.getAnimations().filter(anim => anim.animationName === evt.animationName).forEach(anim => {
-      const result = createScrollTimeline(anim, anim.animationName, evt.target);
-      if (result.timeline && anim.timeline != result.timeline) {
-        const proxyAnimation = new ProxyAnimation(anim, result.timeline, result.animOptions);
+      // Create a per-element cache
+      if (!proxyAnimations.has(evt.target)) {
+        proxyAnimations.set(evt.target, new Map());
+      }
+      const elementProxyAnimations = proxyAnimations.get(evt.target);
+
+      // Store Proxy Animation in the cache
+      if (!elementProxyAnimations.has(anim.animationName)) {
+        const result = createScrollTimeline(anim, anim.animationName, evt.target);
+        if (result && result.timeline && anim.timeline != result.timeline) {
+          elementProxyAnimations.set(anim.animationName, new ProxyAnimation(anim, result.timeline, result.animOptions));
+        } else {
+          elementProxyAnimations.set(anim.animationName, null);
+        }
+      }
+      
+      // Get Proxy Animation from cache
+      const proxyAnimation = elementProxyAnimations.get(anim.animationName);
+
+      // Swap the original animation with the proxied one
+      if (proxyAnimation !== null) {
         anim.pause();
         proxyAnimation.play();
       }
