@@ -156,7 +156,7 @@ export function initCSSPolyfill() {
       // Store Proxy Animation in the cache, if one was created
       if (!evt.target.proxiedAnimations.has(anim.animationName)) {
         const result = createScrollTimeline(anim, anim.animationName, evt.target);
-        if (result.timeline && anim.timeline != result.timeline) {
+        if (result && result.timeline && anim.timeline != result.timeline) {
           evt.target.proxiedAnimations.set(anim.animationName, new ProxyAnimation(anim, result.timeline, result.animOptions));
         } else {
           evt.target.proxiedAnimations.set(anim.animationName, null);
