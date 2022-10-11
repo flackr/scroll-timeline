@@ -147,13 +147,22 @@ export function initCSSPolyfill() {
   // We are not wrapping capturing 'animationstart' by a 'load' event,
   // because we may lose some of the 'animationstart' events by the time 'load' is completed.
   window.addEventListener('animationstart', (evt) => {
-    evt.target.getAnimations().filter(anim => anim.animationName === evt.animationName).forEach(anim => {
-      const result = createScrollTimeline(anim, anim.animationName, evt.target);
-      if (result.timeline && anim.timeline != result.timeline) {
-        const proxyAnimation = new ProxyAnimation(anim, result.timeline, result.animOptions);
-        anim.pause();
-        proxyAnimation.play();
+    evt.target.getAnimations().filter(anim => anim.animationName === evt.animationName).forEach((anim, i) => {
+      if (!evt.target.proxiedAnimations) {
+        evt.target.proxiedAnimations = {};
       }
+
+      if (!evt.target.proxiedAnimations[anim.animationName]) {
+        const result = createScrollTimeline(anim, anim.animationName, evt.target);
+        if (result.timeline && anim.timeline != result.timeline) {
+          evt.target.proxiedAnimations[anim.animationName] = new ProxyAnimation(anim, result.timeline, result.animOptions);
+        } else {
+          return;
+        }
+      }
+
+      anim.pause();
+      evt.target.proxiedAnimations[anim.animationName].play();
     });
   });
 }
