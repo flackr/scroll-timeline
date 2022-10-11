@@ -1,4 +1,4 @@
-import { StyleParser, RegexMatcher } from "./scroll-timeline-css-parser";
+import { StyleParser, FeatureDetection } from "./scroll-timeline-css-parser";
 import { ProxyAnimation } from "./proxy-animation"
 import { ScrollTimeline, ViewTimeline, getScrollParent, calculateRange,
   calculateRelativePosition } from "./scroll-timeline-base";
@@ -138,7 +138,7 @@ function updateKeyframesIfNecessary(anim, options) {
 
 export function initCSSPolyfill() {
   // Don't load if browser claims support
-  if (CSS.supports("animation-timeline: works")) {
+  if (FeatureDetection.SUPPORTS_SCROLL_TIMELINE && FeatureDetection.SUPPORTS_VIEW_TIMELINE) {
     return;
   }
 

@@ -32,6 +32,11 @@ const ANIMATION_KEYWORDS = [
 
 const VIEW_TIMELINE_AXIS_TYPES = ['block', 'inline',  'vertical', 'horizontal'];
 
+export const FeatureDetection = {
+  SUPPORTS_SCROLL_TIMELINE: CSS.supports("animation-timeline: scroll()"),
+  SUPPORTS_VIEW_TIMELINE: CSS.supports("view-timeline: works"),
+};
+
 // 1 - Extracts @scroll-timeline and saves it in scrollTimelineOptions.
 // 2 - If we find any animation-timeline in any of the CSS Rules, 
 // we will save objects in a list named cssRulesWithTimelineName
@@ -124,6 +129,9 @@ export class StyleParser {
   }
 
   getScrollTimelineOptions(timelineName) {
+    // Don't bother if browser claims support
+    if (FeatureDetection.SUPPORTS_SCROLL_TIMELINE) return null;
+
     const options = this.scrollTimelineOptions.get(timelineName);
 
     if(options?.source) {
@@ -153,6 +161,9 @@ export class StyleParser {
   }
 
   getViewTimelineOptions(timelineName, target) {
+    // Don't bother if browser claims support
+    if (FeatureDetection.SUPPORTS_VIEW_TIMELINE) return null;
+
     for (let i = this.subjectSelectorToViewTimeline.length - 1; i >= 0; i--) {
       const options = this.subjectSelectorToViewTimeline[i];
       if(options.name == timelineName) {
