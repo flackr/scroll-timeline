@@ -41,6 +41,7 @@ export class StyleParser {
   constructor() {
     this.cssRulesWithTimelineName = [];
     this.scrollTimelineOptions = new Map(); // save options by name
+    this.nextAnonymousTimelineNameIndex = 0;
     this.anonymousScrollTimelineOptions = new Map(); // save anonymous options by name
     this.subjectSelectorToViewTimeline = [];
     this.keyframeNamesSelectors = new Map();
@@ -394,7 +395,7 @@ export class StyleParser {
   saveAnonymousTimelineName(part) {
     // Anonymous scroll timelines are given a name that starts with ':' to
     // prevent collision with named scroll timelines.
-    const name = `:t${this.anonymousScrollTimelineOptions.size}`;
+    const name = `:t${this.nextAnonymousTimelineNameIndex++}`;
     this.anonymousScrollTimelineOptions.set(name, this.parseAnonymousTimeline(part));
     return name;
   }
