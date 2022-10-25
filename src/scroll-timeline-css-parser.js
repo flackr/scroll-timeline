@@ -314,7 +314,7 @@ export class StyleParser {
     let viewTimeline = {selector: rule.selector, name: '', axis: 'block'};
 
     if(hasViewTimeline) {
-      const parts = this.extractMatches(rule.block.contents, RegexMatcher.VIEW_TIMELINE, separator=' ');
+      const parts = this.extractMatches(rule.block.contents, RegexMatcher.VIEW_TIMELINE, ' ');
       if(parts.length == 1) {
         viewTimeline.name = parts[0];
       } else if(parts.length == 2) {
