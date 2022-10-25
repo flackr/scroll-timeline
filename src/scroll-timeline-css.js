@@ -131,8 +131,6 @@ function updateKeyframesIfNecessary(anim, options) {
     });
 
     anim.effect.setKeyframes(sortedKeyframes);
-    // Since the mapping has been applied to these @keyframes, we no longer need them.
-    parser.keyframeNamesSelectors.set(anim.animationName, null);
   }
 }
 
