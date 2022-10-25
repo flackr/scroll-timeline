@@ -259,13 +259,14 @@ export class StyleParser {
       this.extractMatches(rule.block.contents, RegexMatcher.ANIMATION)
         .forEach(shorthand => {
           const r = this.extractTimelineName(shorthand);
-          if(!r.timelineName)
-            return;
 
-          timelineNames.push(r.timelineName);
+          if(r.timelineName)
+            timelineNames.push(r.timelineName);
 
           const animationName = this.extractAnimationName(shorthand);
-          if (animationName) animationNames.push(animationName);
+          // Save this animation only if there is a scroll timeline.
+          if (animationName && (r.timelineName || hasAnimationTimeline))
+            animationNames.push(animationName);
 
           // If there is no duration, animationstart will not happen,
           // and polyfill will not work which is based on animationstart.
