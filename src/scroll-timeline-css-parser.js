@@ -17,6 +17,7 @@ export const RegexMatcher = {
   ANIMATION_NAME: /animation-name\s*:([^;}]+)/,
   ANIMATION: /animation\s*:([^;}]+)/,
   SOURCE_ELEMENT: /selector\(#([^)]+)\)/,
+  ANONYMOUS_SCROLL: /scroll\(([^)]*)\)/,
 };
 
 // Used for ANIMATION_TIMELINE, ANIMATION_NAME and ANIMATION regex
@@ -406,13 +407,11 @@ export class StyleParser {
   }
 
   parseAnonymousTimeline(part) {
-    const openIndex = part.indexOf("(");
-    const closeIndex = part.indexOf(")");
-
-    if(!part.startsWith("scroll") || openIndex == -1 || closeIndex == -1)
+    const anonymousMatch = RegexMatcher.ANONYMOUS_SCROLL.exec(part);
+    if(!anonymousMatch)
       return null;
 
-    const value = part.substring(openIndex+1, closeIndex);
+    const value = anonymousMatch[VALUES_CAPTURE_INDEX];
     const options = {};
     value.split(" ").forEach(token => {
       if(TIMELINE_AXIS_TYPES.includes(token)) {
@@ -433,13 +432,12 @@ export class StyleParser {
     let timelineName = null;
     let toBeReplaced = null; // either timelineName or anonymousTimeline
 
-    const anonymousStart = shorthand.indexOf("scroll(");
-    if(anonymousStart == -1) {
+    const anonymousMatch = RegexMatcher.ANONYMOUS_SCROLL.exec(shorthand);
+    if(!anonymousMatch) {
       timelineName = this.findMatchingEntryInContainer(shorthand, this.scrollTimelineOptions);
       toBeReplaced = timelineName;
     } else {
-      const anonymousEnd = shorthand.indexOf(')', anonymousStart);
-      const anonymousTimeline = shorthand.substring(anonymousStart, anonymousEnd + 1);
+      const anonymousTimeline = anonymousMatch[WHOLE_MATCH_INDEX];
       timelineName = this.saveAnonymousTimelineName(anonymousTimeline);
       toBeReplaced = anonymousTimeline;
     }
