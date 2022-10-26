@@ -17,6 +17,7 @@ export const RegexMatcher = {
   ANIMATION_NAME: /animation-name\s*:([^;}]+)/,
   ANIMATION: /animation\s*:([^;}]+)/,
   SOURCE_ELEMENT: /selector\(#([^)]+)\)/,
+  ANONYMOUS_SCROLL: /scroll\(([^)]*)\)/,
 };
 
 // Used for ANIMATION_TIMELINE, ANIMATION_NAME and ANIMATION regex
@@ -242,6 +243,7 @@ export class StyleParser {
 
     let timelineNames = [];
     let animationNames = [];
+    let shouldReplacePart = false;
 
     if (hasAnimationTimeline)
       timelineNames = this.extractScrollTimelineNames(rule.block.contents);
@@ -257,48 +259,52 @@ export class StyleParser {
     if (hasAnimation) {
       this.extractMatches(rule.block.contents, RegexMatcher.ANIMATION)
         .forEach(shorthand => {
+          const r = this.extractTimelineName(shorthand);
+
+          if(r.timelineName)
+            timelineNames.push(r.timelineName);
+
           const animationName = this.extractAnimationName(shorthand);
-          const timelineName = this.extractTimelineName(shorthand);
-          if (animationName) animationNames.push(animationName);
-          if (timelineName) {
-            timelineNames.push(timelineName);
-            // Remove timeline name from animation shorthand
-            // so the native implementation works with the rest of the properties
-            // Retain length of original name though, to play nice with multiple
-            // animations that might have been applied
-            rule.block.contents = rule.block.contents.replace(
-              timelineName,
-              " ".repeat(timelineName.length)
-            );
-            this.replacePart(
-              rule.block.startIndex,
-              rule.block.endIndex,
-              rule.block.contents,
-              p
-            );
-          }
+          // Save this animation only if there is a scroll timeline.
+          if (animationName && (r.timelineName || hasAnimationTimeline))
+            animationNames.push(animationName);
 
           // If there is no duration, animationstart will not happen,
           // and polyfill will not work which is based on animationstart.
           // Add 1s as duration to fix this.
-          if(timelineName || hasAnimationTimeline) {
+          if(r.timelineName || hasAnimationTimeline) {
             if(!this.hasDuration(shorthand)) {
               // TODO: Should keep track of whether duration is artificial or not,
               // so that we can later track that we need to update timing to
               // properly see duration as 'auto' for the polyfill.
               rule.block.contents = rule.block.contents.replace(
-                "animation:",
-                "animation: 1s "
+                shorthand, " 1s " + shorthand
               );
-              this.replacePart(
-                rule.block.startIndex,
-                rule.block.endIndex,
-                rule.block.contents,
-                p
-              );
+              shouldReplacePart = true;
             }
           }
+
+          if(r.toBeReplaced) {
+            // Remove timeline name from animation shorthand
+            // so the native implementation works with the rest of the properties
+            // Retain length of original name though, to play nice with multiple
+            // animations that might have been applied
+            rule.block.contents = rule.block.contents.replace(
+              r.toBeReplaced,
+              " ".repeat(r.toBeReplaced.length)
+            );
+            shouldReplacePart = true;
+          }
         });
+    }
+
+    if(shouldReplacePart) {
+      this.replacePart(
+        rule.block.startIndex,
+        rule.block.endIndex,
+        rule.block.contents,
+        p
+      );
     }
 
     this.saveRelationInList(rule, timelineNames, animationNames);
@@ -401,13 +407,11 @@ export class StyleParser {
   }
 
   parseAnonymousTimeline(part) {
-    const openIndex = part.indexOf("(");
-    const closeIndex = part.indexOf(")");
-
-    if(!part.startsWith("scroll") || openIndex == -1 || closeIndex == -1)
+    const anonymousMatch = RegexMatcher.ANONYMOUS_SCROLL.exec(part);
+    if(!anonymousMatch)
       return null;
 
-    const value = part.substring(openIndex+1, closeIndex);
+    const value = anonymousMatch[VALUES_CAPTURE_INDEX];
     const options = {};
     value.split(" ").forEach(token => {
       if(TIMELINE_AXIS_TYPES.includes(token)) {
@@ -425,7 +429,20 @@ export class StyleParser {
   }
 
   extractTimelineName(shorthand) {
-    return this.findMatchingEntryInContainer(shorthand, this.scrollTimelineOptions);
+    let timelineName = null;
+    let toBeReplaced = null; // either timelineName or anonymousTimeline
+
+    const anonymousMatch = RegexMatcher.ANONYMOUS_SCROLL.exec(shorthand);
+    if(!anonymousMatch) {
+      timelineName = this.findMatchingEntryInContainer(shorthand, this.scrollTimelineOptions);
+      toBeReplaced = timelineName;
+    } else {
+      const anonymousTimeline = anonymousMatch[WHOLE_MATCH_INDEX];
+      timelineName = this.saveAnonymousTimelineName(anonymousTimeline);
+      toBeReplaced = anonymousTimeline;
+    }
+
+    return { timelineName, toBeReplaced };
   }
 
   findMatchingEntryInContainer(shorthand, container) {
@@ -589,6 +606,7 @@ export class StyleParser {
     // If we are pointing past the end of the affected section, we need to
     // recalculate the string pointer. Pointing to something inside the section
     // that’s being replaced is undefined behavior. Sue me.
+
     if (p.index >= end) {
       const delta = p.index - end;
       p.index = start + replacement.length + delta;
