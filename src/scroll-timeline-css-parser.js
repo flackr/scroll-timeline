@@ -325,7 +325,7 @@ export class StyleParser {
       const viewTimelines = this.extractMatches(rule.block.contents, RegexMatcher.VIEW_TIMELINE);
       for(let tl of viewTimelines) {
         parts = this.split(tl);
-        let options = {selector: rule.selector, name: '', axis: 'block', inset: null};
+        let options = {selector: rule.selector, name: '', inset: null};
         if(parts.length == 1) {
           options.name = parts[0];
         } else if(parts.length == 2) {
@@ -345,7 +345,7 @@ export class StyleParser {
           // longhand overrides shorthand
           timelines[i].name = names[i];
         } else {
-          let options = {selector: rule.selector, name: names[i], axis: 'block', inset: null};
+          let options = {selector: rule.selector, name: names[i], inset: null};
           timelines.push(options);
         }
       }
