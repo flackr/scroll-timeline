@@ -10,6 +10,7 @@ export const RegexMatcher = {
   VIEW_TIMELINE: /view-timeline\s*:([^;}]+)/,
   VIEW_TIMELINE_NAME: /view-timeline-name\s*:([^;}]+)/,
   VIEW_TIMELINE_AXIS: /view-timeline-axis\s*:([^;}]+)/,
+  VIEW_TIMELINE_INSET: /view-timeline-inset\s*:([^;}]+)/,
   ANIMATION_TIMELINE: /animation-timeline\s*:([^;}]+)/,
   ANIMATION_DELAY: /animation-delay\s*:([^;}]+)/,
   ANIMATION_END_DELAY: /animation-end-delay\s*:([^;}]+)/,
@@ -314,35 +315,62 @@ export class StyleParser {
     const hasViewTimeline = rule.block.contents.includes("view-timeline:");
     const hasViewTimelineName = rule.block.contents.includes("view-timeline-name:");
     const hasViewTimelineAxis = rule.block.contents.includes("view-timeline-axis:");
+    const hasViewTimelineInset = rule.block.contents.includes("view-timeline-inset:");
 
     if(!hasViewTimeline && !hasViewTimelineName) return;
 
-    let viewTimeline = {selector: rule.selector, name: '', axis: 'block'};
+    let timelines = [];
 
     if(hasViewTimeline) {
-      const parts = this.extractMatches(rule.block.contents, RegexMatcher.VIEW_TIMELINE, separator=' ');
-      if(parts.length == 1) {
-        viewTimeline.name = parts[0];
-      } else if(parts.length == 2) {
-        if(TIMELINE_AXIS_TYPES.includes(parts[0]))
-          viewTimeline.axis = parts[0], viewTimeline.name = parts[1];
-        else
-          viewTimeline.axis = parts[1], viewTimeline.name = parts[0];
+      const viewTimelines = this.extractMatches(rule.block.contents, RegexMatcher.VIEW_TIMELINE);
+      for(let tl of viewTimelines) {
+        parts = this.split(tl);
+        let options = {selector: rule.selector, name: '', inset: null};
+        if(parts.length == 1) {
+          options.name = parts[0];
+        } else if(parts.length == 2) {
+          if(TIMELINE_AXIS_TYPES.includes(parts[0]))
+            options.axis = parts[0], options.name = parts[1];
+          else
+            options.axis = parts[1], options.name = parts[0];
+        }
+        timelines.push(options);
       }
     }
 
     if(hasViewTimelineName) {
-      const parts = this.extractMatches(rule.block.contents, RegexMatcher.VIEW_TIMELINE_NAME);
-      viewTimeline.name = parts[0];
+      const names = this.extractMatches(rule.block.contents, RegexMatcher.VIEW_TIMELINE_NAME);
+      for(let i = 0; i < names.length; i++) {
+        if(i < timelines.length) {
+          // longhand overrides shorthand
+          timelines[i].name = names[i];
+        } else {
+          let options = {selector: rule.selector, name: names[i], inset: null};
+          timelines.push(options);
+        }
+      }
     }
+
+    let insets = [];
+    let axes = [];
+
+    if(hasViewTimelineInset)
+      insets = this.extractMatches(rule.block.contents, RegexMatcher.VIEW_TIMELINE_INSET);
 
     if(hasViewTimelineAxis) {
-      const parts = this.extractMatches(rule.block.contents, RegexMatcher.VIEW_TIMELINE_AXIS);
-      if(TIMELINE_AXIS_TYPES.includes(parts[0]))
-        viewTimeline.axis = parts[0];
+      axes = this.extractMatches(rule.block.contents, RegexMatcher.VIEW_TIMELINE_AXIS);
+      axes = axes.filter(a => TIMELINE_AXIS_TYPES.includes(a));
     }
 
-    this.subjectSelectorToViewTimeline.push(viewTimeline);
+    for(let i = 0; i < timelines.length; i++) {
+      if(insets.length)
+        timelines[i].inset = insets[i % timelines.length];
+
+      if(axes.length)
+        timelines[i].axis = axes[i % timelines.length];
+    }
+
+    this.subjectSelectorToViewTimeline.push(...timelines);
   }
 
   hasDuration(shorthand) {
@@ -692,6 +720,11 @@ export class StyleParser {
 
   extractMatches(contents, matcher, separator=',') {
     return matcher.exec(contents)[VALUES_CAPTURE_INDEX].trim().split(separator).map(item => item.trim());
+  }
+
+  split(contents) {
+    return contents.split(" ").map(item => item.trim())
+      .filter(item => item != "");
   }
 }
 
