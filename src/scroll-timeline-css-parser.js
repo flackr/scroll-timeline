@@ -568,19 +568,24 @@ export class StyleParser {
     const newContents = [];
     newContents.push(contents.substring(0, parts[0].start));
     for(let i = 0; i < parts.length; i++) {
-      const currentFrameSelector = contents.substring(parts[i].start, parts[i].end);
-      const trimmedFrameSelector = cleanFrameSelector(currentFrameSelector);
-      // There is no need to treat 'from' and 'to' differently,
-      // Let's say some implicit keyframes for 'from' and 'to' are added to the
-      // keyframes, after we are converting keyframes back, we will ignore them
-      // because they have no presence in the mapping.
-      // TODO: total number of keyframes > 100 is not supported at the moment.
-      const newFrameSelector = mapping.size;
-      mapping.set(newFrameSelector, trimmedFrameSelector);
-      newContents.push(`${newFrameSelector}%`);
+      const allFrameSelectors = contents.substring(parts[i].start, parts[i].end);
+      let replacedFrameSelectors = [];
 
-      if(hasPhase(trimmedFrameSelector))
-        foundPhaseLinkedOffset = true;
+      allFrameSelectors.split(",").forEach(currentFrameSelector => {
+        const trimmedFrameSelector = cleanFrameSelector(currentFrameSelector);
+        // There is no need to treat 'from' and 'to' differently,
+        // Let's say some implicit keyframes for 'from' and 'to' are added to the
+        // keyframes, after we are converting keyframes back, we will ignore them
+        // because they have no presence in the mapping.
+        // TODO: total number of keyframes > 100 is not supported at the moment.
+        const newFrameSelector = mapping.size;
+        mapping.set(newFrameSelector, trimmedFrameSelector);
+        replacedFrameSelectors.push(`${newFrameSelector}%`);
+        if(hasPhase(trimmedFrameSelector))
+          foundPhaseLinkedOffset = true;
+      });
+
+      newContents.push(replacedFrameSelectors.join(","));
 
       if(i == parts.length-1)
         newContents.push(contents.substring(parts[i].end));
