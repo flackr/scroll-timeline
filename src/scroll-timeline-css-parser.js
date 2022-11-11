@@ -78,11 +78,10 @@ export class StyleParser {
 
       const rule = this.parseQualifiedRule(p);
       if (!rule) continue;
-      if (firstPass) {
+      if (firstPass)
         this.parseKeyframesAndSaveNameMapping(rule, p);
-      } else {
+      else
         this.handleScrollTimelineProps(rule, p);
-      }
     }
 
     // If this sheet has no srcURL (like from a <style> tag), we are done.
@@ -141,7 +140,7 @@ export class StyleParser {
           return {
             source,
             ...(options.axis ? { orientation: options.axis } : {}),
-          }
+          };
         }
       }
     }
@@ -505,6 +504,12 @@ export class StyleParser {
 
     const anonymousMatch = RegexMatcher.ANONYMOUS_SCROLL.exec(shorthand);
     if(!anonymousMatch) {
+      timelineName =
+        this.findMatchingEntryInContainer(shorthand,
+          new Set(this.sourceSelectorToScrollTimeline.map(o => o.name))) ||
+        this.findMatchingEntryInContainer(shorthand,
+          new Set(this.subjectSelectorToViewTimeline.map(o => o.name)));
+
       timelineName =
         this.findMatchingEntryInContainer(shorthand,
         new Set(this.sourceSelectorToScrollTimeline.map(o => o.name))) ||
