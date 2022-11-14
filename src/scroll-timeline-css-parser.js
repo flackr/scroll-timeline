@@ -505,10 +505,12 @@ export class StyleParser {
     const anonymousMatch = RegexMatcher.ANONYMOUS_SCROLL.exec(shorthand);
     if(!anonymousMatch) {
       timelineName =
-        this.findMatchingEntryInContainer(shorthand,
-          new Set(this.sourceSelectorToScrollTimeline.map(o => o.name))) ||
-        this.findMatchingEntryInContainer(shorthand,
-          new Set(this.subjectSelectorToViewTimeline.map(o => o.name)));
+          this.findMatchingEntryInContainer(
+              shorthand,
+              new Set(this.sourceSelectorToScrollTimeline.map(o => o.name))) ||
+          this.findMatchingEntryInContainer(
+              shorthand,
+              new Set(this.subjectSelectorToViewTimeline.map(o => o.name)));
       toBeReplaced = timelineName;
     } else {
       const anonymousTimeline = anonymousMatch[WHOLE_MATCH_INDEX];
