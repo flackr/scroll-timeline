@@ -7,6 +7,9 @@ export const RegexMatcher = {
   WHITE_SPACE: /\s*/g,
   NUMBER: /^[0-9]+/,
   TIME: /^[0-9]+(s|ms)/,
+  SCROLL_TIMELINE: /scroll-timeline\s*:([^;}]+)/,
+  SCROLL_TIMELINE_NAME: /scroll-timeline-name\s*:([^;}]+)/,
+  SCROLL_TIMELINE_AXIS: /scroll-timeline-axis\s*:([^;}]+)/,
   VIEW_TIMELINE: /view-timeline\s*:([^;}]+)/,
   VIEW_TIMELINE_NAME: /view-timeline-name\s*:([^;}]+)/,
   VIEW_TIMELINE_AXIS: /view-timeline-axis\s*:([^;}]+)/,
@@ -17,7 +20,6 @@ export const RegexMatcher = {
   ANIMATION_TIME_RANGE: /animation-time-range\s*:([^;}]+)/,
   ANIMATION_NAME: /animation-name\s*:([^;}]+)/,
   ANIMATION: /animation\s*:([^;}]+)/,
-  SOURCE_ELEMENT: /selector\(#([^)]+)\)/,
   ANONYMOUS_SCROLL: /scroll\(([^)]*)\)/,
 };
 
@@ -42,9 +44,9 @@ const ANONYMOUS_TIMELINE_SOURCE_TYPES = ['nearest', 'root'];
 export class StyleParser {
   constructor() {
     this.cssRulesWithTimelineName = [];
-    this.scrollTimelineOptions = new Map(); // save options by name
     this.nextAnonymousTimelineNameIndex = 0;
     this.anonymousScrollTimelineOptions = new Map(); // save anonymous options by name
+    this.sourceSelectorToScrollTimeline = [];
     this.subjectSelectorToViewTimeline = [];
     this.keyframeNamesSelectors = new Map();
   }
@@ -74,18 +76,12 @@ export class StyleParser {
         continue;
       }
 
-      if (this.lookAhead("@scroll-timeline", p)) {
-        const { scrollTimeline, startIndex, endIndex } = this.parseScrollTimeline(p);
-        if (firstPass) this.scrollTimelineOptions.set(scrollTimeline.name, scrollTimeline);
-      } else {
-        const rule = this.parseQualifiedRule(p);
-        if (!rule) continue;
-        if (firstPass) {
-          this.parseKeyframesAndSaveNameMapping(rule, p);
-        } else {
-          this.handleScrollTimelineProps(rule, p);
-        }
-      }
+      const rule = this.parseQualifiedRule(p);
+      if (!rule) continue;
+      if (firstPass)
+        this.parseKeyframesAndSaveNameMapping(rule, p);
+      else
+        this.handleScrollTimelineProps(rule, p);
     }
 
     // If this sheet has no srcURL (like from a <style> tag), we are done.
@@ -116,19 +112,6 @@ export class StyleParser {
     return null;
   }
 
-  // This implementation is based on https://drafts.csswg.org/scroll-animations-1/
-  // TODO: Should update accordingly when new spec lands.
-  getSourceElement(source) {
-    const matches = RegexMatcher.SOURCE_ELEMENT.exec(source);
-    const SOURCE_CAPTURE_INDEX = 1;
-    if (matches)
-      return document.getElementById(matches[SOURCE_CAPTURE_INDEX]);
-    else if (source === "auto")
-      return document.scrollingElement;
-    else
-      return null;
-  }
-
   getAnonymousScrollTimelineOptions(timelineName, target) {
     const options = this.anonymousScrollTimelineOptions.get(timelineName);
     if(options) {
@@ -148,14 +131,18 @@ export class StyleParser {
     if(anonymousTimelineOptions)
       return anonymousTimelineOptions;
 
-    const options = this.scrollTimelineOptions.get(timelineName);
+    for (let i = this.sourceSelectorToScrollTimeline.length - 1; i >= 0; i--) {
+      const options = this.sourceSelectorToScrollTimeline[i];
+      if(options.name == timelineName) {
+        const source = this.findPreviousSiblingOrAncestorMatchingSelector(target, options.selector);
 
-    if(options?.source) {
-      const sourceElement = this.getSourceElement(options.source);
-      return {
-        ...(sourceElement ? { source: sourceElement } : {}),
-        ...(options.orientation != "auto" ? { orientation: options.orientation } : {}),
-      };
+        if(source) {
+          return {
+            source,
+            ...(options.axis ? { orientation: options.axis } : {}),
+          };
+        }
+      }
     }
 
     return null;
@@ -240,6 +227,7 @@ export class StyleParser {
     const hasAnimationTimeline = rule.block.contents.includes("animation-timeline:");
     const hasAnimation = rule.block.contents.includes("animation:");
 
+    this.saveSourceSelectorToScrollTimeline(rule);
     this.saveSubjectSelectorToViewTimeline(rule);
 
     let timelineNames = [];
@@ -309,6 +297,60 @@ export class StyleParser {
     }
 
     this.saveRelationInList(rule, timelineNames, animationNames);
+  }
+
+  saveSourceSelectorToScrollTimeline(rule) {
+    const hasScrollTimeline = rule.block.contents.includes("scroll-timeline:");
+    const hasScrollTimelineName = rule.block.contents.includes("scroll-timeline-name:");
+    const hasScrollTimelineAxis = rule.block.contents.includes("scroll-timeline-axis:");
+
+    if(!hasScrollTimeline && !hasScrollTimelineName) return;
+
+    let timelines = [];
+    if(hasScrollTimeline) {
+      const scrollTimelines = this.extractMatches(rule.block.contents, RegexMatcher.SCROLL_TIMELINE);
+      for(const st of scrollTimelines) {
+        parts = this.split(st);
+        let options = {selector: rule.selector, name: ''};
+
+        if(parts.length == 1) {
+          options.name = parts[0];
+        } else if(parts.length == 2) {
+          if(TIMELINE_AXIS_TYPES.includes(parts[0]))
+            options.axis = parts[0], options.name = parts[1];
+          else
+            options.axis = parts[1], options.name = parts[0];
+        }
+
+        timelines.push(options);
+      }
+    }
+
+    if(hasScrollTimelineName) {
+      const names = this.extractMatches(rule.block.contents, RegexMatcher.SCROLL_TIMELINE_NAME);
+      for(let i = 0; i < names.length; i++) {
+        if(i < timelines.length) {
+          // longhand overrides shorthand
+          timelines[i].name = names[i];
+        } else {
+          let options = {selector: rule.selector, name: names[i]};
+          timelines.push(options);
+        }
+      }
+    }
+
+    let axes = [];
+    if(hasScrollTimelineAxis) {
+      axes = this.extractMatches(rule.block.contents, RegexMatcher.SCROLL_TIMELINE_AXIS);
+      axes = axes.filter(a => TIMELINE_AXIS_TYPES.includes(a));
+    }
+
+    for(let i = 0; i < timelines.length; i++) {
+      if(axes.length)
+        timelines[i].axis = axes[i % timelines.length];
+    }
+
+    this.sourceSelectorToScrollTimeline.push(...timelines);
   }
 
   saveSubjectSelectorToViewTimeline(rule) {
@@ -462,7 +504,13 @@ export class StyleParser {
 
     const anonymousMatch = RegexMatcher.ANONYMOUS_SCROLL.exec(shorthand);
     if(!anonymousMatch) {
-      timelineName = this.findMatchingEntryInContainer(shorthand, this.scrollTimelineOptions);
+      timelineName =
+          this.findMatchingEntryInContainer(
+              shorthand,
+              new Set(this.sourceSelectorToScrollTimeline.map(o => o.name))) ||
+          this.findMatchingEntryInContainer(
+              shorthand,
+              new Set(this.subjectSelectorToViewTimeline.map(o => o.name)));
       toBeReplaced = timelineName;
     } else {
       const anonymousTimeline = anonymousMatch[WHOLE_MATCH_INDEX];
