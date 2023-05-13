@@ -551,7 +551,7 @@ export class StyleParser {
   Replaces this:
     {
       0% { opacity: 0 }
-      enter 100% { opacity: 1 }
+      entry 100% { opacity: 1 }
       exit 0% { opacity: 1 }
       exit 100% { opacity: 0 }
       to { opacity: 1 }
@@ -564,7 +564,7 @@ export class StyleParser {
       60% { opacity: 0 }
       80% { opacity: 1 }
     }
-  and returns a mapping of { "0.00%": "0%", "20.00%" : "enter 100%", "40.00%" : "exit 0%", ... }
+  and returns a mapping of { "0.00%": "0%", "20.00%" : "entry 100%", "40.00%" : "exit 0%", ... }
   If there are no phases in the keyframe selectors, nothing will happen
   and an empty map is returned.
   This change in keyframes is temporary, and when we are creating ScrollTimeline,

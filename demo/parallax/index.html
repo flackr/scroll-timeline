@@ -210,9 +210,9 @@ function animateWipe() {
       width: ['100%', '0']}, {
       fill: 'both',
       timeline: new ViewTimeline({ subject: container }),
-      delay: { phase: 'enter', percent: CSS.percent(100) },
-      endDelay: { phase: 'enter', percent: CSS.percent(120) },
-      // timeRange: 'enter 100% 120%'
+      delay: { phase: 'entry', percent: CSS.percent(100) },
+      endDelay: { phase: 'entry', percent: CSS.percent(120) },
+      // timeRange: 'entry 100% 120%'
   });
 }
 

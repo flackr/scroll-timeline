@@ -103,7 +103,7 @@
     background-color: rgba(0, 200, 0, 0.3);
     width: 0px;
 
-    animation-time-range: enter;
+    animation-time-range: entry;
   }
 
   #progress-bar-progress-d {
@@ -151,7 +151,7 @@
     background-color: rgba(0, 200, 0, 0.3);
     width: 0px;
 
-    animation-time-range: enter 150% exit -50%;
+    animation-time-range: entry 150% exit -50%;
   }
 
   #progress-bar-progress-g {
@@ -168,7 +168,7 @@
     width: 0px;
 
     /* mixed shorthand and longhands */
-    animation-time-range: enter;
+    animation-time-range: entry;
     animation-delay: cover;
     animation-end-delay: contain;
   }
@@ -187,7 +187,7 @@
     width: 0px;
 
     /* mixed shorthand and longhands */
-    animation-time-range: enter 100% exit 200%;
+    animation-time-range: entry 100% exit 200%;
     animation-end-delay: contain;
   }
 
@@ -206,12 +206,12 @@
     <div id="overlay">
       <div class="progress-bar" style="top: 20px;"><span>cover</span></div>
       <div class="progress-bar" style="top: 70px;"><span>contain</span></div>
-      <div class="progress-bar" style="top: 120px;"><span>enter</span></div>
+      <div class="progress-bar" style="top: 120px;"><span>entry</span></div>
       <div class="progress-bar" style="top: 170px;"><span>exit</span></div>
       <div class="progress-bar" style="top: 220px"><span>contain 25% 75%</span></div>
-      <div class="progress-bar" style="top: 270px"><span>enter 150% exit -50%</span></div>
+      <div class="progress-bar" style="top: 270px"><span>entry 150% exit -50%</span></div>
       <div class="progress-bar" style="top: 320px"><span>* cover 0% contain 100%</span></div>
-      <div class="progress-bar" style="top: 370px"><span>* enter 100% contain 100%</span></div>
+      <div class="progress-bar" style="top: 370px"><span>* entry 100% contain 100%</span></div>
       <div id="progress-bar-progress-a" class="progress-bar-progress" style="top: 20px;"></div>
       <div id="progress-bar-progress-b" class="progress-bar-progress" style="top: 70px;"></div>
       <div id="progress-bar-progress-c" class="progress-bar-progress" style="top: 120px;"></div>

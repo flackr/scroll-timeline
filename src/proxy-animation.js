@@ -8,7 +8,7 @@ import {
 const nativeElementAnimate = window.Element.prototype.animate;
 const nativeAnimation = window.Animation;
 
-export const ANIMATION_DELAY_NAMES = ['enter', 'exit', 'cover', 'contain'];
+export const ANIMATION_DELAY_NAMES = ['entry', 'exit', 'cover', 'contain'];
 
 class PromiseWrapper {
   constructor() {
