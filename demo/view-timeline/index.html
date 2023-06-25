@@ -123,11 +123,11 @@
   "use strict";
 
   const progressBars = document.querySelectorAll('.progress-bar-progress');
-  const createProgressAnimation = (bar, range, orientation) => {
+  const createProgressAnimation = (bar, range, axis) => {
     const target = document.getElementById('target');
     const viewTimeline = new ViewTimeline({
       'subject': target,
-      'axis': orientation
+      'axis': axis
     });
     bar.animate( { width: ['0px', '200px' ] }, {
       timeline: viewTimeline,
@@ -136,17 +136,17 @@
     });
   }
   const createAnimations = (selection) => {
-    const orientation = selection == 'vertical-tb' ? 'block' : 'inline';
+    const axis = selection == 'vertical-tb' ? 'block' : 'inline';
     document.getAnimations().forEach(anim => {
       anim.cancel();
     });
-    createProgressAnimation(progressBars[0], 'cover', orientation);
-    createProgressAnimation(progressBars[1], 'contain', orientation);
-    createProgressAnimation(progressBars[2], 'enter', orientation);
-    createProgressAnimation(progressBars[3], 'exit', orientation);
-    createProgressAnimation(progressBars[4], 'contain 25% 75%', orientation);
+    createProgressAnimation(progressBars[0], 'cover', axis);
+    createProgressAnimation(progressBars[1], 'contain', axis);
+    createProgressAnimation(progressBars[2], 'enter', axis);
+    createProgressAnimation(progressBars[3], 'exit', axis);
+    createProgressAnimation(progressBars[4], 'contain 25% 75%', axis);
     createProgressAnimation(progressBars[5], 'enter 150% exit -50%',
-                            orientation);
+                            axis);
   };
 
   document.querySelectorAll('input').forEach(input => {
