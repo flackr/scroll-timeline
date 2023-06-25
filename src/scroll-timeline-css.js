@@ -140,8 +140,8 @@ function updateKeyframesIfNecessary(anim, options) {
 
 export function initCSSPolyfill() {
   // Don't load if browser claims support
-  if (CSS.supports("animation-timeline: works")) {
-    return;
+  if (CSS.supports("animation-timeline: none")) {
+    return true;
   }
 
   initMutationObserver();
