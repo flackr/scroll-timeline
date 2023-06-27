@@ -17,7 +17,7 @@ export const RegexMatcher = {
   ANIMATION_TIMELINE: /animation-timeline\s*:([^;}]+)/,
   ANIMATION_DELAY: /animation-delay\s*:([^;}]+)/,
   ANIMATION_END_DELAY: /animation-end-delay\s*:([^;}]+)/,
-  ANIMATION_TIME_RANGE: /animation-time-range\s*:([^;}]+)/,
+  ANIMATION_TIME_RANGE: /animation-range\s*:([^;}]+)/,
   ANIMATION_NAME: /animation-name\s*:([^;}]+)/,
   ANIMATION: /animation\s*:([^;}]+)/,
   ANONYMOUS_SCROLL: /scroll\(([^)]*)\)/,
@@ -103,7 +103,7 @@ export class StyleParser {
             'animation-timeline': current['animation-timeline'],
             'animation-delay': current['animation-delay'],
             'animation-end-delay': current['animation-end-delay'],
-            'animation-time-range': current['animation-time-range']
+            'animation-range': current['animation-range']
           }
         }
       }
@@ -422,7 +422,7 @@ export class StyleParser {
   saveRelationInList(rule, timelineNames, animationNames) {
     const hasAnimationDelay = rule.block.contents.includes("animation-delay:");
     const hasAnimationEndDelay = rule.block.contents.includes("animation-end-delay:");
-    const hasAnimationTimeRange = rule.block.contents.includes("animation-time-range:");
+    const hasAnimationTimeRange = rule.block.contents.includes("animation-range:");
 
     let animationDelays = [];
     let animationEndDelays = [];
@@ -447,7 +447,7 @@ export class StyleParser {
         ...(animationNames.length ? {'animation-name': animationNames[i % animationNames.length]}: {}),
         ...(animationDelays.length ? {'animation-delay': animationDelays[i % animationDelays.length]}: {}),
         ...(animationEndDelays.length ? {'animation-end-delay': animationEndDelays[i % animationEndDelays.length]}: {}),
-        ...(animationTimeRanges.length ? {'animation-time-range': animationTimeRanges[i % animationTimeRanges.length]}: {}),
+        ...(animationTimeRanges.length ? {'animation-range': animationTimeRanges[i % animationTimeRanges.length]}: {}),
       });
     }
   }
