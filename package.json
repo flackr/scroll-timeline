@@ -9,7 +9,9 @@
     "dev": "run-all \"serve\" \" microbundle watch -f iife \"",
     "deploy": "npm run build",
     "test:simple": "./test/setup/wpt-repo.sh && node ./test/webdriver/wpt-server-cli.js",
-    "test:webdriver": "./test/setup/wpt-repo.sh && node test/webdriver/index.js"
+    "test:simple-w": "test\\setup\\wpt-repo.sh.bat && node ./test/webdriver/wpt-server-cli.js",
+    "test:webdriver": "./test/setup/wpt-repo.sh && node test/webdriver/index.js",
+    "test:webdriver-w": "test\\setup\\wpt-repo.sh.bat && node test/webdriver/index.js"
   },
   "repository": {
     "type": "git",
