@@ -251,7 +251,7 @@ export class ScrollTimeline {
 
   set axis(axis) {
     if (
-      ["block", "inline", "horizontal", "vertical"].indexOf(axis) === -1
+      ["block", "inline", "horizontal", "vertical", "x", "y"].indexOf(axis) === -1
     ) {
       throw TypeError("Invalid axis");
     }
@@ -296,6 +296,13 @@ export class ScrollTimeline {
     if (!container) return unresolved;
     if (this.phase == 'inactive')
       return unresolved;
+    const scrollerStyle = getComputedStyle(container);
+    if (
+      scrollerStyle.display === "inline" ||
+      scrollerStyle.display === "none"
+    ) {
+      return unresolved;
+    }
 
     const axis = this.axis;
     const scrollPos = directionAwareScrollOffset(container, axis);
