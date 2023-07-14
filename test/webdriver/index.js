@@ -11,6 +11,7 @@ const wptServer = require("./wpt-server");
 const TEST_CONFIGS = require("../tests.config.json");
 const harnessTests = require("./harness-tests");
 const { resolve } = require("path");
+const os = require('os');
 
 // Env configs
 const ENV = {}
@@ -155,6 +156,12 @@ async function runWebDriverTests() {
         }
 
         for (let testFile of testFiles) {
+            if (os.platform() === 'win32') {
+                // Under Win32, we're using ENV.WPT_DIR as a full path
+                // testFile is relative, so we need to map to a full path.
+                testFile = process.cwd() + '\\'+ testFile;
+            }
+
             // convert: test/wpt/scroll-timeline/....html
             // to: localhost:PORT/scroll-timeline/....html
             let url = testFile.replace(ENV.WPT_DIR, baseURL);
