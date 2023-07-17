@@ -44,9 +44,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v2
         with:
-          path: |
-            .
-            !./node_modules
+          path: .
 
   # Deployment job
   deploy:
