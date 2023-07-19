@@ -10,8 +10,7 @@
     "deploy": "npm run build",
     "test-setup": "node test/setup/checkout-wpt.mjs",
     "test:wpt": "npm run build && npm run test-setup && cd test && cd wpt && python wpt run --install-webdriver --inject-script ../../dist/scroll-timeline.js chrome scroll-animations",
-    "test:simple": "npm run build && npm run test-setup && cd test && cd wpt && python wpt serve --inject-script ../../dist/scroll-timeline.js",
-    "test:webdriver": "npm run test-setup && node test/webdriver/index.js"
+    "test:simple": "npm run build && npm run test-setup && cd test && cd wpt && python wpt serve --inject-script ../../dist/scroll-timeline.js"
   },
   "repository": {
     "type": "git",
