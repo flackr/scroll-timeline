@@ -8,10 +8,9 @@
     "build": "microbundle -f iife",
     "dev": "run-all \"serve\" \" microbundle watch -f iife \"",
     "deploy": "npm run build",
-    "test:simple": "./test/setup/wpt-repo.sh && node ./test/webdriver/wpt-server-cli.js",
-    "test:simple-w": "test\\setup\\wpt-repo.sh.bat && node ./test/webdriver/wpt-server-cli.js",
-    "test:webdriver": "./test/setup/wpt-repo.sh && node test/webdriver/index.js",
-    "test:webdriver-w": "test\\setup\\wpt-repo.sh.bat && node test/webdriver/index.js"
+    "test-setup": "node test/setup/checkout-wpt.mjs",
+    "test:wpt": "npm run build && npm run test-setup && cd test && cd wpt && python wpt run --install-webdriver --inject-script ../../dist/scroll-timeline.js chrome scroll-animations",
+    "test:simple": "npm run build && npm run test-setup && cd test && cd wpt && python wpt serve --inject-script ../../dist/scroll-timeline.js"
   },
   "repository": {
     "type": "git",

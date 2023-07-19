@@ -1,2 +1,2 @@
 @call config silent
-npm run test:webdriver-w
+npm run test:webdriver
