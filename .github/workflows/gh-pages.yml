@@ -41,8 +41,14 @@ jobs:
         run: "[[ -f package-lock.json || -f npm-shrinkwrap.json ]] && npm ci || true"
       - name: Build with microbundle
         run: "npm run build"
+      - name: Checkout WPT
+        run: "npm run test-setup"
+      - name: WPT hosts
+        run: "./test/wpt/wpt make-hosts-file | sudo tee -a /etc/hosts"
+      - name: WPT tests
+        run: "npm run test:wpt"
       - name: Clean build files
-        run: "rm -rf node_modules"
+        run: "rm -rf node_modules test/wpt"
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v2
         with:
