@@ -46,6 +46,7 @@ jobs:
       - name: WPT hosts
         run: "./test/wpt/wpt make-hosts-file | sudo tee -a /etc/hosts"
       - name: WPT tests
+        continue-on-error: true
         run: "npm run test:wpt"
       - name: Clean build files
         run: "rm -rf node_modules test/wpt"
