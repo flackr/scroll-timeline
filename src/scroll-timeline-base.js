@@ -503,7 +503,7 @@ export function calculateRange(phase, container, target, axis, optionsInset) {
   const containStartOffset = Math.min(alignStartOffset, alignEndOffset);
   const containEndOffset = Math.max(alignStartOffset, alignEndOffset);
 
-  // Enter and Exit bounds align with cover and contains bounds.
+  // Entry and Exit bounds align with cover and contains bounds.
 
   let startOffset = undefined;
   let endOffset = undefined;
@@ -519,7 +519,7 @@ export function calculateRange(phase, container, target, axis, optionsInset) {
       endOffset = containEndOffset;
       break;
 
-    case 'enter':
+    case 'entry':
       startOffset = coverStartOffset;
       endOffset = containStartOffset;
       break;
