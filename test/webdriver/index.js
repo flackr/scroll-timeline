@@ -12,7 +12,6 @@ const TEST_CONFIGS = require("../tests.config.json");
 const harnessTests = require("./harness-tests");
 const { resolve } = require("path");
 const os = require('os');
-const glob = require('tiny-glob');
 
 // Env configs
 const ENV = {}
@@ -112,7 +111,9 @@ async function collectHarnessTestResults(driver, file) {
             message: "Could not find #__testharness__results__ element"
         })
     }
-    return resJson;
+    return new Promise((res) => {
+        res(resJson)
+    })
 }
 
 async function runWebDriverTests() {
@@ -121,20 +122,7 @@ async function runWebDriverTests() {
     let testResults = new Map();
     let { browsers } = TEST_CONFIGS;
     let testFiles = await harnessTests.retrieve(TEST_CONFIGS.harnessTests, ENV)
-    const excludedTests = new Set();
-    for (const excludeTestGlob of TEST_CONFIGS.excludeTests) {
-      if (excludeTestGlob.startsWith("!")) {
-        const files = await glob(ENV.WPT_DIR + excludeTestGlob.slice(1));
-        for (const file of files) {
-          excludedTests.delete(file);
-        }
-      } else {
-        const files = await glob(ENV.WPT_DIR + excludeTestGlob);
-        for (const file of files) {
-          excludedTests.add(file);
-        }
-      }
-    }
+    let excludedTests = new Set(TEST_CONFIGS.excludeTests);
 
     const baseURL = `http://${ENV.ORIGIN}:${ENV.WPT_SERVER_PORT}`;
 
@@ -183,7 +171,7 @@ async function runWebDriverTests() {
             // testFile: test/wpt/scroll-timeline/....html
             // excludedTest: /scroll-timeline/....html
             // notice the test/wpt
-            if (excludedTests.has(testFile)) {
+            if (excludedTests.has(testFile.replace(ENV.WPT_DIR, ""))) {
                 continue;
             }
             await driver.get(url).catch(e => {
@@ -194,7 +182,7 @@ async function runWebDriverTests() {
                     message: "Webdriver could not get that page"
                 })
             })
-            res = await collectHarnessTestResults(driver, testFile)
+            res = await collectHarnessTestResults(driver)
             currentBrowserResults.push(res)
         }
         // cleanup before going to next browser's driver
