@@ -23,7 +23,8 @@ import {
 
 import { initCSSPolyfill } from "./scroll-timeline-css"
 
-export function initPolyfill() {
+function initPolyfill() {
+  // initCSSPolyfill returns true iff the host browser supports SDA
   if (initCSSPolyfill()) {
     return true;
   }
