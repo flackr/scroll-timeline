@@ -26,7 +26,7 @@ import { initCSSPolyfill } from "./scroll-timeline-css"
 function initPolyfill() {
   // initCSSPolyfill returns true iff the host browser supports SDA
   if (initCSSPolyfill()) {
-    return true;
+    return;
   }
 
   if ([...document.styleSheets].filter((s) => s.href !== null).length) {
