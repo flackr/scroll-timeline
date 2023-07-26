@@ -1490,6 +1490,10 @@ export class ProxyAnimation {
   get id() {
     return proxyAnimations.get(this).animation.id;
   }
+  
+  set id(value) {
+    proxyAnimations.get(this).animation.id = value;
+  }
 
   cancel() {
     const details = proxyAnimations.get(this);

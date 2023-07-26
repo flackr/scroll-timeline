@@ -119,7 +119,7 @@ export class StyleParser {
         anonymousSource: options.source,
         anonymousTarget: target,
         source: getAnonymousSourceElement(options.source, target),
-        orientation: (options.orientation ? options.orientation : 'block'),
+        axis: (options.axis ? options.axis : 'block'),
       };
     }
 
@@ -139,7 +139,7 @@ export class StyleParser {
         if(source) {
           return {
             source,
-            ...(options.axis ? { orientation: options.axis } : {}),
+            ...(options.axis ? { axis: options.axis } : {}),
           };
         }
       }
@@ -193,7 +193,7 @@ export class StyleParser {
     let scrollTimeline = {
       name: name,
       source: "auto",
-      orientation: undefined,
+      axis: undefined,
     };
 
     while (this.peek(p) !== "}") {
@@ -485,7 +485,7 @@ export class StyleParser {
     const options = {};
     value.split(" ").forEach(token => {
       if(TIMELINE_AXIS_TYPES.includes(token)) {
-        options['orientation'] = token;
+        options['axis'] = token;
       } else if(ANONYMOUS_TIMELINE_SOURCE_TYPES.includes(token)) {
         options['source'] = token;
       }

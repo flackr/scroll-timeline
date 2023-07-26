@@ -51,9 +51,9 @@ function initMutationObserver() {
     .forEach((tag) => handleLinkedStylesheet(tag));
 }
 
-function relativePosition(phase, container, target, orientation, optionsInset, percent) {
-  const phaseRange = calculateRange(phase, container, target, orientation, optionsInset);
-  const coverRange = calculateRange('cover', container, target, orientation, optionsInset);
+function relativePosition(phase, container, target, axis, optionsInset, percent) {
+  const phaseRange = calculateRange(phase, container, target, axis, optionsInset);
+  const coverRange = calculateRange('cover', container, target, axis, optionsInset);
   return calculateRelativePosition(phaseRange, percent, coverRange);
 }
 
@@ -90,7 +90,7 @@ function createScrollTimeline(anim, animationName, target) {
 
 function updateKeyframesIfNecessary(anim, options) {
   const container = getScrollParent(options.subject);
-  const orientation = (options.axis || options.orientation);
+  const axis = (options.axis || options.axis);
 
   function calculateNewOffset(mapping, keyframe) {
     let newOffset = null;
@@ -106,7 +106,7 @@ function updateKeyframesIfNecessary(anim, options) {
             newOffset = parseFloat(tokens[0]);
           } else {
             newOffset = relativePosition(tokens[0], container, options.subject,
-              orientation, options.inset, CSS.percent(parseFloat(tokens[1]))) * 100;
+              axis, options.inset, CSS.percent(parseFloat(tokens[1]))) * 100;
           }
         }
         break;
@@ -140,8 +140,8 @@ function updateKeyframesIfNecessary(anim, options) {
 
 export function initCSSPolyfill() {
   // Don't load if browser claims support
-  if (CSS.supports("animation-timeline: works")) {
-    return;
+  if (CSS.supports("animation-timeline: --works")) {
+    return true;
   }
 
   initMutationObserver();

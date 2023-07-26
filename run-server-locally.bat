@@ -1,2 +1,2 @@
 @call config silent
-npm run test:simple-w
+npm run test:simple
