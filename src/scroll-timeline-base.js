@@ -44,12 +44,12 @@ function updateInternal(scrollTimelineInstance) {
 
 /**
  * Calculates a scroll offset that corrects for writing modes, text direction
- * and a logical orientation.
+ * and a logical axis.
  * @param scrollTimeline {ScrollTimeline}
- * @param orientation {String}
+ * @param axis {String}
  * @returns {Number}
  */
-function directionAwareScrollOffset(source, orientation) {
+function directionAwareScrollOffset(source, axis) {
   if (!source)
     return null;
 
@@ -60,9 +60,9 @@ function directionAwareScrollOffset(source, orientation) {
   // http://drafts.csswg.org/css-writing-modes-4/#block-flow
   const horizontalWritingMode = style.writingMode == 'horizontal-tb';
   let currentScrollOffset  = source.scrollTop;
-  if (orientation == 'horizontal' ||
-     (orientation == 'inline' && horizontalWritingMode) ||
-     (orientation == 'block' && !horizontalWritingMode)) {
+  if (axis == 'horizontal' ||
+     (axis == 'inline' && horizontalWritingMode) ||
+     (axis == 'block' && !horizontalWritingMode)) {
     // Negative values are reported for scrollLeft when the inline text
     // direction is right to left or for vertical text with a right to left
     // block flow. This is a consequence of shifting the scroll origin due to
@@ -84,23 +84,23 @@ export function calculateTargetEffectEnd(animation) {
 }
 
 /**
- * Calculates scroll offset based on orientation and source geometry
+ * Calculates scroll offset based on axis and source geometry
  * @param source {DOMElement}
- * @param orientation {String}
+ * @param axis {String}
  * @returns {number}
  */
-export function calculateMaxScrollOffset(source, orientation) {
+export function calculateMaxScrollOffset(source, axis) {
   // Only one horizontal writing mode: horizontal-tb.  All other writing modes
   // flow vertically.
   const horizontalWritingMode =
     getComputedStyle(source).writingMode == 'horizontal-tb';
-  if (orientation === "block")
-    orientation = horizontalWritingMode ? "vertical" : "horizontal";
-  else if (orientation === "inline")
-    orientation = horizontalWritingMode ? "horizontal" : "vertical";
-  if (orientation === "vertical")
+  if (axis === "block")
+    axis = horizontalWritingMode ? "vertical" : "horizontal";
+  else if (axis === "inline")
+    axis = horizontalWritingMode ? "horizontal" : "vertical";
+  if (axis === "vertical")
     return source.scrollHeight - source.clientHeight;
-  else if (orientation === "horizontal")
+  else if (axis === "horizontal")
     return source.scrollWidth - source.clientWidth;
 }
 
@@ -220,7 +220,7 @@ export class ScrollTimeline {
   constructor(options) {
     scrollTimelineOptions.set(this, {
       source: null,
-      orientation: "block",
+      axis: "block",
       anonymousSource: (options ? options.anonymousSource : null),
       anonymousTarget: (options ? options.anonymousTarget : null),
 
@@ -236,7 +236,7 @@ export class ScrollTimeline {
       options && options.source !== undefined ? options.source
                                               : document.scrollingElement;
     updateSource(this, source);
-    this.orientation = (options && options.orientation) || "block";
+    this.axis = (options && options.axis) || "block";
     updateInternal(this);
   }
 
@@ -249,18 +249,18 @@ export class ScrollTimeline {
     return scrollTimelineOptions.get(this).source;
   }
 
-  set orientation(orientation) {
+  set axis(axis) {
     if (
-      ["block", "inline", "horizontal", "vertical"].indexOf(orientation) === -1
+      ["block", "inline", "horizontal", "vertical", "x", "y"].indexOf(axis) === -1
     ) {
-      throw TypeError("Invalid orientation");
+      throw TypeError("Invalid axis");
     }
-    scrollTimelineOptions.get(this).orientation = orientation;
+    scrollTimelineOptions.get(this).axis = axis;
     updateInternal(this);
   }
 
-  get orientation() {
-    return scrollTimelineOptions.get(this).orientation;
+  get axis() {
+    return scrollTimelineOptions.get(this).axis;
   }
 
   get duration() {
@@ -296,10 +296,17 @@ export class ScrollTimeline {
     if (!container) return unresolved;
     if (this.phase == 'inactive')
       return unresolved;
+    const scrollerStyle = getComputedStyle(container);
+    if (
+      scrollerStyle.display === "inline" ||
+      scrollerStyle.display === "none"
+    ) {
+      return unresolved;
+    }
 
-    const orientation = this.orientation;
-    const scrollPos = directionAwareScrollOffset(container, orientation);
-    const maxScrollPos = calculateMaxScrollOffset(container, orientation);
+    const axis = this.axis;
+    const scrollPos = directionAwareScrollOffset(container, axis);
+    const maxScrollPos = calculateMaxScrollOffset(container, axis);
 
     return maxScrollPos > 0 ? CSS.percent(100 * scrollPos / maxScrollPos)
                             : CSS.percent(100);
@@ -428,10 +435,10 @@ function range(timeline, phase) {
   const container = timeline.source;
   const target = timeline.subject;
 
-  return calculateRange(phase, container, target, details.orientation, details.inset);
+  return calculateRange(phase, container, target, details.axis, details.inset);
 }
 
-export function calculateRange(phase, container, target, orientation, optionsInset) {
+export function calculateRange(phase, container, target, axis, optionsInset) {
   let top = 0;
   let left = 0;
   let node = target;
@@ -453,9 +460,9 @@ export function calculateRange(phase, container, target, orientation, optionsIns
   let viewSize = undefined;
   let viewPos = undefined;
   let containerSize = undefined;
-  if (orientation == 'horizontal' ||
-      (orientation == 'inline' && horizontalWritingMode) ||
-      (orientation == 'block' && !horizontalWritingMode)) {
+  if (axis == 'horizontal' ||
+      (axis == 'inline' && horizontalWritingMode) ||
+      (axis == 'block' && !horizontalWritingMode)) {
     viewSize = target.clientWidth;
     viewPos = left;
     if (rtl)
@@ -590,8 +597,8 @@ export class ViewTimeline extends ScrollTimeline {
   constructor(options) {
     if (options.axis) {
       // Orientation called axis for a view timeline. Internally we can still
-      // call this orientation, since the internal naming is not exposed.
-      options.orientation = options.axis;
+      // call this axis, since the internal naming is not exposed.
+      options.axis = options.axis;
     }
     super(options);
     const details = scrollTimelineOptions.get(this);
@@ -615,15 +622,15 @@ export class ViewTimeline extends ScrollTimeline {
     return scrollTimelineOptions.get(this).subject;
   }
 
-  // The orientation is called "axis" for a view timeline.
-  // Internally we still call it orientation.
+  // The axis is called "axis" for a view timeline.
+  // Internally we still call it axis.
   get axis() {
-    return scrollTimelineOptions.get(this).orientation;
+    return scrollTimelineOptions.get(this).axis;
   }
 
   get currentTime() {
     const unresolved = null;
-    const scrollPos = directionAwareScrollOffset(this.source, this.orientation);
+    const scrollPos = directionAwareScrollOffset(this.source, this.axis);
     if (scrollPos == unresolved)
       return unresolved;
 
