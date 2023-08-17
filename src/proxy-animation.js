@@ -755,7 +755,7 @@ function fractionalStartDelay(details) {
     return 0;
 
   const startTime = details.animationRange.start;
-  return relativePosition(details.timeline, startTime.name, startTime.offset);
+  return relativePosition(details.timeline, startTime.rangeName, startTime.offset);
 }
 
 // Computes the ends delay as a fraction of the active cover range.
@@ -764,7 +764,7 @@ function fractionalEndDelay(details) {
     return 0;
 
   const endTime = details.animationRange.end;
-  return 1 - relativePosition(details.timeline, endTime.name, endTime.offset);
+  return 1 - relativePosition(details.timeline, endTime.rangeName, endTime.offset);
 }
 
 // Create an alternate Animation class which proxies API requests.
@@ -1599,15 +1599,13 @@ export class ProxyAnimation {
 };
 
 // Parses an individual TimelineRangeOffset
-// TODO: rename the internal .name to the specced .rangeName
 // TODO: Support all formatting options
 function parseTimelineRangeOffset(value, defaultValue) {
   // TODO: Should this return the default value?
   if(!value) return null;
 
   // Extract parts from the passed in value.
-  let rangeName = defaultValue.rangeName;
-  let offset = defaultValue.offset;
+  let { rangeName, offset } = defaultValue;
 
   // Author passed in something like `{ rangeName: 'cover', offset: CSS.percent(100) }`
   if (value instanceof Object) {
@@ -1652,7 +1650,7 @@ function parseTimelineRangeOffset(value, defaultValue) {
 
   }
 
-  return { name: rangeName, offset: offset };
+  return { rangeName, offset };
 }
 
 function defaultAnimationRangeStart() { return { rangeName: 'cover', offset: CSS.percent(0) }; }
@@ -1677,23 +1675,23 @@ function parseAnimationRange(value) {
   // <start-offset> <end-offset> --> cover <start-offset> cover <end-offset>
   // TODO: Support all formatting options once ratified in the spec.
   const parts = value.split(' ');
-  const names = [];
+  const rangeNames = [];
   const offsets = [];
 
   parts.forEach(part => {
     if (part.endsWith('%'))
       offsets.push(parseFloat(part));
     else
-      names.push(part);
+      rangeNames.push(part);
   });
 
-  if (names.length > 2 || offsets.length > 2 || offsets.length == 1) {
+  if (rangeNames.length > 2 || offsets.length > 2 || offsets.length == 1) {
     throw TypeError("Invalid time range or unsupported time range format.");
   }
 
-  if (names.length) {
-    animationRange.start.name = names[0];
-    animationRange.end.name = names.length > 1 ? names[1] : names[0];
+  if (rangeNames.length) {
+    animationRange.start.rangeName = rangeNames[0];
+    animationRange.end.rangeName = rangeNames.length > 1 ? rangeNames[1] : rangeNames[0];
   }
 
   // TODO: allow calc() in the offsets
