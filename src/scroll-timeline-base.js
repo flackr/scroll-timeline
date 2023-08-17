@@ -60,7 +60,7 @@ function directionAwareScrollOffset(source, axis) {
   // http://drafts.csswg.org/css-writing-modes-4/#block-flow
   const horizontalWritingMode = style.writingMode == 'horizontal-tb';
   let currentScrollOffset  = source.scrollTop;
-  if (axis == 'horizontal' ||
+  if (axis == 'x' ||
      (axis == 'inline' && horizontalWritingMode) ||
      (axis == 'block' && !horizontalWritingMode)) {
     // Negative values are reported for scrollLeft when the inline text
@@ -95,12 +95,12 @@ export function calculateMaxScrollOffset(source, axis) {
   const horizontalWritingMode =
     getComputedStyle(source).writingMode == 'horizontal-tb';
   if (axis === "block")
-    axis = horizontalWritingMode ? "vertical" : "horizontal";
+    axis = horizontalWritingMode ? "y" : "x";
   else if (axis === "inline")
-    axis = horizontalWritingMode ? "horizontal" : "vertical";
-  if (axis === "vertical")
+    axis = horizontalWritingMode ? "x" : "y";
+  if (axis === "y")
     return source.scrollHeight - source.clientHeight;
-  else if (axis === "horizontal")
+  else if (axis === "x")
     return source.scrollWidth - source.clientWidth;
 }
 
@@ -220,7 +220,7 @@ export class ScrollTimeline {
   constructor(options) {
     scrollTimelineOptions.set(this, {
       source: null,
-      axis: "block",
+      axis: (options && options.axis) ? options.axis : 'block',
       anonymousSource: (options ? options.anonymousSource : null),
       anonymousTarget: (options ? options.anonymousTarget : null),
 
@@ -236,7 +236,6 @@ export class ScrollTimeline {
       options && options.source !== undefined ? options.source
                                               : document.scrollingElement;
     updateSource(this, source);
-    this.axis = (options && options.axis) || "block";
     updateInternal(this);
   }
 
@@ -251,7 +250,7 @@ export class ScrollTimeline {
 
   set axis(axis) {
     if (
-      ["block", "inline", "horizontal", "vertical", "x", "y"].indexOf(axis) === -1
+      ["block", "inline", "x", "y"].indexOf(axis) === -1
     ) {
       throw TypeError("Invalid axis");
     }
@@ -460,7 +459,7 @@ export function calculateRange(phase, container, target, axis, optionsInset) {
   let viewSize = undefined;
   let viewPos = undefined;
   let containerSize = undefined;
-  if (axis == 'horizontal' ||
+  if (axis == 'x' ||
       (axis == 'inline' && horizontalWritingMode) ||
       (axis == 'block' && !horizontalWritingMode)) {
     viewSize = target.clientWidth;
@@ -595,11 +594,6 @@ export class ViewTimeline extends ScrollTimeline {
   // ViewTimelineOptions. Inferring the source from the subject if not
   // explicitly set.
   constructor(options) {
-    if (options.axis) {
-      // Orientation called axis for a view timeline. Internally we can still
-      // call this axis, since the internal naming is not exposed.
-      options.axis = options.axis;
-    }
     super(options);
     const details = scrollTimelineOptions.get(this);
     details.subject = options && options.subject ? options.subject : undefined;
