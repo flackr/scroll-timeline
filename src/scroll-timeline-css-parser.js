@@ -35,7 +35,7 @@ const ANIMATION_KEYWORDS = [
   'ease', 'linear', 'ease-in', 'ease-out', 'ease-in-out'
 ];
 
-const TIMELINE_AXIS_TYPES = ['block', 'inline',  'vertical', 'horizontal'];
+const TIMELINE_AXIS_TYPES = ['block', 'inline', 'x', 'y'];
 const ANONYMOUS_TIMELINE_SOURCE_TYPES = ['nearest', 'root'];
 
 // 1 - Extracts @scroll-timeline and saves it in scrollTimelineOptions.
@@ -341,8 +341,11 @@ export class StyleParser {
 
     let axes = [];
     if(hasScrollTimelineAxis) {
-      axes = this.extractMatches(rule.block.contents, RegexMatcher.SCROLL_TIMELINE_AXIS);
-      axes = axes.filter(a => TIMELINE_AXIS_TYPES.includes(a));
+      const extractedAxes = this.extractMatches(rule.block.contents, RegexMatcher.SCROLL_TIMELINE_AXIS);
+      axes = extractedAxes.filter(a => TIMELINE_AXIS_TYPES.includes(a));
+      if (axes.length != extractedAxes.length) {
+        throw new Error('Invalid axis');
+      }
     }
 
     for(let i = 0; i < timelines.length; i++) {
@@ -400,8 +403,11 @@ export class StyleParser {
       insets = this.extractMatches(rule.block.contents, RegexMatcher.VIEW_TIMELINE_INSET);
 
     if(hasViewTimelineAxis) {
-      axes = this.extractMatches(rule.block.contents, RegexMatcher.VIEW_TIMELINE_AXIS);
-      axes = axes.filter(a => TIMELINE_AXIS_TYPES.includes(a));
+      const extractedAxes = this.extractMatches(rule.block.contents, RegexMatcher.VIEW_TIMELINE_AXIS);
+      axes = extractedAxes.filter(a => TIMELINE_AXIS_TYPES.includes(a));
+      if (axes.length != extractedAxes.length) {
+        throw new Error('Invalid axis');
+      }
     }
 
     for(let i = 0; i < timelines.length; i++) {

@@ -60,7 +60,7 @@ function directionAwareScrollOffset(source, axis) {
   // http://drafts.csswg.org/css-writing-modes-4/#block-flow
   const horizontalWritingMode = style.writingMode == 'horizontal-tb';
   let currentScrollOffset  = source.scrollTop;
-  if (axis == 'horizontal' ||
+  if (axis == 'x' ||
      (axis == 'inline' && horizontalWritingMode) ||
      (axis == 'block' && !horizontalWritingMode)) {
     // Negative values are reported for scrollLeft when the inline text
@@ -95,12 +95,12 @@ export function calculateMaxScrollOffset(source, axis) {
   const horizontalWritingMode =
     getComputedStyle(source).writingMode == 'horizontal-tb';
   if (axis === "block")
-    axis = horizontalWritingMode ? "vertical" : "horizontal";
+    axis = horizontalWritingMode ? "y" : "x";
   else if (axis === "inline")
-    axis = horizontalWritingMode ? "horizontal" : "vertical";
-  if (axis === "vertical")
+    axis = horizontalWritingMode ? "x" : "y";
+  if (axis === "y")
     return source.scrollHeight - source.clientHeight;
-  else if (axis === "horizontal")
+  else if (axis === "x")
     return source.scrollWidth - source.clientWidth;
 }
 
@@ -251,7 +251,7 @@ export class ScrollTimeline {
 
   set axis(axis) {
     if (
-      ["block", "inline", "horizontal", "vertical", "x", "y"].indexOf(axis) === -1
+      ["block", "inline", "x", "y"].indexOf(axis) === -1
     ) {
       throw TypeError("Invalid axis");
     }
@@ -460,7 +460,7 @@ export function calculateRange(phase, container, target, axis, optionsInset) {
   let viewSize = undefined;
   let viewPos = undefined;
   let containerSize = undefined;
-  if (axis == 'horizontal' ||
+  if (axis == 'x' ||
       (axis == 'inline' && horizontalWritingMode) ||
       (axis == 'block' && !horizontalWritingMode)) {
     viewSize = target.clientWidth;
