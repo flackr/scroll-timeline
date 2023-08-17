@@ -2,10 +2,6 @@
 <script src="../../dist/scroll-timeline.js"></script>
 
 <style>
-@scroll-timeline progressTimeline {
-  
-}
-
 body {
   padding: 0px;
   margin: 0px;
@@ -17,8 +13,8 @@ body {
   width: 100%;
   height: 10px;
   background-color: red;
-  animation-timeline: progressTimeline;
-  animation: progress linear;
+  animation: progress linear forwards;
+  animation-timeline: scroll();
 }
 
 @keyframes progress {

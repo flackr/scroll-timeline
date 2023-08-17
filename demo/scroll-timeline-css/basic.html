@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <style>
 #container {
-  scroll-timeline-name: foo, bar;
+  scroll-timeline-name: --foo, --bar;
   overflow: scroll;
   width: 500px;
   height: 500px;
+  border: 1px solid #333;
 }
 
 .spacer {
@@ -16,8 +17,8 @@
   position: fixed;
   height: 10px;
   background-color: red;
-  animation: progress linear;
-  animation-timeline: foo;
+  animation: progress linear forwards;
+  animation-timeline: --foo;
 }
 
 body {

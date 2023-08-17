@@ -34,9 +34,9 @@
     var st = new ScrollTimeline();
     var a = document.querySelector('#test').animate([
         {transform: 'translateY(0)'},
-        {transform: 'translateY(' + (window.innerHeight - 100) + 'px)'},
+        {transform: 'translateY(calc(100vh - 100px))'},
     ], {
-        duration: 1000,
+        fill: 'both',
         timeline: st,
     });
 </script>

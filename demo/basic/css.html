@@ -22,22 +22,22 @@
         background: blue;
     }
 
-    @scroll-timeline scroll-in-document {
-    }
-
     @keyframes move {
         from {
             transform: translateY(0);
         }
 
         to {
-            transform: translateY(1000px);
+            transform: translateY(calc(100vh - 100px));
         }
     }
 
+    html {
+        scroll-timeline: --scroll-in-document;
+    }
     #test {
-	    animation: 1s linear move forwards;
-	    animation-timeline: scroll-in-document;
+	    animation: linear move both;
+	    animation-timeline: --scroll-in-document;
     }
 </style>
 <body>
