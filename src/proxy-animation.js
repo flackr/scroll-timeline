@@ -1599,7 +1599,6 @@ export class ProxyAnimation {
 };
 
 // Parses an individual TimelineRangeOffset
-// TODO: allow calc() in the offsets
 // TODO: rename the internal .name to the specced .rangeName
 // TODO: Support all formatting options
 function parseTimelineRangeOffset(value, defaultValue) {
@@ -1607,33 +1606,53 @@ function parseTimelineRangeOffset(value, defaultValue) {
   if(!value) return null;
 
   // Extract parts from the passed in value.
-  // TODO: This needs refactoring …
-  let parts = [];
+  let rangeName = defaultValue.rangeName;
+  let offset = defaultValue.offset;
 
   // Author passed in something like `{ rangeName: 'cover', offset: CSS.percent(100) }`
-  if ((value instanceof Object) && (value.rangeName)) {
-    parts[0] = value.rangeName;
-    parts[1] = value.offset.toString();
+  if (value instanceof Object) {
+    if (value.rangeName != undefined) {
+      rangeName = value.rangeName;
+    };
+
+    if (value.offset !== undefined) {
+      offset = value.offset;
+    }
   }
   // Author passed in something like `"cover 100%"`
   else {
-    parts = value.split(' ');
+    const parts = value.split(' ');
+
+    rangeName = parts[0];
+
+    if (parts.length == 2) {
+      offset = parts[1];
+    }
   }
 
-  if(!ANIMATION_RANGE_NAMES.includes(parts[0]) ||
-    (parts.length == 2 && !parts[1].endsWith('%')))
-    throw TypeError("Invalid range offset or unsupported offset format");
-
-  let offset = defaultValue.offset;
-  if(parts.length == 2) {
-    const percentage = parseFloat(parts[1]);
-    if(Number.isNaN(percentage))
-      throw TypeError(`\"${parts[1]}\" is not a valid percentage for animation delay`);
-
-    offset = CSS.percent(percentage);
+  // Validate rangeName
+  if (!ANIMATION_RANGE_NAMES.includes(rangeName)) {
+    throw TypeError("Invalid range name");
   }
 
-  return { name: parts[0], offset: offset };
+  // Validate and process offset
+  // TODO: support more than % and px. Don’t forget about calc() along with that.
+  if (!(offset instanceof Object)) {
+    if (!offset.endsWith('%') && !offset.endsWith('px')) {
+      throw TypeError("Invalid range offset. Only % and px are supported (for now)");
+    }
+
+    const parsedValue = parseFloat(offset);
+
+    if (offset.endsWith('%')) {
+      offset = CSS.percent(parsedValue);
+    } else if (offset.endsWith('px')) {
+      offset = CSS.px(parsedValue);
+    }
+
+  }
+
+  return { name: rangeName, offset: offset };
 }
 
 function defaultAnimationRangeStart() { return { rangeName: 'cover', offset: CSS.percent(0) }; }
