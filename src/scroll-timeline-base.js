@@ -584,7 +584,7 @@ export function calculateRelativePosition(phaseRange, percent, coverRange) {
   return (offset - coverRange.start) / (coverRange.end - coverRange.start);
 }
 
-// https://drafts.csswg.org/scroll-animations-1/rewrite#view-progress-timelines
+// https://drafts.csswg.org/scroll-animations-1/#view-progress-timelines
 export class ViewTimeline extends ScrollTimeline {
   // As specced, ViewTimeline has a subject and a source, but
   // ViewTimelineOptions only has source. Furthermore, there is a strict
