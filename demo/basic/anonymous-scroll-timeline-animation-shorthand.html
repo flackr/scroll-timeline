@@ -20,8 +20,8 @@
     width: 100px;
     height: 100px;
     background-color: green;
-    animation: linear colorChange both scroll(root), linear widthChange 1s both, 
-      move linear scroll(vertical nearest);
+    animation: linear colorChange both, linear widthChange both, move linear;
+    animation-timeline: scroll(root), auto, scroll(nearest y);
   }
 
   .spacer {

@@ -16,6 +16,7 @@
     overflow-y:  scroll;
     position:  relative;
     align-items:  flex-start;
+    timeline-scope: --firstVT, --secondVT;
   }
 
   .overlay {
@@ -40,7 +41,7 @@
     flex:  none;
     height: 100px;
     width:  90%;
-    view-timeline-name: firstVT, secondVT;
+    view-timeline-name: --firstVT, --secondVT;
     view-timeline-inset: auto, 100px 200px;
   }
 
@@ -72,11 +73,11 @@
   }
 
   #first {
-    animation-timeline: firstVT;
+    animation-timeline: --firstVT;
   }
 
   #second {
-    animation-timeline: secondVT;
+    animation-timeline: --secondVT;
   }
 
 </style>

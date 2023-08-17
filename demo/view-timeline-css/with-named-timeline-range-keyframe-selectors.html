@@ -19,9 +19,9 @@
     flex:  none;
     height: 200px;
     width:  90%;
-    view-timeline-name: foo;
-    animation-timeline: foo;
+    view-timeline-name: --foo;
     animation: linear fade-in-out-animation;
+    animation-timeline: --foo;
   }
 
   #container {
@@ -34,6 +34,7 @@
     overflow-y:  scroll;
     position:  relative;
     align-items:  flex-start;
+    timeline-scope: --foo;
   }
 
   .spacer {
