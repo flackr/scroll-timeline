@@ -91,7 +91,7 @@
   "use strict";
 
   const progressBars = document.querySelectorAll('.progress-bar-progress');
-  const createProgressAnimation = (bar, delay, endDelay, axis, inset=null) => {
+  const createProgressAnimation = (bar, rangeStart, rangeEnd, axis, inset = 'auto') => {
     const subject = document.getElementById('subject');
     const viewTimeline = new ViewTimeline({
       'subject': subject,
@@ -100,9 +100,8 @@
     });
     bar.animate( { width: ['0px', '200px' ] }, {
       timeline: viewTimeline,
-      // timeRange: `${range}`,
-      delay: delay,
-      endDelay: endDelay,
+      rangeStart: rangeStart,
+      rangeEnd: rangeEnd,
       fill: 'both'
     });
   }
@@ -111,10 +110,10 @@
     document.getAnimations().forEach(anim => {
       anim.cancel();
     });
-    createProgressAnimation(progressBars[0], { phase: 'cover', percent: CSS.percent(0) },
-      { phase: 'cover', percent: CSS.percent(100) }, axis);
-    createProgressAnimation(progressBars[1], { phase: 'cover', percent: CSS.percent(0) },
-      { phase: 'cover', percent: CSS.percent(100) }, axis, '100px 200px');
+    createProgressAnimation(progressBars[0], { rangeName: 'cover', offset: CSS.percent(0) },
+      { rangeName: 'cover', offset: CSS.percent(100) }, axis);
+    createProgressAnimation(progressBars[1], { rangeName: 'cover', offset: CSS.percent(0) },
+      { rangeName: 'cover', offset: CSS.percent(100) }, axis, '100px 200px');
   };
 
   createAnimations();

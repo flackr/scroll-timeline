@@ -1,4 +1,4 @@
-import { ANIMATION_DELAY_NAMES } from './proxy-animation';
+import { ANIMATION_RANGE_NAMES } from './proxy-animation';
 import { getAnonymousSourceElement } from './scroll-timeline-base';
 
 // This is also used in scroll-timeline-css.js
@@ -15,8 +15,6 @@ export const RegexMatcher = {
   VIEW_TIMELINE_AXIS: /view-timeline-axis\s*:([^;}]+)/,
   VIEW_TIMELINE_INSET: /view-timeline-inset\s*:([^;}]+)/,
   ANIMATION_TIMELINE: /animation-timeline\s*:([^;}]+)/,
-  ANIMATION_DELAY: /animation-delay\s*:([^;}]+)/,
-  ANIMATION_END_DELAY: /animation-end-delay\s*:([^;}]+)/,
   ANIMATION_TIME_RANGE: /animation-range\s*:([^;}]+)/,
   ANIMATION_NAME: /animation-name\s*:([^;}]+)/,
   ANIMATION: /animation\s*:([^;}]+)/,
@@ -101,8 +99,6 @@ export class StyleParser {
         if (!current['animation-name'] || current['animation-name'] == animationName) {
           return {
             'animation-timeline': current['animation-timeline'],
-            'animation-delay': current['animation-delay'],
-            'animation-end-delay': current['animation-end-delay'],
             'animation-range': current['animation-range']
           }
         }
@@ -420,34 +416,21 @@ export class StyleParser {
   }
 
   saveRelationInList(rule, timelineNames, animationNames) {
-    const hasAnimationDelay = rule.block.contents.includes("animation-delay:");
-    const hasAnimationEndDelay = rule.block.contents.includes("animation-end-delay:");
-    const hasAnimationTimeRange = rule.block.contents.includes("animation-range:");
+    const hasAnimationRange = rule.block.contents.includes("animation-range:");
+    let animationRanges = [];
 
-    let animationDelays = [];
-    let animationEndDelays = [];
-    let animationTimeRanges = [];
-
-    if (hasAnimationDelay)
-      animationDelays = this.extractMatches(rule.block.contents, RegexMatcher.ANIMATION_DELAY);
-
-    if (hasAnimationEndDelay)
-      animationEndDelays = this.extractMatches(rule.block.contents, RegexMatcher.ANIMATION_END_DELAY);
-
-    if (hasAnimationTimeRange)
-      animationTimeRanges = this.extractMatches(rule.block.contents, RegexMatcher.ANIMATION_TIME_RANGE);
+    if (hasAnimationRange)
+      animationRanges = this.extractMatches(rule.block.contents, RegexMatcher.ANIMATION_TIME_RANGE);
 
     const maxLength = Math.max(timelineNames.length, animationNames.length,
-      animationDelays.length, animationEndDelays.length, animationTimeRanges.length);
+      animationRanges.length);
 
     for (let i = 0; i < maxLength; i++) {
       this.cssRulesWithTimelineName.push({
         selector: rule.selector,
         'animation-timeline': timelineNames[i % timelineNames.length],
         ...(animationNames.length ? {'animation-name': animationNames[i % animationNames.length]}: {}),
-        ...(animationDelays.length ? {'animation-delay': animationDelays[i % animationDelays.length]}: {}),
-        ...(animationEndDelays.length ? {'animation-end-delay': animationEndDelays[i % animationEndDelays.length]}: {}),
-        ...(animationTimeRanges.length ? {'animation-range': animationTimeRanges[i % animationTimeRanges.length]}: {}),
+        ...(animationRanges.length ? {'animation-range': animationRanges[i % animationRanges.length]}: {}),
       });
     }
   }
@@ -572,7 +555,7 @@ export class StyleParser {
   */
   replaceKeyframesAndGetMapping(rule, p) {
     function hasPhase(selector) {
-      return ANIMATION_DELAY_NAMES.some(phase => selector.startsWith(phase));
+      return ANIMATION_RANGE_NAMES.some(phase => selector.startsWith(phase));
     }
 
     function cleanFrameSelector(selector) {
