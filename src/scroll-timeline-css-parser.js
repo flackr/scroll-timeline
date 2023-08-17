@@ -1,4 +1,4 @@
-import { ANIMATION_DELAY_NAMES } from './proxy-animation';
+import { ANIMATION_RANGE_NAMES } from './proxy-animation';
 import { getAnonymousSourceElement } from './scroll-timeline-base';
 
 // This is also used in scroll-timeline-css.js
@@ -572,7 +572,7 @@ export class StyleParser {
   */
   replaceKeyframesAndGetMapping(rule, p) {
     function hasPhase(selector) {
-      return ANIMATION_DELAY_NAMES.some(phase => selector.startsWith(phase));
+      return ANIMATION_RANGE_NAMES.some(phase => selector.startsWith(phase));
     }
 
     function cleanFrameSelector(selector) {
