@@ -174,9 +174,8 @@ function animateParallax() {
       transform: ['none', 'translateY(30%)']}, {
       fill: 'both',
       timeline: new ViewTimeline({subject: header}),
-      delay: { phase: 'exit', percent: CSS.percent(0) },
-      endDelay: { phase: 'exit', percent: CSS.percent(100) },
-      // timeRange: 'exit'
+      rangeStart: { phase: 'exit', percent: CSS.percent(0) },
+      rangeEnd: { phase: 'exit', percent: CSS.percent(100) },
     });
 }
 
@@ -186,9 +185,8 @@ function animateZoom() {
       transform: ['scale(3) translateX(10%)', 'scale(1)']}, {
       fill: 'both',
       timeline: new ViewTimeline({ subject: container }),
-      delay: { phase: 'contain', percent: CSS.percent(30) },
-      endDelay: { phase: 'contain', percent: CSS.percent(80) },
-      // timeRange: 'contain 20% 80%'
+      rangeStart: { phase: 'contain', percent: CSS.percent(30) },
+      rangeEnd: { phase: 'contain', percent: CSS.percent(80) },
   });
 }
 
@@ -198,9 +196,8 @@ function animatePan() {
       backgroundPosition: ['left center', 'right center']}, {
       fill: 'both',
       timeline: new ViewTimeline({ subject: container }),
-      delay: { phase: 'contain', percent: CSS.percent(0) },
-      endDelay: { phase: 'contain', percent: CSS.percent(100) },
-      // timeRange: 'contain'
+      rangeStart: { phase: 'contain', percent: CSS.percent(0) },
+      rangeEnd: { phase: 'contain', percent: CSS.percent(100) },
   });
 }
 
@@ -210,9 +207,8 @@ function animateWipe() {
       width: ['100%', '0']}, {
       fill: 'both',
       timeline: new ViewTimeline({ subject: container }),
-      delay: { phase: 'entry', percent: CSS.percent(100) },
-      endDelay: { phase: 'entry', percent: CSS.percent(120) },
-      // timeRange: 'entry 100% 120%'
+      rangeStart: { phase: 'entry', percent: CSS.percent(100) },
+      rangeEnd: { phase: 'entry', percent: CSS.percent(120) },
   });
 }
 
@@ -229,9 +225,8 @@ function animateHeaders() {
         {
           fill: 'both',
           timeline: new ViewTimeline({ subject: headers[i] }),
-          delay: { phase: 'contain', percent: CSS.percent(0) },
-          endDelay: { phase: 'contain', percent: CSS.percent(100) },
-          // timeRange: 'contain'
+          rangeStart: { phase: 'contain', percent: CSS.percent(0) },
+          rangeEnd: { phase: 'contain', percent: CSS.percent(100) },
         });
   }
 }
