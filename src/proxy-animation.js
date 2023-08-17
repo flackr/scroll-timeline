@@ -671,6 +671,7 @@ function createProxyEffect(details) {
       let timing = Object.assign({}, details.specifiedTiming);
 
       const timeline = details.timeline;
+      // TODO: These delays most likely need to be rewritten to rangeStart/rangeEnd
       let computedDelays = false;
       let startDelay;
       let endDelay;
@@ -753,7 +754,7 @@ function fractionalStartDelay(details) {
   if (!(details.timeline instanceof ViewTimeline))
     return 0;
 
-  const startTime = details.timeRange.start;
+  const startTime = details.animationRange.start;
   return relativePosition(details.timeline, startTime.name, startTime.offset);
 }
 
@@ -762,7 +763,7 @@ function fractionalEndDelay(details) {
   if (!(details.timeline instanceof ViewTimeline))
     return 0;
 
-  const endTime = details.timeRange.end;
+  const endTime = details.animationRange.end;
   return 1 - relativePosition(details.timeline, endTime.name, endTime.offset);
 }
 
@@ -816,7 +817,8 @@ export class ProxyAnimation {
       effect: null,
       // Range when using a view-timeline. The default range is cover 0% to
       // 100%.
-      timeRange: timeline instanceof ViewTimeline ? parseAnimationDelays(animOptions) : null,
+      animationRange: timeline instanceof ViewTimeline ?
+        parseAnimationRange(animOptions['animation-range']) : null,
       proxy: this
     });
   }
@@ -1596,17 +1598,33 @@ export class ProxyAnimation {
   }
 };
 
-// animation-delay or animation-end-delay should be in the form of a name and an optional percentage
-function parseOneAnimationDelay(delay, defaultOffset) {
-  if(!delay) return null;
+// Parses an individual TimelineRangeOffset
+// TODO: allow calc() in the offsets
+// TODO: rename the internal .name to the specced .rangeName
+// TODO: Support all formatting options
+function parseTimelineRangeOffset(value, defaultValue) {
+  // TODO: Should this return the default value?
+  if(!value) return null;
 
-  const parts = delay.split(' ');
+  // Extract parts from the passed in value.
+  // TODO: This needs refactoring …
+  let parts = [];
+
+  // Author passed in something like `{ rangeName: 'cover', offset: CSS.percent(100) }`
+  if ((value instanceof Object) && (value.rangeName)) {
+    parts[0] = value.rangeName;
+    parts[1] = value.offset.toString();
+  }
+  // Author passed in something like `"cover 100%"`
+  else {
+    parts = value.split(' ');
+  }
 
   if(!ANIMATION_RANGE_NAMES.includes(parts[0]) ||
     (parts.length == 2 && !parts[1].endsWith('%')))
-    throw TypeError("Invalid animation delay");
+    throw TypeError("Invalid range offset or unsupported offset format");
 
-  let offset = defaultOffset;
+  let offset = defaultValue.offset;
   if(parts.length == 2) {
     const percentage = parseFloat(parts[1]);
     if(Number.isNaN(percentage))
@@ -1618,30 +1636,19 @@ function parseOneAnimationDelay(delay, defaultOffset) {
   return { name: parts[0], offset: offset };
 }
 
-function defaultAnimationDelay() { return { name: 'cover', offset: CSS.percent(0) }; }
+function defaultAnimationRangeStart() { return { rangeName: 'cover', offset: CSS.percent(0) }; }
 
-function defaultAnimationEndDelay() { return { name: 'cover', offset: CSS.percent(100) }; }
+function defaultAnimationRangeEnd() { return { rangeName: 'cover', offset: CSS.percent(100) }; }
 
-function parseAnimationDelays(animOptions) {
-  const timeRange = parseTimeRange(animOptions['animation-range']);
-
-  if(animOptions['animation-delay'])
-    timeRange.start = parseOneAnimationDelay(animOptions['animation-delay'], defaultAnimationDelay().offset);
-
-  if(animOptions['animation-end-delay'])
-    timeRange.end = parseOneAnimationDelay(animOptions['animation-end-delay'], defaultAnimationEndDelay().offset);
-
-  return timeRange;
-}
-
-function parseTimeRange(value) {
-  const timeRange = {
-    start: defaultAnimationDelay(),
-    end: defaultAnimationEndDelay()
+// Parses a given animation-range value (string)
+function parseAnimationRange(value) {
+  const animationRange = {
+    start: defaultAnimationRangeStart(),
+    end: defaultAnimationRangeEnd()
   };
 
   if (!value)
-    return timeRange;
+    return animationRange;
 
   // Format:
   // <start-name> <start-offset> <end-name> <end-offset>
@@ -1662,20 +1669,21 @@ function parseTimeRange(value) {
   });
 
   if (names.length > 2 || offsets.length > 2 || offsets.length == 1) {
-    throw TypeError("Invalid time range");
+    throw TypeError("Invalid time range or unsupported time range format.");
   }
 
   if (names.length) {
-    timeRange.start.name = names[0];
-    timeRange.end.name = names.length > 1 ? names[1] : names[0];
+    animationRange.start.name = names[0];
+    animationRange.end.name = names.length > 1 ? names[1] : names[0];
   }
 
+  // TODO: allow calc() in the offsets
   if (offsets.length > 1) {
-    timeRange.start.offset = CSS.percent(offsets[0]);
-    timeRange.end.offset = CSS.percent(offsets[1]);
+    animationRange.start.offset = CSS.percent(offsets[0]);
+    animationRange.end.offset = CSS.percent(offsets[1]);
   }
 
-  return timeRange;
+  return animationRange;
 }
 
 export function animate(keyframes, options) {
@@ -1684,33 +1692,6 @@ export function animate(keyframes, options) {
   if (timeline instanceof ScrollTimeline)
     delete options.timeline;
 
-  const timelineOffset = (options, property) => {
-     if (property in options) {
-        const value = options[property];
-        if (typeof value != 'number') {
-          delete options[property];
-          return value;
-        }
-        return null;
-     }
-  };
-
-  const updateDelay = (timelineOffset, value) => {
-    if (!value)
-      return;
-
-    // TODO(kevers): Update property names once ratified.
-    // https://github.com/w3c/csswg-drafts/issues/7589
-    if (value.phase)
-      timelineOffset.name = value.phase;
-
-    if (value.percent)
-      timelineOffset.offset = value.percent;
-  };
-
-  const rangeStart = timelineOffset(options, 'rangeStart');
-  const rangeEnd = timelineOffset(options, 'rangeEnd');
-
   const animation = nativeElementAnimate.apply(this, [keyframes, options]);
   const proxyAnimation = new ProxyAnimation(animation, timeline);
 
@@ -1718,9 +1699,11 @@ export function animate(keyframes, options) {
     animation.pause();
     if (timeline instanceof ViewTimeline) {
       const details = proxyAnimations.get(proxyAnimation);
-      details.timeRange = parseTimeRange(options.timeRange);
-      updateDelay(details.timeRange.start, rangeStart);
-      updateDelay(details.timeRange.end, rangeEnd);
+
+      details.animationRange = {
+        start: parseTimelineRangeOffset(options.rangeStart, defaultAnimationRangeStart()), 
+        end: parseTimelineRangeOffset(options.rangeEnd, defaultAnimationRangeEnd()), 
+      };
     }
     proxyAnimation.play();
   }
