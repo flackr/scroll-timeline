@@ -83,7 +83,7 @@ LOCAL_WEBDRIVER_BIN=? #/path/to/webdriver-binaries
 *Command*
 
 ```shell script
-npm run test:webdriver
+npm run test:wpt
 ```
 
 ##### SauceLabs / CI
@@ -103,5 +103,5 @@ SAUCE_KEY=<secret> # Your API key
 *Command*
 
 ```shell script
-TEST_ENV=sauce npm run test:webdriver
+TEST_ENV=sauce npm run test:wpt
 ```
