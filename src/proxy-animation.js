@@ -1708,8 +1708,8 @@ export function animate(keyframes, options) {
       timelineOffset.offset = value.percent;
   };
 
-  const delayTimelineOffset = timelineOffset(options, 'delay');
-  const endDelayTimelineOffset = timelineOffset(options, 'endDelay');
+  const rangeStart = timelineOffset(options, 'rangeStart');
+  const rangeEnd = timelineOffset(options, 'rangeEnd');
 
   const animation = nativeElementAnimate.apply(this, [keyframes, options]);
   const proxyAnimation = new ProxyAnimation(animation, timeline);
@@ -1719,8 +1719,8 @@ export function animate(keyframes, options) {
     if (timeline instanceof ViewTimeline) {
       const details = proxyAnimations.get(proxyAnimation);
       details.timeRange = parseTimeRange(options.timeRange);
-      updateDelay(details.timeRange.start, delayTimelineOffset);
-      updateDelay(details.timeRange.end, endDelayTimelineOffset);
+      updateDelay(details.timeRange.start, rangeStart);
+      updateDelay(details.timeRange.end, rangeEnd);
     }
     proxyAnimation.play();
   }
