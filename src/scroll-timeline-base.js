@@ -595,11 +595,6 @@ export class ViewTimeline extends ScrollTimeline {
   // ViewTimelineOptions. Inferring the source from the subject if not
   // explicitly set.
   constructor(options) {
-    if (options.axis) {
-      // Orientation called axis for a view timeline. Internally we can still
-      // call this axis, since the internal naming is not exposed.
-      options.axis = options.axis;
-    }
     super(options);
     const details = scrollTimelineOptions.get(this);
     details.subject = options && options.subject ? options.subject : undefined;
