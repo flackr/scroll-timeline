@@ -515,10 +515,14 @@ export class StyleParser {
     // have the same options.
     const value = anonymousMatch[VALUES_CAPTURE_INDEX];
     const options = {};
-    // TODO: capture inset in the view() function
+
+    // TODO: This naive check code also accepts `view(40% block 40%)`, which is not
+    // spec compliant. If two inset values are set, they should be grouped together.
     value.split(" ").forEach(token => {
       if(TIMELINE_AXIS_TYPES.includes(token)) {
         options['axis'] = token;
+      } else {
+        options['inset'] = options['inset'] ? `${options['inset']} ${token}` : token;
       }
     });
 
