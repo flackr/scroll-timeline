@@ -267,6 +267,14 @@ export class StyleParser {
               );
               shouldReplacePart = true;
             }
+
+            if (this.hasAutoDuration(shorthand)) {
+              rule.block.contents = rule.block.contents.replace(
+                'auto',
+                '    '
+              );
+              shouldReplacePart = true;
+            }
           }
 
           if(r.toBeReplaced) {
@@ -419,6 +427,11 @@ export class StyleParser {
 
   hasDuration(shorthand) {
     return shorthand.split(" ").filter(part => isTime(part)).length >= 1;
+  }
+
+  hasAutoDuration(shorthand) {
+    // TODO: Cater for animations that are named auto
+    return shorthand.split(" ").filter(part => part === 'auto').length >= 1;
   }
 
   saveRelationInList(rule, timelineNames, animationNames) {
