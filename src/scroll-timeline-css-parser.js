@@ -259,19 +259,21 @@ export class StyleParser {
           // Add 1s as duration to fix this.
           if(r.timelineName || hasAnimationTimeline) {
             if(!this.hasDuration(shorthand)) {
+
+              // `auto` also is valid duration. Older browsers can’t always
+              // handle it properly, so we remove it from the shorthand.
+              if (this.hasAutoDuration(shorthand)) {
+                rule.block.contents = rule.block.contents.replace(
+                  'auto',
+                  '    '
+                );
+              }
+
               // TODO: Should keep track of whether duration is artificial or not,
               // so that we can later track that we need to update timing to
               // properly see duration as 'auto' for the polyfill.
               rule.block.contents = rule.block.contents.replace(
                 shorthand, " 1s " + shorthand
-              );
-              shouldReplacePart = true;
-            }
-
-            if (this.hasAutoDuration(shorthand)) {
-              rule.block.contents = rule.block.contents.replace(
-                'auto',
-                '    '
               );
               shouldReplacePart = true;
             }
