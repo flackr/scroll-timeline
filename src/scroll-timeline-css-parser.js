@@ -466,7 +466,7 @@ export class StyleParser {
     const timelineNames = [];
 
     value.split(",").map(part => part.trim()).forEach(part => {
-      if(isAnonymousScrollTimeline(part)) {
+      if(isAnonymousTimeline(part)) {
         const name = this.saveAnonymousTimelineName(part);
         timelineNames.push(name);
       } else {
@@ -816,7 +816,7 @@ export class StyleParser {
   }
 }
 
-function isAnonymousScrollTimeline(part) {
+function isAnonymousTimeline(part) {
   return (part.startsWith("scroll") || part.startsWith("view")) && part.includes("(");
 }
 
