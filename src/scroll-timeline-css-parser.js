@@ -182,7 +182,6 @@ export class StyleParser {
     for (let i = this.subjectSelectorToViewTimeline.length - 1; i >= 0; i--) {
       const options = this.subjectSelectorToViewTimeline[i];
       if(options.name == timelineName) {
-        // TODO: The subject is the target, no? If yes, then can remove this extra check.
         const subject = this.findPreviousSiblingOrAncestorMatchingSelector(target, options.selector);
         if(subject) {
           return {
