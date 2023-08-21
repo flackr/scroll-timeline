@@ -146,6 +146,8 @@ export class StyleParser {
     return null;
   }
 
+  // TODO: Remove this old lookup mechanism and replace it by one that
+  // respects timeline-scope (https://github.com/flackr/scroll-timeline/issues/123)
   findPreviousSiblingOrAncestorMatchingSelector(target, selector) {
     // Target self
     let candidate = target;
