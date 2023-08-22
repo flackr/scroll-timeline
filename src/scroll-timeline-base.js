@@ -548,6 +548,8 @@ function parseInset(value, containerSize) {
       insetParts.push(parseFloat(part));
     else if(part === "auto")
       insetParts.push(0);
+    else
+      throw TypeError("Unsupported inset. Only % and px values are supported (for now).");
   });
 
   if (insetParts.length > 2) {

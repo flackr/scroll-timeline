@@ -18,7 +18,8 @@ export const RegexMatcher = {
   ANIMATION_TIME_RANGE: /animation-range\s*:([^;}]+)/,
   ANIMATION_NAME: /animation-name\s*:([^;}]+)/,
   ANIMATION: /animation\s*:([^;}]+)/,
-  ANONYMOUS_SCROLL: /scroll\(([^)]*)\)/,
+  ANONYMOUS_SCROLL_TIMELINE: /scroll\(([^)]*)\)/,
+  ANONYMOUS_VIEW_TIMELINE: /view\(([^)]*)\)/,
 };
 
 // Used for ANIMATION_TIMELINE, ANIMATION_NAME and ANIMATION regex
@@ -44,6 +45,7 @@ export class StyleParser {
     this.cssRulesWithTimelineName = [];
     this.nextAnonymousTimelineNameIndex = 0;
     this.anonymousScrollTimelineOptions = new Map(); // save anonymous options by name
+    this.anonymousViewTimelineOptions = new Map(); // save anonymous options by name
     this.sourceSelectorToScrollTimeline = [];
     this.subjectSelectorToViewTimeline = [];
     this.keyframeNamesSelectors = new Map();
@@ -144,6 +146,8 @@ export class StyleParser {
     return null;
   }
 
+  // TODO: Remove this old lookup mechanism and replace it by one that
+  // respects timeline-scope (https://github.com/flackr/scroll-timeline/issues/123)
   findPreviousSiblingOrAncestorMatchingSelector(target, selector) {
     // Target self
     let candidate = target;
@@ -159,7 +163,24 @@ export class StyleParser {
     return null;
   }
 
+  getAnonymousViewTimelineOptions(timelineName, target) {
+    const options = this.anonymousViewTimelineOptions.get(timelineName);
+    if(options) {
+      return {
+        subject: target,
+        axis: (options.axis ? options.axis : 'block'),
+        inset: (options.inset ? options.inset : 'auto'),
+      };
+    }
+
+    return null;
+  }
+
   getViewTimelineOptions(timelineName, target) {
+    const anonymousTimelineOptions = this.getAnonymousViewTimelineOptions(timelineName, target);
+    if(anonymousTimelineOptions)
+      return anonymousTimelineOptions;
+
     for (let i = this.subjectSelectorToViewTimeline.length - 1; i >= 0; i--) {
       const options = this.subjectSelectorToViewTimeline[i];
       if(options.name == timelineName) {
@@ -446,7 +467,7 @@ export class StyleParser {
     const timelineNames = [];
 
     value.split(",").map(part => part.trim()).forEach(part => {
-      if(isAnonymousScrollTimeline(part)) {
+      if(isAnonymousTimeline(part)) {
         const name = this.saveAnonymousTimelineName(part);
         timelineNames.push(name);
       } else {
@@ -461,12 +482,16 @@ export class StyleParser {
     // Anonymous scroll timelines are given a name that starts with ':' to
     // prevent collision with named scroll timelines.
     const name = `:t${this.nextAnonymousTimelineNameIndex++}`;
-    this.anonymousScrollTimelineOptions.set(name, this.parseAnonymousTimeline(part));
+    if (part.startsWith('scroll(')) {
+      this.anonymousScrollTimelineOptions.set(name, this.parseAnonymousScrollTimeline(part));
+    } else {
+      this.anonymousViewTimelineOptions.set(name, this.parseAnonymousViewTimeline(part));
+    }
     return name;
   }
 
-  parseAnonymousTimeline(part) {
-    const anonymousMatch = RegexMatcher.ANONYMOUS_SCROLL.exec(part);
+  parseAnonymousScrollTimeline(part) {
+    const anonymousMatch = RegexMatcher.ANONYMOUS_SCROLL_TIMELINE.exec(part);
     if(!anonymousMatch)
       return null;
 
@@ -483,6 +508,28 @@ export class StyleParser {
     return options;
   }
 
+  parseAnonymousViewTimeline(part) {
+    const anonymousMatch = RegexMatcher.ANONYMOUS_VIEW_TIMELINE.exec(part);
+    if(!anonymousMatch)
+      return null;
+
+    // have the same options.
+    const value = anonymousMatch[VALUES_CAPTURE_INDEX];
+    const options = {};
+
+    // TODO: This naive check code also accepts `view(40% block 40%)`, which is not
+    // spec compliant. If two inset values are set, they should be grouped together.
+    value.split(" ").forEach(token => {
+      if(TIMELINE_AXIS_TYPES.includes(token)) {
+        options['axis'] = token;
+      } else {
+        options['inset'] = options['inset'] ? `${options['inset']} ${token}` : token;
+      }
+    });
+
+    return options;
+  }
+
   extractAnimationName(shorthand) {
     return this.findMatchingEntryInContainer(shorthand, this.keyframeNamesSelectors);
   }
@@ -491,7 +538,7 @@ export class StyleParser {
     let timelineName = null;
     let toBeReplaced = null; // either timelineName or anonymousTimeline
 
-    const anonymousMatch = RegexMatcher.ANONYMOUS_SCROLL.exec(shorthand);
+    const anonymousMatch = RegexMatcher.ANONYMOUS_SCROLL_TIMELINE.exec(shorthand);
     if(!anonymousMatch) {
       timelineName =
           this.findMatchingEntryInContainer(
@@ -770,8 +817,8 @@ export class StyleParser {
   }
 }
 
-function isAnonymousScrollTimeline(part) {
-  return part.startsWith("scroll") && part.includes("(");
+function isAnonymousTimeline(part) {
+  return (part.startsWith("scroll") || part.startsWith("view")) && part.includes("(");
 }
 
 function isTime(s) {
