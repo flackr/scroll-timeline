@@ -1,9 +1,5 @@
 # Scroll-timeline Polyfill
 
-Automated tests in CI provided by  [<img width="120px" src="https://saucelabs.com/images/logo-saucelabs.png">](https://saucelabs.com/)
-
-[![Sauce Test Status](https://saucelabs.com/browser-matrix/zochahou.svg)](https://saucelabs.com/u/zochahou)
-
 A polyfill of ScrollTimeline as defined by the [spec](https://wicg.github.io/scroll-animations/).
 
 View a [cool demo showing its usage](https://flackr.github.io/scroll-timeline/demo/parallax/)!
