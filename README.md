@@ -6,7 +6,7 @@ View a [cool demo showing its usage](https://flackr.github.io/scroll-timeline/de
 
 # Usage
 
-To play with ScrollTimeline, simply import the module into your site and you can start creating animations.
+To use this polyfill, import the module into your site and you can start creating animations that use a `ScrollTimeline` or `ViewTimeline`.
 
 ```js
 import 'https://flackr.github.io/scroll-timeline/dist/scroll-timeline.js';
