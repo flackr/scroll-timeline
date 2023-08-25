@@ -1,6 +1,6 @@
 # Scroll-timeline Polyfill
 
-A polyfill of ScrollTimeline as defined by the [spec](https://wicg.github.io/scroll-animations/).
+A polyfill of ScrollTimeline and ViewTimeline as defined by the [spec](https://drafts.csswg.org/scroll-animations-1/).
 
 View a [cool demo showing its usage](https://flackr.github.io/scroll-timeline/demo/parallax/)!
 
