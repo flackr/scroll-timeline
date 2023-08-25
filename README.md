@@ -50,7 +50,7 @@ npm i
 npm run dev 
 ```
 
-Then open the browser `http://localhost:5000`, choose one of the demos (test) to see how your changes. 
+Then open the browser `http://localhost:3000`, choose one of the demos (test) to see how your changes. 
 
 ### 2. Configure & Run Tests
 
