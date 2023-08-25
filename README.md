@@ -22,6 +22,23 @@ document.getElementById('parallax').animate(
     });
 ```
 
+Also works with CSS Animations that use a `view-timeline` or `scroll-timeline`
+
+```html
+<script src="https://flackr.github.io/scroll-timeline/dist/scroll-timeline.js"></script>
+```
+
+```css
+@keyframes parallax-effect {
+  to { transform: 'translateY(100px)' }
+}
+#parallax {
+  animation: parallax-effect linear both;
+  animation-timeline: scroll(block root);
+  animation-range: 0px 200px;
+}
+```
+
 # Contributing
  
 ### 1. Polyfill dev 
