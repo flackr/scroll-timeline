@@ -220,7 +220,7 @@ export class ScrollTimeline {
   constructor(options) {
     scrollTimelineOptions.set(this, {
       source: null,
-      axis: (options && options.axis) ? options.axis : 'block',
+      axis: null,
       anonymousSource: (options ? options.anonymousSource : null),
       anonymousTarget: (options ? options.anonymousTarget : null),
 
@@ -236,6 +236,10 @@ export class ScrollTimeline {
       options && options.source !== undefined ? options.source
                                               : document.scrollingElement;
     updateSource(this, source);
+
+    const axis = (options && options.axis) ? options.axis : 'block';
+    this.axis = axis;
+
     updateInternal(this);
   }
 
