@@ -12,16 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { parseLength } from "./utils";
-
 import { installCSSOM } from "./proxy-cssom.js";
 installCSSOM();
 
-const AUTO = new CSSKeywordValue("auto");
 const DEFAULT_TIMELINE_AXIS = 'block';
 
 let scrollTimelineOptions = new WeakMap();
-let extensionScrollOffsetFunctions = [];
 
 function scrollEventSource(source) {
   if (source === document.scrollingElement) return document;

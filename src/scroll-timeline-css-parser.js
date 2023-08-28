@@ -37,8 +37,8 @@ const ANIMATION_KEYWORDS = [
 const TIMELINE_AXIS_TYPES = ['block', 'inline', 'x', 'y'];
 const ANONYMOUS_TIMELINE_SOURCE_TYPES = ['nearest', 'root'];
 
-// 1 - Extracts @scroll-timeline and saves it in scrollTimelineOptions.
-// 2 - If we find any animation-timeline in any of the CSS Rules, 
+// Parse a styleSheet to extract the relevant elements needed for
+// scroll-driven animations.
 // we will save objects in a list named cssRulesWithTimelineName
 export class StyleParser {
   constructor() {
@@ -55,8 +55,8 @@ export class StyleParser {
   // https://drafts.csswg.org/css-syntax/#parser-diagrams
   // https://github.com/GoogleChromeLabs/container-query-polyfill/blob/main/src/engine.ts
   // This function is called twice, in the first pass we are interested in saving
-  // @scroll-timeline and @keyframe names, in the second pass
-  // we will parse other rules
+  // the @keyframe names, in the second pass we will parse other rules to extract
+  // scroll-animations related properties and values.
   transpileStyleSheet(sheetSrc, firstPass, srcUrl) {
     // AdhocParser
     const p = {
@@ -198,41 +198,6 @@ export class StyleParser {
     return null;
   }
 
-  parseScrollTimeline(p) {
-    const startIndex = p.index;
-    this.assertString(p, "@scroll-timeline");
-    this.eatWhitespace(p);
-    let name = this.parseIdentifier(p);
-    this.eatWhitespace(p);
-    this.assertString(p, "{"); // eats {
-    this.eatWhitespace(p);
-
-    let scrollTimeline = {
-      name: name,
-      source: "auto",
-      axis: undefined,
-    };
-
-    while (this.peek(p) !== "}") {
-      const property = this.parseIdentifier(p);
-      this.eatWhitespace(p);
-      this.assertString(p, ":");
-      this.eatWhitespace(p);
-      scrollTimeline[property] = this.removeEnclosingDoubleQuotes(this.eatUntil(";", p));
-      this.assertString(p, ";");
-      this.eatWhitespace(p);
-    }
-
-    this.assertString(p, "}");
-    const endIndex = p.index;
-    this.eatWhitespace(p);
-    return {
-      scrollTimeline,
-      startIndex,
-      endIndex,
-    };
-  }
-
   handleScrollTimelineProps(rule, p) {
     // The animation-timeline property may not be used in keyframes
     if (rule.selector.includes("@keyframes")) {
@@ -265,20 +230,16 @@ export class StyleParser {
     if (hasAnimation) {
       this.extractMatches(rule.block.contents, RegexMatcher.ANIMATION)
         .forEach(shorthand => {
-          const r = this.extractTimelineName(shorthand);
-
-          if(r.timelineName)
-            timelineNames.push(r.timelineName);
-
           const animationName = this.extractAnimationName(shorthand);
+
           // Save this animation only if there is a scroll timeline.
-          if (animationName && (r.timelineName || hasAnimationTimeline))
+          if (animationName && hasAnimationTimeline)
             animationNames.push(animationName);
 
           // If there is no duration, animationstart will not happen,
           // and polyfill will not work which is based on animationstart.
           // Add 1s as duration to fix this.
-          if(r.timelineName || hasAnimationTimeline) {
+          if(hasAnimationTimeline) {
             if(!this.hasDuration(shorthand)) {
 
               // `auto` also is valid duration. Older browsers can’t always
@@ -298,18 +259,6 @@ export class StyleParser {
               );
               shouldReplacePart = true;
             }
-          }
-
-          if(r.toBeReplaced) {
-            // Remove timeline name from animation shorthand
-            // so the native implementation works with the rest of the properties
-            // Retain length of original name though, to play nice with multiple
-            // animations that might have been applied
-            rule.block.contents = rule.block.contents.replace(
-              r.toBeReplaced,
-              " ".repeat(r.toBeReplaced.length)
-            );
-            shouldReplacePart = true;
           }
         });
     }
@@ -549,34 +498,10 @@ export class StyleParser {
     return this.findMatchingEntryInContainer(shorthand, this.keyframeNamesSelectors);
   }
 
-  extractTimelineName(shorthand) {
-    let timelineName = null;
-    let toBeReplaced = null; // either timelineName or anonymousTimeline
-
-    const anonymousMatch = RegexMatcher.ANONYMOUS_SCROLL_TIMELINE.exec(shorthand);
-    if(!anonymousMatch) {
-      timelineName =
-          this.findMatchingEntryInContainer(
-              shorthand,
-              new Set(this.sourceSelectorToScrollTimeline.map(o => o.name))) ||
-          this.findMatchingEntryInContainer(
-              shorthand,
-              new Set(this.subjectSelectorToViewTimeline.map(o => o.name)));
-      toBeReplaced = timelineName;
-    } else {
-      const anonymousTimeline = anonymousMatch[WHOLE_MATCH_INDEX];
-      timelineName = this.saveAnonymousTimelineName(anonymousTimeline);
-      toBeReplaced = anonymousTimeline;
-    }
-
-    return { timelineName, toBeReplaced };
-  }
-
   findMatchingEntryInContainer(shorthand, container) {
     const matches = shorthand.split(" ").filter(part => container.has(part))
     return matches ? matches[0] : null;
   }
-
 
   parseIdentifier(p) {
     RegexMatcher.IDENTIFIER.lastIndex = p.index;

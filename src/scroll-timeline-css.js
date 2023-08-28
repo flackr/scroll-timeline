@@ -1,4 +1,4 @@
-import { StyleParser, RegexMatcher } from "./scroll-timeline-css-parser";
+import { StyleParser } from "./scroll-timeline-css-parser";
 import { ProxyAnimation } from "./proxy-animation"
 import { ScrollTimeline, ViewTimeline, getScrollParent, calculateRange,
   calculateRelativePosition } from "./scroll-timeline-base";
@@ -55,14 +55,6 @@ function relativePosition(phase, container, target, axis, optionsInset, percent)
   const phaseRange = calculateRange(phase, container, target, axis, optionsInset);
   const coverRange = calculateRange('cover', container, target, axis, optionsInset);
   return calculateRelativePosition(phaseRange, percent, coverRange);
-}
-
-function isDescendant(child, parent) {
-  while (child) {
-    if (child == parent) return true;
-    child = child.parentNode;
-  }
-  return false;
 }
 
 function createScrollTimeline(anim, animationName, target) {
