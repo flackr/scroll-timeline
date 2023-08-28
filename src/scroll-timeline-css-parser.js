@@ -766,6 +766,10 @@ export class StyleParser {
     }
   }
 
+  parseError(p, msg) {
+    return Error(`(${p.name ? p.name : '<anonymous file>'}): ${msg}`);
+  }
+
   eatUntil(s, p, replaceWithSpace=false) {
     const startIndex = p.index;
     while (!this.lookAhead(s, p)) {
