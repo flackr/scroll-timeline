@@ -57,14 +57,6 @@ function relativePosition(phase, container, target, axis, optionsInset, percent)
   return calculateRelativePosition(phaseRange, percent, coverRange);
 }
 
-function isDescendant(child, parent) {
-  while (child) {
-    if (child == parent) return true;
-    child = child.parentNode;
-  }
-  return false;
-}
-
 function createScrollTimeline(anim, animationName, target) {
   const animOptions = parser.getAnimationTimelineOptions(animationName, target);
 
