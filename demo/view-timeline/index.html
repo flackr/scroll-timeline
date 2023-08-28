@@ -59,10 +59,19 @@
     width:  90%;
   }
 
+  #target.taller {
+    height: 650px;
+  }
+
   #container.rtl > #target,
   #container.ltr > #target {
     height:  90%;
     width: 125px;
+  }
+
+  #container.rtl > #target.taller,
+  #container.ltr > #target.taller {
+    width: 650px;
   }
 
   .progress-bar,
@@ -104,24 +113,32 @@
     <div class="progress-bar" style="top: 270px">
       <span>entry 150% exit -50%</span>
     </div>
+    <div class="progress-bar" style="top: 320px;"><span>entry-crossing</span></div>
+    <div class="progress-bar" style="top: 370px;"><span>exit-crossing</span></div>
     <div class="progress-bar-progress" style="top: 20px;"></div>
     <div class="progress-bar-progress" style="top: 70px;"></div>
     <div class="progress-bar-progress" style="top: 120px;"></div>
     <div class="progress-bar-progress" style="top: 170px;"></div>
     <div class="progress-bar-progress" style="top: 220px;"></div>
     <div class="progress-bar-progress" style="top: 270px;"></div>
+    <div class="progress-bar-progress" style="top: 320px;"></div>
+    <div class="progress-bar-progress" style="top: 370px;"></div>
   </div>
   <input type="radio" name="layout" id="vertical-tb" checked>
-  <label for="vertical">Vertical top to bottom</label>
+  <label for="vertical-tb">Vertical top to bottom</label>
   <input type="radio" name="layout" id="horizontal-ltr">
-  <label for="horizontal-rtl">Horizontal left to right</label>
+  <label for="horizontal-ltr">Horizontal left to right</label>
   <input type="radio" name="layout" id="horizontal-rtl">
   <label for="horizontal-rtl">Horizontal right to left</label>
+  <br>
+  <input type="checkbox" name="subject-size" id="taller-than-scrollport-subject">
+  <label for="taller-than-scrollport-subject">Taller than scrollport subject</label>
 </body>
 <script src="../../dist/scroll-timeline.js"></script>
 <script type="text/javascript">
   "use strict";
 
+  let layout = 'vertical-tb';
   const progressBars = document.querySelectorAll('.progress-bar-progress');
   const createProgressAnimation = (bar, rangeStart, rangeEnd, axis) => {
     const target = document.getElementById('target');
@@ -136,8 +153,8 @@
       fill: 'both'
     });
   }
-  const createAnimations = (selection) => {
-    const axis = selection == 'vertical-tb' ? 'block' : 'inline';
+  const createAnimations = () => {
+    const axis = layout == 'vertical-tb' ? 'block' : 'inline';
     document.getAnimations().forEach(anim => {
       anim.cancel();
     });
@@ -148,6 +165,8 @@
     createProgressAnimation(progressBars[4], 'contain 25%', 'contain 75%', axis);
     createProgressAnimation(progressBars[5], 'entry 150%', 'exit -50%',
                             axis);
+    createProgressAnimation(progressBars[6], 'entry-crossing', 'entry-crossing', axis);
+    createProgressAnimation(progressBars[7], 'exit-crossing', 'exit-crossing', axis);
   };
 
   document.querySelectorAll('input').forEach(input => {
@@ -155,26 +174,41 @@
       document.getAnimations().forEach(anim => {
         anim.cancel();
       });
-      const selection = event.target.id;
-      switch(selection) {
-        case 'vertical-tb':
-          container.classList.remove('rtl');
-          container.classList.remove('ltr');
-          overlay.classList.remove('rtl');
+
+      switch (event.target.name) {
+        case 'layout':
+          const selection = event.target.id;
+          switch(selection) {
+            case 'vertical-tb':
+              container.classList.remove('rtl');
+              container.classList.remove('ltr');
+              overlay.classList.remove('rtl');
+              break;
+
+            case 'horizontal-ltr':
+              container.classList.remove('rtl');
+              container.classList.add('ltr');
+              overlay.classList.remove('rtl');
+              break;
+
+            case 'horizontal-rtl':
+              container.classList.add('rtl');
+              container.classList.remove('ltr');
+              overlay.classList.add('rtl');
+          }
+          layout = selection;
           break;
 
-        case 'horizontal-ltr':
-          container.classList.remove('rtl');
-          container.classList.add('ltr');
-          overlay.classList.remove('rtl');
+        case 'subject-size':
+          if(event.target.checked) {
+            target.classList.add('taller');
+          } else {
+            target.classList.remove('taller');
+          }
           break;
-
-        case 'horizontal-rtl':
-          container.classList.add('rtl');
-          container.classList.remove('ltr');
-          overlay.classList.add('rtl');
       }
-      createAnimations(evt.target.id);
+
+      createAnimations();
     });
   });
 

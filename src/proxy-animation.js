@@ -8,7 +8,7 @@ import {
 const nativeElementAnimate = window.Element.prototype.animate;
 const nativeAnimation = window.Animation;
 
-export const ANIMATION_RANGE_NAMES = ['entry', 'exit', 'cover', 'contain'];
+export const ANIMATION_RANGE_NAMES = ['entry', 'exit', 'cover', 'contain', 'entry-crossing', 'exit-crossing'];
 
 class PromiseWrapper {
   constructor() {
@@ -704,6 +704,15 @@ function createProxyEffect(details) {
              ? (totalDuration - timing.delay - timing.endDelay) /
                  timing.iterations
              : 0;
+          // When the rangeStart comes after the rangeEnd, we end up in a situation
+          // that cannot work. We can tell this by having ended up with a negative
+          // duration. In that case, we need to adjust the computed timings. We do
+          // this by setting the duration to 0 and then assigning the remainder of
+          // the totalDuration to the endDelay
+          if (timing.duration < 0) {
+            timing.duration = 0;
+            timing.endDelay = totalDuration - timing.delay;
+          }
           // Set the timing on the native animation to the normalized values
           // while preserving the specified timing.
           nativeUpdateTiming.apply(effect, [timing]);

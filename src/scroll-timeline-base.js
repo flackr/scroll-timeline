@@ -441,6 +441,7 @@ function range(timeline, phase) {
 }
 
 export function calculateRange(phase, container, target, axis, optionsInset) {
+  // TODO: handle position sticky
   let top = 0;
   let left = 0;
   let node = target;
@@ -509,6 +510,7 @@ export function calculateRange(phase, container, target, axis, optionsInset) {
 
   let startOffset = undefined;
   let endOffset = undefined;
+  const targetIsTallerThanContainer = viewSize > containerSize ? true : false;
 
   switch(phase) {
     case 'cover':
@@ -528,6 +530,16 @@ export function calculateRange(phase, container, target, axis, optionsInset) {
 
     case 'exit':
       startOffset = containEndOffset;
+      endOffset = coverEndOffset;
+      break;
+
+    case 'entry-crossing':
+      startOffset = coverStartOffset;
+      endOffset = targetIsTallerThanContainer ? containEndOffset : containStartOffset;
+      break;
+
+    case 'exit-crossing':
+      startOffset = targetIsTallerThanContainer ? containStartOffset : containEndOffset;
       endOffset = coverEndOffset;
       break;
   }
