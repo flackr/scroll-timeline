@@ -230,20 +230,16 @@ export class StyleParser {
     if (hasAnimation) {
       this.extractMatches(rule.block.contents, RegexMatcher.ANIMATION)
         .forEach(shorthand => {
-          const r = this.extractTimelineName(shorthand);
-
-          if(r.timelineName)
-            timelineNames.push(r.timelineName);
-
           const animationName = this.extractAnimationName(shorthand);
+
           // Save this animation only if there is a scroll timeline.
-          if (animationName && (r.timelineName || hasAnimationTimeline))
+          if (animationName && hasAnimationTimeline)
             animationNames.push(animationName);
 
           // If there is no duration, animationstart will not happen,
           // and polyfill will not work which is based on animationstart.
           // Add 1s as duration to fix this.
-          if(r.timelineName || hasAnimationTimeline) {
+          if(hasAnimationTimeline) {
             if(!this.hasDuration(shorthand)) {
 
               // `auto` also is valid duration. Older browsers can’t always
@@ -263,18 +259,6 @@ export class StyleParser {
               );
               shouldReplacePart = true;
             }
-          }
-
-          if(r.toBeReplaced) {
-            // Remove timeline name from animation shorthand
-            // so the native implementation works with the rest of the properties
-            // Retain length of original name though, to play nice with multiple
-            // animations that might have been applied
-            rule.block.contents = rule.block.contents.replace(
-              r.toBeReplaced,
-              " ".repeat(r.toBeReplaced.length)
-            );
-            shouldReplacePart = true;
           }
         });
     }
@@ -514,34 +498,10 @@ export class StyleParser {
     return this.findMatchingEntryInContainer(shorthand, this.keyframeNamesSelectors);
   }
 
-  extractTimelineName(shorthand) {
-    let timelineName = null;
-    let toBeReplaced = null; // either timelineName or anonymousTimeline
-
-    const anonymousMatch = RegexMatcher.ANONYMOUS_SCROLL_TIMELINE.exec(shorthand);
-    if(!anonymousMatch) {
-      timelineName =
-          this.findMatchingEntryInContainer(
-              shorthand,
-              new Set(this.sourceSelectorToScrollTimeline.map(o => o.name))) ||
-          this.findMatchingEntryInContainer(
-              shorthand,
-              new Set(this.subjectSelectorToViewTimeline.map(o => o.name)));
-      toBeReplaced = timelineName;
-    } else {
-      const anonymousTimeline = anonymousMatch[WHOLE_MATCH_INDEX];
-      timelineName = this.saveAnonymousTimelineName(anonymousTimeline);
-      toBeReplaced = anonymousTimeline;
-    }
-
-    return { timelineName, toBeReplaced };
-  }
-
   findMatchingEntryInContainer(shorthand, container) {
     const matches = shorthand.split(" ").filter(part => container.has(part))
     return matches ? matches[0] : null;
   }
-
 
   parseIdentifier(p) {
     RegexMatcher.IDENTIFIER.lastIndex = p.index;
