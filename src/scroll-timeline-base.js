@@ -506,7 +506,7 @@ export function calculateRange(phase, container, target, axis, optionsInset) {
 
   let startOffset = undefined;
   let endOffset = undefined;
-  let targetIsTallerThanContainer = viewSize > containerSize ? true : false;
+  const targetIsTallerThanContainer = viewSize > containerSize ? true : false;
 
   switch(phase) {
     case 'cover':
