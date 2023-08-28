@@ -327,7 +327,7 @@ export class StyleParser {
     if(hasScrollTimeline) {
       const scrollTimelines = this.extractMatches(rule.block.contents, RegexMatcher.SCROLL_TIMELINE);
       for(const st of scrollTimelines) {
-        parts = this.split(st);
+        const parts = this.split(st);
         let options = {selector: rule.selector, name: ''};
 
         if(parts.length == 1) {
@@ -386,7 +386,7 @@ export class StyleParser {
     if(hasViewTimeline) {
       const viewTimelines = this.extractMatches(rule.block.contents, RegexMatcher.VIEW_TIMELINE);
       for(let tl of viewTimelines) {
-        parts = this.split(tl);
+        const parts = this.split(tl);
         let options = {selector: rule.selector, name: '', inset: null};
         if(parts.length == 1) {
           options.name = parts[0];
