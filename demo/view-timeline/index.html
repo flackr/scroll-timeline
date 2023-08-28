@@ -154,7 +154,7 @@
       fill: 'both'
     });
   }
-  const createAnimations = (layout) => {
+  const createAnimations = () => {
     const axis = layout == 'vertical-tb' ? 'block' : 'inline';
     document.getAnimations().forEach(anim => {
       anim.cancel();
@@ -209,7 +209,7 @@
           break;
       }
 
-      createAnimations(layout);
+      createAnimations();
     });
   });
 
