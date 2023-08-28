@@ -1601,8 +1601,7 @@ export class ProxyAnimation {
 // Parses an individual TimelineRangeOffset
 // TODO: Support all formatting options
 function parseTimelineRangeOffset(value, defaultValue) {
-  // TODO: Should this return the default value?
-  if(!value) return null;
+  if(!value) return defaultValue;
 
   // Extract parts from the passed in value.
   let { rangeName, offset } = defaultValue;
