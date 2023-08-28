@@ -280,6 +280,16 @@ export class StyleParser {
           // Add 1s as duration to fix this.
           if(r.timelineName || hasAnimationTimeline) {
             if(!this.hasDuration(shorthand)) {
+
+              // `auto` also is valid duration. Older browsers can’t always
+              // handle it properly, so we remove it from the shorthand.
+              if (this.hasAutoDuration(shorthand)) {
+                rule.block.contents = rule.block.contents.replace(
+                  'auto',
+                  '    '
+                );
+              }
+
               // TODO: Should keep track of whether duration is artificial or not,
               // so that we can later track that we need to update timing to
               // properly see duration as 'auto' for the polyfill.
@@ -440,6 +450,11 @@ export class StyleParser {
 
   hasDuration(shorthand) {
     return shorthand.split(" ").filter(part => isTime(part)).length >= 1;
+  }
+
+  hasAutoDuration(shorthand) {
+    // TODO: Cater for animations that are named auto
+    return shorthand.split(" ").filter(part => part === 'auto').length >= 1;
   }
 
   saveRelationInList(rule, timelineNames, animationNames) {
