@@ -37,8 +37,8 @@ const ANIMATION_KEYWORDS = [
 const TIMELINE_AXIS_TYPES = ['block', 'inline', 'x', 'y'];
 const ANONYMOUS_TIMELINE_SOURCE_TYPES = ['nearest', 'root'];
 
-// 1 - Extracts @scroll-timeline and saves it in scrollTimelineOptions.
-// 2 - If we find any animation-timeline in any of the CSS Rules, 
+// Parse a styleSheet to extract the relevant elements needed for
+// scroll-driven animations.
 // we will save objects in a list named cssRulesWithTimelineName
 export class StyleParser {
   constructor() {
@@ -55,8 +55,8 @@ export class StyleParser {
   // https://drafts.csswg.org/css-syntax/#parser-diagrams
   // https://github.com/GoogleChromeLabs/container-query-polyfill/blob/main/src/engine.ts
   // This function is called twice, in the first pass we are interested in saving
-  // @scroll-timeline and @keyframe names, in the second pass
-  // we will parse other rules
+  // the @keyframe names, in the second pass we will parse other rules to extract
+  // scroll-animations related properties and values.
   transpileStyleSheet(sheetSrc, firstPass, srcUrl) {
     // AdhocParser
     const p = {
@@ -196,41 +196,6 @@ export class StyleParser {
     }
 
     return null;
-  }
-
-  parseScrollTimeline(p) {
-    const startIndex = p.index;
-    this.assertString(p, "@scroll-timeline");
-    this.eatWhitespace(p);
-    let name = this.parseIdentifier(p);
-    this.eatWhitespace(p);
-    this.assertString(p, "{"); // eats {
-    this.eatWhitespace(p);
-
-    let scrollTimeline = {
-      name: name,
-      source: "auto",
-      axis: undefined,
-    };
-
-    while (this.peek(p) !== "}") {
-      const property = this.parseIdentifier(p);
-      this.eatWhitespace(p);
-      this.assertString(p, ":");
-      this.eatWhitespace(p);
-      scrollTimeline[property] = this.removeEnclosingDoubleQuotes(this.eatUntil(";", p));
-      this.assertString(p, ";");
-      this.eatWhitespace(p);
-    }
-
-    this.assertString(p, "}");
-    const endIndex = p.index;
-    this.eatWhitespace(p);
-    return {
-      scrollTimeline,
-      startIndex,
-      endIndex,
-    };
   }
 
   handleScrollTimelineProps(rule, p) {
