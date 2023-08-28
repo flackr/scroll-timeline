@@ -1,4 +1,4 @@
-import { StyleParser, RegexMatcher } from "./scroll-timeline-css-parser";
+import { StyleParser } from "./scroll-timeline-css-parser";
 import { ProxyAnimation } from "./proxy-animation"
 import { ScrollTimeline, ViewTimeline, getScrollParent, calculateRange,
   calculateRelativePosition } from "./scroll-timeline-base";
