@@ -438,6 +438,7 @@ function range(timeline, phase) {
 }
 
 export function calculateRange(phase, container, target, axis, optionsInset) {
+  // TODO: handle position sticky
   let top = 0;
   let left = 0;
   let node = target;
