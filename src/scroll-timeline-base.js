@@ -18,6 +18,7 @@ import { installCSSOM } from "./proxy-cssom.js";
 installCSSOM();
 
 const AUTO = new CSSKeywordValue("auto");
+const DEFAULT_TIMELINE_AXIS = 'block';
 
 let scrollTimelineOptions = new WeakMap();
 let extensionScrollOffsetFunctions = [];
@@ -220,7 +221,7 @@ export class ScrollTimeline {
   constructor(options) {
     scrollTimelineOptions.set(this, {
       source: null,
-      axis: null,
+      axis: DEFAULT_TIMELINE_AXIS,
       anonymousSource: (options ? options.anonymousSource : null),
       anonymousTarget: (options ? options.anonymousTarget : null),
 
@@ -237,8 +238,10 @@ export class ScrollTimeline {
                                               : document.scrollingElement;
     updateSource(this, source);
 
-    const axis = (options && options.axis) ? options.axis : 'block';
-    this.axis = axis;
+    if ((options && options.axis !== undefined) && 
+        (options.axis != DEFAULT_TIMELINE_AXIS)) {
+      this.axis = options.axis;
+    }
 
     updateInternal(this);
   }
