@@ -197,6 +197,11 @@ export function removeAnimation(scrollTimeline, animation) {
 export function addAnimation(scrollTimeline, animation, tickAnimation) {
   let animations = scrollTimelineOptions.get(scrollTimeline).animations;
   for (let i = 0; i < animations.length; i++) {
+    // @TODO: This early return causes issues when a page with the polyfill
+    // is loaded from the BFCache. Ideally, this code gets fixed instead of
+    // the workaround which clears the proxyAnimations cache on pagehide.
+    // See https://github.com/flackr/scroll-timeline/issues/146#issuecomment-1698159183
+    // for details.
     if (animations[i].animation == animation)
       return;
   }
