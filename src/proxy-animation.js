@@ -849,7 +849,8 @@ export class ProxyAnimation {
     return details.effect;
   }
   set effect(newEffect) {
-    proxyAnimations.get(this).animation.effect = newEffect;
+    const details = proxyAnimations.get(this);
+    details.animation.effect = newEffect;
     // Reset proxy to force re-initialization the next time it is accessed.
     details.effect = null;
   }
