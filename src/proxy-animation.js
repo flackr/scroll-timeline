@@ -313,7 +313,8 @@ function updateFinishedState(details, didSeek, synchronouslyNotify) {
     const playbackRate = effectivePlaybackRate(details);
     const upperBound = effectEnd(details);
     let boundary = details.previousCurrentTime;
-    if (playbackRate > 0 && unconstrainedCurrentTime >= upperBound) {
+    if (playbackRate > 0 && unconstrainedCurrentTime >= upperBound &&
+        details.previousCurrentTime != null) {
       if (boundary === null || boundary < upperBound)
         boundary = upperBound;
       details.holdTime = didSeek ? unconstrainedCurrentTime : boundary;
