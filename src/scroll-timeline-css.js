@@ -176,7 +176,6 @@ export function initCSSPolyfill() {
   // See https://github.com/flackr/scroll-timeline/issues/146#issuecomment-1698159183
   // for details.
   window.addEventListener('pagehide', (e) => {
-    console.log('pagehide');
     proxyAnimations = new WeakMap();
   }, false);
 }
