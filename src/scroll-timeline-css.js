@@ -171,4 +171,11 @@ export function initCSSPolyfill() {
       }
     });
   });
+
+  // Clear cache containing the ProxyAnimation instances when leaving the page.
+  // See https://github.com/flackr/scroll-timeline/issues/146#issuecomment-1698159183
+  // for details.
+  window.addEventListener('pagehide', (e) => {
+    proxyAnimations = new WeakMap();
+  }, false);
 }
