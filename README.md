@@ -30,7 +30,7 @@ Also works with CSS Animations that use a `view-timeline` or `scroll-timeline`
 
 ```css
 @keyframes parallax-effect {
-  to { transform: 'translateY(100px)' }
+  to { transform: translateY(100px) }
 }
 #parallax {
   animation: parallax-effect linear both;
