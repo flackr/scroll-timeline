@@ -241,7 +241,11 @@ export class ScrollTimeline {
 
     if ((options && options.axis !== undefined) && 
         (options.axis != DEFAULT_TIMELINE_AXIS)) {
-      this.axis = options.axis;
+      if (!ScrollTimeline.isValidAxis(options.axis)) {
+        throw TypeError("Invalid axis");
+      }
+
+      scrollTimelineOptions.get(this).axis = options.axis;
     }
 
     updateInternal(this);
@@ -257,11 +261,10 @@ export class ScrollTimeline {
   }
 
   set axis(axis) {
-    if (
-      ["block", "inline", "x", "y"].indexOf(axis) === -1
-    ) {
+    if (!ScrollTimeline.isValidAxis(axis)) {
       throw TypeError("Invalid axis");
     }
+
     scrollTimelineOptions.get(this).axis = axis;
     updateInternal(this);
   }
@@ -321,6 +324,10 @@ export class ScrollTimeline {
 
   get __polyfill() {
     return true;
+  }
+
+  static isValidAxis(axis) {
+    return ["block", "inline", "x", "y"].includes(axis);
   }
 }
 
