@@ -212,6 +212,8 @@ export class StyleParser {
     this.saveSourceSelectorToScrollTimeline(rule);
     this.saveSubjectSelectorToViewTimeline(rule);
 
+    if(!hasAnimationTimeline && !hasAnimationName && !hasAnimation) return;
+
     let timelineNames = [];
     let animationNames = [];
     let shouldReplacePart = false;
