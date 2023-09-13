@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { isValidAxis } from "./utils.js";
 import { installCSSOM } from "./proxy-cssom.js";
 installCSSOM();
 
@@ -242,7 +241,7 @@ export class ScrollTimeline {
 
     if ((options && options.axis !== undefined) && 
         (options.axis != DEFAULT_TIMELINE_AXIS)) {
-      if (!isValidAxis(options.axis)) {
+      if (!ScrollTimeline.isValidAxis(options.axis)) {
         throw TypeError("Invalid axis");
       }
 
@@ -262,7 +261,7 @@ export class ScrollTimeline {
   }
 
   set axis(axis) {
-    if (!isValidAxis(axis)) {
+    if (!ScrollTimeline.isValidAxis(axis)) {
       throw TypeError("Invalid axis");
     }
 
@@ -325,6 +324,10 @@ export class ScrollTimeline {
 
   get __polyfill() {
     return true;
+  }
+
+  static isValidAxis(axis) {
+    return ["block", "inline", "x", "y"].includes(axis);
   }
 }
 
