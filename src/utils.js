@@ -12,3 +12,7 @@ export function parseLength(obj, acceptStr) {
   }
   return null;
 }
+
+export function isValidAxis(axis) {
+  return ["block", "inline", "x", "y"].includes(axis);
+}
