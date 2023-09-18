@@ -107,7 +107,7 @@ export class StyleParser {
           }
         }
       } catch {
-        // Continue matching
+        // TODO: handle nested at-rules
       }      
     }
 
