@@ -97,14 +97,18 @@ export class StyleParser {
     // rule that matches, instead take the one with the most specifity among those that match
     for (let i = this.cssRulesWithTimelineName.length - 1; i >= 0; i--) {
       const current = this.cssRulesWithTimelineName[i];
-      if (target.matches(current.selector)) {
-        if (!current['animation-name'] || current['animation-name'] == animationName) {
-          return {
-            'animation-timeline': current['animation-timeline'],
-            'animation-range': current['animation-range']
+      try {
+        if (target.matches(current.selector)) {
+          if (!current['animation-name'] || current['animation-name'] == animationName) {
+            return {
+              'animation-timeline': current['animation-timeline'],
+              'animation-range': current['animation-range']
+            }
           }
         }
-      }
+      } catch {
+        // Continue matching
+      }      
     }
 
     return null;
