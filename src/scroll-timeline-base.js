@@ -103,6 +103,7 @@ export function calculateMaxScrollOffset(source, axis) {
 
 function resolvePx(cssValue, resolvedLength) {
   if (cssValue instanceof CSSUnitValue) {
+    // TODO: Add support for em, vh
     if (cssValue.unit == "percent")
       return cssValue.value * resolvedLength / 100;
     else if (cssValue.unit == "px")
@@ -115,7 +116,9 @@ function resolvePx(cssValue, resolvedLength) {
       total += resolvePx(value, resolvedLength);
     }
     return total;
-  }
+  } else if (cssValue instanceof CSSMathNegate) {
+    return -resolvePx(cssValue.value, resolvedLength);
+  } 
   throw TypeError("Unsupported value type: " + typeof(cssValue));
 }
 
