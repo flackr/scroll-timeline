@@ -481,14 +481,14 @@ export function calculateRange(phase, container, target, axis, optionsInset) {
   if (axis == 'x' ||
       (axis == 'inline' && horizontalWritingMode) ||
       (axis == 'block' && !horizontalWritingMode)) {
-    viewSize = target.clientWidth;
+    viewSize = target.offsetWidth;
     viewPos = left;
     if (rtl)
       viewPos += container.scrollWidth - container.clientWidth;
     containerSize = container.clientWidth;
   } else {
     // TODO: support sideways-lr
-    viewSize = target.clientHeight;
+    viewSize = target.offsetHeight;
     viewPos = top;
     containerSize = container.clientHeight;
   }
