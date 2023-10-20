@@ -52,6 +52,7 @@
   }
 
   #target {
+    box-sizing: border-box;
     background-color:  rgba(0, 0, 255, 0.5);
     display:  inline-block;
     flex:  none;
@@ -61,6 +62,10 @@
 
   #target.taller {
     height: 650px;
+  }
+
+  #target.borders {
+    border: 25px solid #e0c58b;
   }
 
   #container.rtl > #target,
@@ -133,6 +138,8 @@
   <br>
   <input type="checkbox" name="subject-size" id="taller-than-scrollport-subject">
   <label for="taller-than-scrollport-subject">Taller than scrollport subject</label>
+  <input type="checkbox" name="subject-borders" id="subject-has-borders">
+  <label for="subject-has-borders">Subject has borders</label>
 </body>
 <script src="../../dist/scroll-timeline.js"></script>
 <script type="text/javascript">
@@ -204,6 +211,13 @@
             target.classList.add('taller');
           } else {
             target.classList.remove('taller');
+          }
+          break;
+        case 'subject-borders':
+          if(event.target.checked) {
+            target.classList.add('borders');
+          } else {
+            target.classList.remove('borders');
           }
           break;
       }
