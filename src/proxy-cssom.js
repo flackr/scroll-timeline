@@ -122,7 +122,7 @@ export function installCSSOM() {
       }
     },
 
-    'CSSMathNegate': class extends MathOperation {
+    'CSSMathInvert': class extends MathOperation {
       constructor(values) {
         super([1, arguments[0]], 'invert', 'calc', ' / ');
       }
