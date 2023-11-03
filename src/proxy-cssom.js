@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+import { createAType, invertType, multiplyTypes, to, toSum } from "./numeric-values";
 
 export function installCSSOM() {
   // Object for storing details associated with an object which are to be kept
@@ -88,6 +89,20 @@ export function installCSSOM() {
         return  privateDetails.get(this).unit;
       }
 
+      to(unit) {
+        return to(this, unit)
+      }
+
+      toSum(...units) {
+        return toSum(this, ...units)
+      }
+
+      type() {
+        const details = privateDetails.get(this)
+        // The type of a CSSUnitValue is the result of creating a type from its unit internal slot.
+        return createAType(details.unit)
+      }
+
       toString() {
         const details = privateDetails.get(this);
         return `${details.value}${displayUnit(details.unit)}`;
@@ -114,6 +129,16 @@ export function installCSSOM() {
       constructor(values) {
         super(arguments, 'product', 'calc', ' * ');
       }
+
+      toSum(...units) {
+        return toSum(this, ...units)
+      }
+
+      type() {
+        const values = privateDetails.get(this).values;
+        // The type is the result of multiplying the types of each of the items in its values internal slot.
+        return values.map(v => v.type()).reduce(multiplyTypes)
+      }
     },
 
     'CSSMathNegate': class extends MathOperation {
@@ -133,6 +158,12 @@ export function installCSSOM() {
 
       get value() {
         return  privateDetails.get(this).values[1];
+      }
+
+      type() {
+        const details = privateDetails.get(this)
+        // The type of a CSSUnitValue is the result of creating a type from its unit internal slot.
+        return invertType(details.values[1].type())
       }
     },
 

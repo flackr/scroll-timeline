@@ -12,7 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { installCSSOM } from "./proxy-cssom.js";
+import {installCSSOM} from "./proxy-cssom.js";
+import {simplifyCalculation} from "./simplify-calculation";
+
 installCSSOM();
 
 const DEFAULT_TIMELINE_AXIS = 'block';
@@ -613,20 +615,26 @@ function parseInset(value, containerSize) {
 
 // Calculate the fractional offset of a (phase, percent) pair relative to the
 // full cover range.
-export function relativePosition(timeline, phase, percent) {
+export function relativePosition(timeline, phase, offset) {
   const phaseRange = range(timeline, phase);
   const coverRange = range(timeline, 'cover');
-  return calculateRelativePosition(phaseRange, percent, coverRange);
+  return calculateRelativePosition(phaseRange, offset, coverRange);
 }
 
-export function calculateRelativePosition(phaseRange, percent, coverRange) {
+
+
+export function calculateRelativePosition(phaseRange, offset, coverRange) {
   if (!phaseRange || !coverRange)
     return 0;
 
-  const fraction = percent.value / 100;
-  const offset =
-      (phaseRange.end - phaseRange.start) * fraction + phaseRange.start;
-  return (offset - coverRange.start) / (coverRange.end - coverRange.start);
+  const info = {percentageReference: new CSSUnitValue(phaseRange.end - phaseRange.start, "px")};
+  const simplifiedRangeOffset = simplifyCalculation(offset, info);
+  if (!(simplifiedRangeOffset instanceof CSSUnitValue) || simplifiedRangeOffset.unit !== 'px') {
+    throw new Error(`Unsupported offset '${simplifiedRangeOffset.toString()}'`)
+  }
+
+  const offsetPX = simplifiedRangeOffset.value + phaseRange.start;
+  return (offsetPX - coverRange.start) / (coverRange.end - coverRange.start);
 }
 
 // https://drafts.csswg.org/scroll-animations-1/#view-progress-timelines
