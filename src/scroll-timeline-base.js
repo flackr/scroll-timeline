@@ -162,9 +162,11 @@ function updateSource(timeline, source) {
   if (oldSource == source)
     return;
 
-  if (oldSource && oldScrollListener) {
-    scrollEventSource(oldSource).removeEventListener("scroll",
-                                                     oldScrollListener);
+  if (oldSource) {
+    details.resizeObserver.unobserve(oldSource);
+    if (oldScrollListener) {
+      scrollEventSource(oldSource).removeEventListener("scroll", oldScrollListener);
+    }
   }
   scrollTimelineOptions.get(timeline).source = source;
   if (source) {
@@ -173,6 +175,7 @@ function updateSource(timeline, source) {
     };
     scrollEventSource(source).addEventListener("scroll", listener);
     details.scrollListener = listener;
+    details.resizeObserver.observe(source)
   }
 }
 
@@ -196,8 +199,9 @@ export function removeAnimation(scrollTimeline, animation) {
  * @param scrollTimeline {ScrollTimeline}
  * @param animation {Animation}
  * @param tickAnimation {function(number)}
+ * @param renormalizeTiming {function()}
  */
-export function addAnimation(scrollTimeline, animation, tickAnimation) {
+export function addAnimation(scrollTimeline, animation, tickAnimation, renormalizeTiming) {
   let animations = scrollTimelineOptions.get(scrollTimeline).animations;
   for (let i = 0; i < animations.length; i++) {
     // @TODO: This early return causes issues when a page with the polyfill
@@ -211,9 +215,18 @@ export function addAnimation(scrollTimeline, animation, tickAnimation) {
 
   animations.push({
     animation: animation,
-    tickAnimation: tickAnimation
+    tickAnimation: tickAnimation,
+    renormalizeTiming: renormalizeTiming
   });
   updateInternal(scrollTimeline);
+}
+
+function renormalizeAnimationTimings(scrollTimeline) {
+  let animations = scrollTimelineOptions.get(scrollTimeline).animations;
+  for (const animation of animations) {
+    animation.renormalizeTiming()
+    updateInternal(scrollTimeline)
+  }
 }
 
 // TODO: this is a private function used for unit testing add function
@@ -235,7 +248,8 @@ export class ScrollTimeline {
 
       // Internal members
       animations: [],
-      scrollListener: null
+      scrollListener: null,
+      resizeObserver: new ResizeObserver(() => renormalizeAnimationTimings(this))
     });
     const source =
       options && options.source !== undefined ? options.source
