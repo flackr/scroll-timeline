@@ -120,11 +120,19 @@ export function installCSSOM() {
       constructor(values) {
         super([arguments[0]], 'negate', '-');
       }
+
+      get value() {
+        return  privateDetails.get(this).values[0];
+      }
     },
 
     'CSSMathInvert': class extends MathOperation {
       constructor(values) {
         super([1, arguments[0]], 'invert', 'calc', ' / ');
+      }
+
+      get value() {
+        return  privateDetails.get(this).values[1];
       }
     },
 
