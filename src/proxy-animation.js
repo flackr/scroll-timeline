@@ -524,7 +524,7 @@ function playInternal(details, autoRewind) {
 
   // Additional step for the polyfill.
   addAnimation(details.timeline, details.animation,
-               tickAnimation.bind(details.proxy));
+               tickAnimation.bind(details.proxy), renormalizeTiming.bind(details.proxy));
 
   // 7. If animation's hold time is resolved, let its start time be
   //    unresolved.
@@ -599,6 +599,12 @@ function tickAnimation(timelineTime) {
       details.holdTime = null;
     updateFinishedState(details, false, false);
   }
+}
+
+function renormalizeTiming() {
+  const details = proxyAnimations.get(this);
+  // Force renormalization.
+  details.specifiedTiming = null;
 }
 
 function notifyReady(details) {
@@ -747,8 +753,7 @@ function createProxyEffect(details) {
         target.apply(effect, [details.specifiedTiming]);
       }
       target.apply(effect, argumentsList);
-      // Force renormalization.
-      details.specifiedTiming = null;
+      renormalizeTiming()
     }
   };
   const proxy = new Proxy(effect, handler);
@@ -935,7 +940,7 @@ export class ProxyAnimation {
           // Additional polyfill step needed to associate the animation with
           // the scroll timeline.
           addAnimation(details.timeline, details.animation,
-                       tickAnimation.bind(this));
+                       tickAnimation.bind(this), renormalizeTiming.bind(this));
           break;
 
         //   If previous play state is paused:
