@@ -818,7 +818,10 @@ function fractionalStartDelay(details) {
   if (!(details.timeline instanceof ViewTimeline))
     return 0;
 
-  const startTime = details.animationRange.start;
+  let startTime = details.animationRange.start;
+  if (startTime === 'normal') {
+    startTime = {rangeName: 'cover', offset: CSS.percent(0)};
+  }
   return relativePosition(details.timeline, startTime.rangeName, startTime.offset);
 }
 
@@ -827,7 +830,10 @@ function fractionalEndDelay(details) {
   if (!(details.timeline instanceof ViewTimeline))
     return 0;
 
-  const endTime = details.animationRange.end;
+  let endTime = details.animationRange.end;
+  if (endTime === 'normal') {
+    endTime = {rangeName: 'cover', offset: CSS.percent(100)};
+  }
   return 1 - relativePosition(details.timeline, endTime.rangeName, endTime.offset);
 }
 
@@ -1327,6 +1333,49 @@ export class ProxyAnimation {
     // 4.  Otherwise
     return 'running';
   }
+
+  get rangeStart() {
+    return proxyAnimations.get(this).animationRange.start ?? 'normal';
+  }
+
+  set rangeStart(value) {
+    const details = proxyAnimations.get(this);
+    if (!details.timeline) {
+      return details.animation.rangeStart = value;
+    }
+
+    if (details.timeline instanceof ViewTimeline) {
+      const animationRange = details.animationRange;
+      animationRange.start = parseTimelineRangeOffset(value, 'start');
+
+      // Additional polyfill step to ensure that the native animation has the
+      // correct value for current time.
+      autoAlignStartTime(details);
+      syncCurrentTime(details);
+    }
+  }
+
+  get rangeEnd() {
+    return proxyAnimations.get(this).animationRange.end ?? 'normal';
+  }
+
+  set rangeEnd(value) {
+    const details = proxyAnimations.get(this);
+    if (!details.timeline) {
+      return details.animation.rangeEnd = value;
+    }
+
+    if (details.timeline instanceof ViewTimeline) {
+      const animationRange = details.animationRange;
+      animationRange.end = parseTimelineRangeOffset(value, 'end');
+
+      // Additional polyfill step to ensure that the native animation has the
+      // correct value for current time.
+      autoAlignStartTime(details);
+      syncCurrentTime(details);
+    }
+  }
+
   get replaceState() {
     // TODO: Fix me. Replace state is not a boolean.
     return proxyAnimations.get(this).animation.pending;
@@ -1707,17 +1756,18 @@ export class ProxyAnimation {
 
 // Parses an individual TimelineRangeOffset
 // TODO: Support all formatting options
-function parseTimelineRangeOffset(value, defaultValue) {
-  if(!value) return defaultValue;
+function parseTimelineRangeOffset(value, position) {
+  if(!value || value === 'normal') return 'normal';
 
   // Extract parts from the passed in value.
-  let { rangeName, offset } = defaultValue;
+  let rangeName = 'cover'
+  let offset = position === 'start' ? CSS.percent(0) : CSS.percent(100)
 
   // Author passed in something like `{ rangeName: 'cover', offset: CSS.percent(100) }`
   if (value instanceof Object) {
-    if (value.rangeName != undefined) {
+    if (value.rangeName !== undefined) {
       rangeName = value.rangeName;
-    };
+    }
 
     if (value.offset !== undefined) {
       offset = value.offset;
@@ -1725,12 +1775,17 @@ function parseTimelineRangeOffset(value, defaultValue) {
   }
   // Author passed in something like `"cover 100%"`
   else {
-    const parts = value.split(' ');
+    const parts = value.split(new RegExp(`(${ANIMATION_RANGE_NAMES.join('|')})`)).map(part => part.trim()).filter(Boolean);
 
-    rangeName = parts[0];
-
-    if (parts.length == 2) {
-      offset = parts[1];
+    if (parts.length === 1) {
+      if (ANIMATION_RANGE_NAMES.includes(parts[0])) {
+        rangeName = parts[0];
+      } else {
+        offset = CSSNumericValue.parse(parts[0]);
+      }
+    } else if (parts.length === 2) {
+      rangeName = parts[0];
+      offset = CSSNumericValue.parse(parts[1]);
     }
   }
 
@@ -1739,35 +1794,14 @@ function parseTimelineRangeOffset(value, defaultValue) {
     throw TypeError("Invalid range name");
   }
 
-  // Validate and process offset
-  // TODO: support more than % and px. Don’t forget about calc() along with that.
-  if (!(offset instanceof Object)) {
-    if (!offset.endsWith('%') && !offset.endsWith('px')) {
-      throw TypeError("Invalid range offset. Only % and px are supported (for now)");
-    }
-
-    const parsedValue = parseFloat(offset);
-
-    if (offset.endsWith('%')) {
-      offset = CSS.percent(parsedValue);
-    } else if (offset.endsWith('px')) {
-      offset = CSS.px(parsedValue);
-    }
-
-  }
-
   return { rangeName, offset };
 }
-
-function defaultAnimationRangeStart() { return { rangeName: 'cover', offset: CSS.percent(0) }; }
-
-function defaultAnimationRangeEnd() { return { rangeName: 'cover', offset: CSS.percent(100) }; }
 
 // Parses a given animation-range value (string)
 function parseAnimationRange(value) {
   const animationRange = {
-    start: defaultAnimationRangeStart(),
-    end: defaultAnimationRangeEnd()
+    start: 'normal',
+    end: 'normal'
   };
 
   if (!value)
@@ -1824,8 +1858,8 @@ export function animate(keyframes, options) {
       const details = proxyAnimations.get(proxyAnimation);
 
       details.animationRange = {
-        start: parseTimelineRangeOffset(options.rangeStart, defaultAnimationRangeStart()), 
-        end: parseTimelineRangeOffset(options.rangeEnd, defaultAnimationRangeEnd()), 
+        start: parseTimelineRangeOffset(options.rangeStart, 'start'),
+        end: parseTimelineRangeOffset(options.rangeEnd, 'end'),
       };
     }
     proxyAnimation.play();
