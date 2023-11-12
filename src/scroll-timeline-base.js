@@ -18,6 +18,7 @@ import {simplifyCalculation} from "./simplify-calculation";
 installCSSOM();
 
 const DEFAULT_TIMELINE_AXIS = 'block';
+const NAMED_TIMELINE_RANGES = ["contain", "cover", "entry", "exit", "entry-crossing", "exit-crossing"];
 
 let scrollTimelineOptions = new WeakMap();
 let sourceDetails = new WeakMap();
@@ -25,6 +26,14 @@ let sourceDetails = new WeakMap();
 function scrollEventSource(source) {
   if (source === document.scrollingElement) return document;
   return source;
+}
+
+function updateRanges(scrollTimelineInstance) {
+  const details = scrollTimelineOptions.get(scrollTimelineInstance);
+  // Store ranges
+  for (const rangeName of NAMED_TIMELINE_RANGES) {
+    details.ranges[rangeName] = range(scrollTimelineInstance, rangeName);
+  }
 }
 
 /**
@@ -52,14 +61,14 @@ function updateInternal(scrollTimelineInstance) {
 function directionAwareScrollOffset(source, axis) {
   if (!source)
     return null;
-  const scrollPos = sourceDetails.get(source).scrollPos;
+  const measurements = sourceDetails.get(source).measurements;
   const style = getComputedStyle(source);
   // All writing modes are vertical except for horizontal-tb.
   // TODO: sideways-lr should flow bottom to top, but is currently unsupported
   // in Chrome.
   // http://drafts.csswg.org/css-writing-modes-4/#block-flow
   const horizontalWritingMode = style.writingMode == 'horizontal-tb';
-  let currentScrollOffset  = scrollPos.scrollTop;
+  let currentScrollOffset  = measurements.scrollTop;
   if (axis == 'x' ||
      (axis == 'inline' && horizontalWritingMode) ||
      (axis == 'block' && !horizontalWritingMode)) {
@@ -68,7 +77,7 @@ function directionAwareScrollOffset(source, axis) {
     // block flow. This is a consequence of shifting the scroll origin due to
     // changes in the overflow direction.
     // http://drafts.csswg.org/cssom-view/#overflow-directions.
-    currentScrollOffset = Math.abs(scrollPos.scrollLeft);
+    currentScrollOffset = Math.abs(measurements.scrollLeft);
   }
   return currentScrollOffset;
 }
@@ -90,6 +99,7 @@ export function calculateTargetEffectEnd(animation) {
  * @returns {number}
  */
 export function calculateMaxScrollOffset(source, axis) {
+  const measurements = sourceDetails.get(source).measurements;
   // Only one horizontal writing mode: horizontal-tb.  All other writing modes
   // flow vertically.
   const horizontalWritingMode =
@@ -99,9 +109,9 @@ export function calculateMaxScrollOffset(source, axis) {
   else if (axis === "inline")
     axis = horizontalWritingMode ? "x" : "y";
   if (axis === "y")
-    return source.scrollHeight - source.clientHeight;
+    return measurements.scrollHeight - measurements.clientHeight;
   else if (axis === "x")
-    return source.scrollWidth - source.clientWidth;
+    return measurements.scrollWidth - measurements.clientWidth;
 }
 
 function resolvePx(cssValue, resolvedLength) {
@@ -184,47 +194,61 @@ function updateSource(timeline, source) {
       // Store a list of connected timelines and current scroll position
       details = {
         timelines: [],
-        scrollPos: {
+        measurements: {
           scrollLeft: source.scrollLeft,
-          scrollTop: source.scrollTop
+          scrollTop: source.scrollTop,
+          scrollWidth: source.scrollWidth,
+          scrollHeight: source.scrollHeight,
+          clientWidth: source.clientWidth,
+          clientHeight: source.clientHeight
         }
       };
       sourceDetails.set(source, details);
 
       const resizeObserver = new ResizeObserver(() => {
         // Sample and store scroll pos
-        details.scrollPos = {
+        details.measurements = {
           scrollLeft: source.scrollLeft,
-          scrollTop: source.scrollTop
+          scrollTop: source.scrollTop,
+          scrollWidth: source.scrollWidth,
+          scrollHeight: source.scrollHeight,
+          clientWidth: source.clientWidth,
+          clientHeight: source.clientHeight
         };
+        // Update dimensions of ranges before ticking the timelines
+        for (const timeline of details.timelines) {
+          updateRanges(timeline);
+        }
         requestAnimationFrame(() => {
           // Defer ticking timeline to animation frame to prevent
           // "ResizeObserver loop completed with undelivered notifications"
           for (const timeline of details.timelines) {
-            renormalizeAnimationTimings(timeline);
+            updateInternal(timeline);
           }
         });
       });
       resizeObserver.observe(source);
+      for (const child of source.children) {
+        resizeObserver.observe(child);
+      }
 
       const scrollListener = () => {
         // Sample and store scroll pos
-        details.scrollPos = {
-          scrollLeft: source.scrollLeft,
-          scrollTop: source.scrollTop
-        };
+        details.measurements.scrollLeft = source.scrollLeft;
+        details.measurements.scrollTop = source.scrollTop;
+
         for (const timeline of details.timelines) {
           updateInternal(timeline);
         }
       };
       scrollEventSource(source).addEventListener("scroll", scrollListener);
       details.disconnect = () => {
-        resizeObserver.unobserve(source);
         resizeObserver.disconnect();
         scrollEventSource(source).removeEventListener("scroll", scrollListener);
       };
     }
     details.timelines.push(timeline);
+    updateRanges(timeline);
   }
 }
 
@@ -264,17 +288,8 @@ export function addAnimation(scrollTimeline, animation, tickAnimation, renormali
 
   animations.push({
     animation: animation,
-    tickAnimation: tickAnimation,
-    renormalizeTiming: renormalizeTiming
+    tickAnimation: tickAnimation
   });
-  updateInternal(scrollTimeline);
-}
-
-function renormalizeAnimationTimings(scrollTimeline) {
-  let animations = scrollTimelineOptions.get(scrollTimeline).animations;
-  for (const animation of animations) {
-    animation.renormalizeTiming();
-  }
   updateInternal(scrollTimeline);
 }
 
@@ -298,6 +313,9 @@ export class ScrollTimeline {
       // Internal members
       animations: [],
       scrollListener: null,
+
+      // Stored ranges
+      ranges: {}
     });
     const source =
       options && options.source !== undefined ? options.source
@@ -662,8 +680,9 @@ function parseInset(value, containerSize) {
 // Calculate the fractional offset of a (phase, percent) pair relative to the
 // full cover range.
 export function relativePosition(timeline, phase, offset) {
-  const phaseRange = range(timeline, phase);
-  const coverRange = range(timeline, 'cover');
+  const details = scrollTimelineOptions.get(timeline);
+  const phaseRange = details.ranges[phase];
+  const coverRange = details.ranges['cover'];
   return calculateRelativePosition(phaseRange, offset, coverRange);
 }
 
