@@ -174,7 +174,11 @@ export function measureSource (source) {
     clientWidth: source.clientWidth,
     clientHeight: source.clientHeight,
     writingMode: style.writingMode,
-    direction: style.direction
+    direction: style.direction,
+    scrollPaddingTop: style.scrollPaddingTop,
+    scrollPaddingBottom: style.scrollPaddingBottom,
+    scrollPaddingLeft: style.scrollPaddingLeft,
+    scrollPaddingRight: style.scrollPaddingRight
   };
 }
 
@@ -199,11 +203,13 @@ export function measureSubject(source, subject) {
   }
   left -= source.offsetLeft + source.clientLeft;
   top -= source.offsetTop + source.clientTop;
+  const style = getComputedStyle(subject);
   return {
     top,
     left,
     offsetWidth: subject.offsetWidth,
-    offsetHeight: subject.offsetHeight
+    offsetHeight: subject.offsetHeight,
+    fontSize: style.fontSize,
   };
 }
 
@@ -287,7 +293,7 @@ function updateSource(timeline, source) {
           updateMeasurements(record.target);
         }
       });
-      mutationObserver.observe(source, {attributes: true, attributeFilter: ['style']});
+      mutationObserver.observe(source, {attributes: true, attributeFilter: ['style', 'class']});
 
       const scrollListener = () => {
         // Sample and store scroll pos
@@ -304,6 +310,7 @@ function updateSource(timeline, source) {
       scrollEventSource(source).addEventListener("scroll", scrollListener);
       details.disconnect = () => {
         resizeObserver.disconnect();
+        mutationObserver.disconnect();
         scrollEventSource(source).removeEventListener("scroll", scrollListener);
       };
     }
@@ -368,7 +375,7 @@ export class ScrollTimeline {
 
       // View timeline
       subject: null,
-      inset: (options ? options.inset : null),
+      inset: null,
 
       // Internal members
       animations: [],
@@ -599,23 +606,29 @@ export function calculateRange(phase, sourceMeasurements, subjectMeasurements, a
   const rtl = sourceMeasurements.direction == 'rtl' || sourceMeasurements.writingMode == 'vertical-rl';
   let viewSize = undefined;
   let viewPos = undefined;
-  let containerSize = undefined;
+  let sizes = {
+    fontSize: subjectMeasurements.fontSize
+  };
   if (axis == 'x' ||
       (axis == 'inline' && horizontalWritingMode) ||
       (axis == 'block' && !horizontalWritingMode)) {
     viewSize = subjectMeasurements.offsetWidth;
     viewPos = subjectMeasurements.left;
-    if (rtl)
+    sizes.scrollPadding = [sourceMeasurements.scrollPaddingLeft, sourceMeasurements.scrollPaddingRight];
+    if (rtl) {
       viewPos += sourceMeasurements.scrollWidth - sourceMeasurements.clientWidth;
-    containerSize = sourceMeasurements.clientWidth;
+      sizes.scrollPadding = [sourceMeasurements.scrollPaddingRight, sourceMeasurements.scrollPaddingLeft];
+    }
+    sizes.containerSize = sourceMeasurements.clientWidth;
   } else {
     // TODO: support sideways-lr
     viewSize = subjectMeasurements.offsetHeight;
     viewPos = subjectMeasurements.top;
-    containerSize = sourceMeasurements.clientHeight;
+    sizes.scrollPadding = [sourceMeasurements.scrollPaddingTop, sourceMeasurements.scrollPaddingBottom];
+    sizes.containerSize = sourceMeasurements.clientHeight;
   }
 
-  const inset = parseInset(optionsInset, containerSize);
+  const inset = calculateInset(optionsInset, sizes);
 
   // Cover:
   // 0% progress represents the position at which the start border edge of the
@@ -624,7 +637,7 @@ export function calculateRange(phase, sourceMeasurements, subjectMeasurements, a
   // 100% progress represents the position at which the end border edge of the
   // element’s principal box coincides with the start edge of its view progress
   // visibility range.
-  const coverStartOffset = viewPos - containerSize + inset.end;
+  const coverStartOffset = viewPos - sizes.containerSize + inset.end;
   const coverEndOffset = viewPos + viewSize - inset.start;
 
   // Contain:
@@ -647,7 +660,7 @@ export function calculateRange(phase, sourceMeasurements, subjectMeasurements, a
 
   let startOffset = undefined;
   let endOffset = undefined;
-  const targetIsTallerThanContainer = viewSize > containerSize ? true : false;
+  const targetIsTallerThanContainer = viewSize > sizes.containerSize ? true : false;
 
   switch(phase) {
     case 'cover':
@@ -683,46 +696,73 @@ export function calculateRange(phase, sourceMeasurements, subjectMeasurements, a
   return { start: startOffset, end: endOffset };
 }
 
-function validateInset(value) {
-  // Validating insets when constructing ViewTimeline by running the parse function.
-  // TODO: parse insets to CSSNumericValue when constructing ViewTimeline
-  parseInset(value, 0)
-}
-
-function parseInset(value, containerSize) {
+function parseInset(value) {
   const inset = { start: 0, end: 0 };
 
-  if(!value)
-    return inset;
+  if (!value) return inset;
 
-  const parts = value.split(' ');
-  const insetParts = [];
-  parts.forEach(part => {
-    // TODO: Add support for relative lengths (e.g. em)
-    if(part.endsWith("%"))
-      insetParts.push(containerSize / 100 * parseFloat(part));
-    else if(part.endsWith("px"))
-      insetParts.push(parseFloat(part));
-    else if(part === "auto")
-      insetParts.push(0);
-    else
-      throw TypeError("Unsupported inset. Only % and px values are supported (for now).");
+  let parts = value;
+  // Parse string parts to
+  if (typeof value === 'string') {
+    // Split value into separate parts
+    const stringParts = value.split(/(?<!\([^\)]*)\s(?![^\(]*\))/);
+    parts = stringParts.map(str => {
+      if (str.trim() === 'auto') {
+        return 'auto';
+      } else {
+        try {
+          return CSSNumericValue.parse(str);
+        } catch (e) {
+          throw TypeError('Invalid inset');
+        }
+      }
+    });
+  }
+  if (parts.length === 0 || parts.length > 2) {
+    throw TypeError('Invalid inset');
+  }
+
+  // Validate that the parts are 'auto' or <length-percentage>
+  for (const part of parts) {
+    if (part === 'auto') {
+      continue;
+    }
+    const type = part.type();
+    if (!(type.length === 1 || type.percent === 1)) {
+      throw TypeError('Invalid inset');
+    }
+  }
+
+  return {
+    start: parts[0],
+    end: parts[1] ?? parts[0]
+  };
+}
+
+function calculateInset(value, sizes) {
+  const inset = { start: 0, end: 0 };
+
+  if (!value) return inset;
+
+  const [start, end] = [value.start, value.end].map((part, i) => {
+    if (part === 'auto') {
+      return sizes.scrollPadding[i] === 'auto' ? 0 : parseFloat(sizes.scrollPadding[i]);
+    }
+
+    const simplifiedUnit = simplifyCalculation(part, {
+      percentageReference: CSS.px(sizes.containerSize),
+      fontSize: CSS.px(parseFloat(sizes.fontSize))
+    });
+    if (simplifiedUnit instanceof CSSUnitValue && simplifiedUnit.unit === 'px') {
+      return simplifiedUnit.value;
+    } else {
+      throw TypeError('Unsupported inset.');
+    }
   });
 
-  if (insetParts.length > 2) {
-    throw TypeError("Invalid inset");
-  }
-
-  if(insetParts.length == 1) {
-    inset.start = insetParts[0];
-    inset.end = insetParts[0];
-  } else if(insetParts.length == 2) {
-    inset.start = insetParts[0];
-    inset.end = insetParts[1];
-  }
-
-  return inset;
+  return { start, end };
 }
+
 
 // Calculate the fractional offset of a (phase, percent) pair relative to the
 // full cover range.
@@ -763,11 +803,16 @@ export class ViewTimeline extends ScrollTimeline {
     details.subject = options && options.subject ? options.subject : undefined;
     // TODO: Handle insets.
     if (options && options.inset) {
-      validateInset(options.inset)
+      details.inset = parseInset(options.inset);
     }
-
+    if (details.subject) {
+      const mutationObserver = new MutationObserver(() => {
+        updateMeasurements(details.source);
+      });
+      mutationObserver.observe(details.subject, {attributes: true, attributeFilter: ['class', 'style']});
+    }
     validateSource(this);
-    details.subjectMeasurements = measureSubject(details.source, details.subject)
+    details.subjectMeasurements = measureSubject(details.source, details.subject);
     updateInternal(this);
   }
 
@@ -803,6 +848,14 @@ export class ViewTimeline extends ScrollTimeline {
         (scrollPos - offsets.start) / (offsets.end - offsets.start);
 
     return CSS.percent(100 * progress);
+  }
+
+  get startOffset() {
+    return CSS.px(range(this,'cover').start);
+  }
+
+  get endOffset() {
+    return CSS.px(range(this,'cover').end);
   }
 
 }

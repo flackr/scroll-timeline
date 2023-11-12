@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 import { createAType, invertType, multiplyTypes, to, toSum } from "./numeric-values";
+import { simplifyCalculation } from "./simplify-calculation";
 
 export function installCSSOM() {
   // Object for storing details associated with an object which are to be kept
@@ -68,7 +69,126 @@ export function installCSSOM() {
     }
   }
 
+  /**
+   * Parse a CSSUnitValue from the passed string
+   * @param {string} str
+   * @return {CSSUnitValue}
+   */
+  function parseCSSUnitValue(str) {
+    const UNIT_VALUE_REGEXP = /^(-?\d*[.]?\d+)(r?em|r?ex|r?cap|r?ch|r?ic|r?lh|[sld]?v(w|h|i|b|min|max)|cm|mm|Q|in|pt|pc|px|%)?$/;
+    const match = str.match(UNIT_VALUE_REGEXP);
+    if (match) {
+      let [_, v, unit] = match;
+      if (typeof unit === 'undefined') {
+        unit = 'number';
+      } else if (unit === '%') {
+        unit = 'percent';
+      }
+      return new CSSUnitValue(parseFloat(v), unit);
+    } else {
+      throw new SyntaxError(`Unsupported syntax ${str}`);
+    }
+  }
+
+  /**
+   * Parse the string as a CSSMathProduct
+   * @param {string} str
+   * @return {CSSMathProduct}
+   */
+  function parseCSSMultiplication(str) {
+    let values = [];
+    const tokens = str.split(/(?<!\([^\)]*)([*])(?![^\(]*\))/);
+    values.push(parseCSSDivision(tokens.shift()));
+    while (tokens.length) {
+      tokens.shift(); // Consume operator '*'
+      values.push(parseCSSDivision(tokens.shift()));
+    }
+    return new CSSMathProduct(...values);
+  }
+
+  /**
+   * Parse the string as a CSSMathProduct
+   * @param {string} str
+   * @return {CSSMathProduct}
+   */
+  function parseCSSDivision(str) {
+    let values = [];
+    const tokens = str.split(/(?<!\([^\)]*)([/])(?![^\(]*\))/);
+    values.push(parseCSSNumericValue(tokens.shift()));
+    while (tokens.length) {
+      tokens.shift(); // Consume operator '/'
+      values.push(new CSSMathInvert(parseCSSNumericValue(tokens.shift())));
+    }
+    return new CSSMathProduct(...values);
+  }
+
+  /**
+   * Parse the string as a CSSMathSum
+   * @param {string} str
+   * @return {CSSMathSum}
+   */
+  function parseCSSMathSum(str) {
+    let values = [];
+    const tokens = str.split(/(?<!\([^\)]*)(\s[+-]\s)(?![^\(]*\))/);
+    values.push(parseCSSMultiplication(tokens.shift()));
+    while (tokens.length) {
+      let op = tokens.shift();
+      let val = tokens.shift();
+      if (op.trim() === '+') {
+        values.push(parseCSSMultiplication(val));
+      } else if (op.trim() === '-') {
+        values.push(new CSSMathNegate(parseCSSMultiplication(val)));
+      }
+    }
+    return new CSSMathSum(...values);
+  }
+
+  /**
+   * Parse math function form the passed string and return a matching CSSMathValue
+   * @param {string} str
+   * @return {CSSMathValue}
+   */
+  function parseMathFunction(str) {
+    const MATH_VALUE_REGEXP = /^(calc|min|max)?\((.*)\)$/;
+    const match = str.match(MATH_VALUE_REGEXP);
+    if (match) {
+      let [_, operation = 'parens', value] = match;
+      switch (operation) {
+        case 'calc':
+        case 'parens':
+          return parseCSSMathSum(value);
+        case 'min':
+          return new CSSMathMin(...value.split(',').map(parseCSSNumericValue));
+        case 'max':
+          return new CSSMathMax(...value.split(',').map(parseCSSNumericValue));
+      }
+    } else {
+      throw new SyntaxError(`Unsupported syntax ${str}`);
+    }
+  }
+
+  /**
+   * A naive parsing function parsing the input string and returning a CSSNumericValue.
+   * It supports simple expressions as 'calc(10em + 10px)'
+   *
+   * @param {string} value
+   * @return {CSSNumericValue}
+   */
+  function parseCSSNumericValue(value) {
+    value = value.trim();
+    if (value.match(/^[a-z(]/i)) {
+      return parseMathFunction(value);
+    } else {
+      return parseCSSUnitValue(value);
+    }
+  }
+
   const cssOMTypes = {
+    'CSSNumericValue': class {
+      static parse(value) {
+        return simplifyCalculation(parseCSSNumericValue(value), {});
+      }
+    },
     'CSSUnitValue': class {
       constructor(value, unit) {
         privateDetails.set(this, {
