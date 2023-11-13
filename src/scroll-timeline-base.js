@@ -34,9 +34,11 @@ function updateInternal(scrollTimelineInstance) {
   let animations = details.animations;
   if (animations.length === 0) return;
   let timelineTime = scrollTimelineInstance.currentTime;
-  for (let i = 0; i < animations.length; i++) {
-    animations[i].tickAnimation(timelineTime);
-  }
+  requestAnimationFrame(() => {
+    for (let i = 0; i < animations.length; i++) {
+      animations[i].tickAnimation(timelineTime);
+    }
+  });
 }
 
 /**
