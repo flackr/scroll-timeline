@@ -18,6 +18,7 @@ installCSSOM();
 const DEFAULT_TIMELINE_AXIS = 'block';
 
 let scrollTimelineOptions = new WeakMap();
+let sourceDetails = new WeakMap();
 
 function scrollEventSource(source) {
   if (source === document.scrollingElement) return document;
@@ -49,14 +50,14 @@ function updateInternal(scrollTimelineInstance) {
 function directionAwareScrollOffset(source, axis) {
   if (!source)
     return null;
-
+  const scrollPos = sourceDetails.get(source).scrollPos;
   const style = getComputedStyle(source);
   // All writing modes are vertical except for horizontal-tb.
   // TODO: sideways-lr should flow bottom to top, but is currently unsupported
   // in Chrome.
   // http://drafts.csswg.org/css-writing-modes-4/#block-flow
   const horizontalWritingMode = style.writingMode == 'horizontal-tb';
-  let currentScrollOffset  = source.scrollTop;
+  let currentScrollOffset  = scrollPos.scrollTop;
   if (axis == 'x' ||
      (axis == 'inline' && horizontalWritingMode) ||
      (axis == 'block' && !horizontalWritingMode)) {
@@ -65,7 +66,7 @@ function directionAwareScrollOffset(source, axis) {
     // block flow. This is a consequence of shifting the scroll origin due to
     // changes in the overflow direction.
     // http://drafts.csswg.org/cssom-view/#overflow-directions.
-    currentScrollOffset = Math.abs(source.scrollLeft);
+    currentScrollOffset = Math.abs(scrollPos.scrollLeft);
   }
   return currentScrollOffset;
 }
@@ -156,26 +157,72 @@ function validateAnonymousSource(timeline) {
 }
 
 function updateSource(timeline, source) {
-  const details = scrollTimelineOptions.get(timeline);
-  const oldSource = details.source;
-  const oldScrollListener = details.scrollListener;
+  const oldSource = scrollTimelineOptions.get(timeline).source;
   if (oldSource == source)
     return;
 
   if (oldSource) {
-    details.resizeObserver.unobserve(oldSource);
-    if (oldScrollListener) {
-      scrollEventSource(oldSource).removeEventListener("scroll", oldScrollListener);
+    const details = sourceDetails.get(oldSource);
+    if (details) {
+      // Remove timelines from source
+      details.timelines = details.timelines.filter(t => t !== timeline);
+      if (details.timelines.length === 0) {
+        // All timelines have been disconnected from the source
+        // Clean up
+        details.disconnect();
+        sourceDetails.delete(oldSource);
+      }
     }
   }
   scrollTimelineOptions.get(timeline).source = source;
   if (source) {
-    const listener = () => {
-      updateInternal(timeline);
-    };
-    scrollEventSource(source).addEventListener("scroll", listener);
-    details.scrollListener = listener;
-    details.resizeObserver.observe(source)
+    let details = sourceDetails.get(source);
+    if (!details) {
+      // This is the first timeline for this source
+      // Store a list of connected timelines and current scroll position
+      details = {
+        timelines: [],
+        scrollPos: {
+          scrollLeft: source.scrollLeft,
+          scrollTop: source.scrollTop
+        }
+      };
+      sourceDetails.set(source, details);
+
+      const resizeObserver = new ResizeObserver(() => {
+        // Sample and store scroll pos
+        details.scrollPos = {
+          scrollLeft: source.scrollLeft,
+          scrollTop: source.scrollTop
+        };
+        requestAnimationFrame(() => {
+          // Defer ticking timeline to animation frame to prevent
+          // "ResizeObserver loop completed with undelivered notifications"
+          for (const timeline of details.timelines) {
+            renormalizeAnimationTimings(timeline);
+          }
+        });
+      });
+      resizeObserver.observe(source);
+
+      const scrollListener = () => {
+        // Sample and store scroll pos
+        details.scrollPos = {
+          scrollLeft: source.scrollLeft,
+          scrollTop: source.scrollTop
+        };
+        for (const timeline of details.timelines) {
+          updateInternal(timeline);
+        }
+      };
+      scrollEventSource(source).addEventListener("scroll", scrollListener);
+      details.disconnect = () => {
+        resizeObserver.unobserve(source);
+        resizeObserver.disconnect();
+        scrollEventSource(source).removeEventListener("scroll", scrollListener);
+      };
+    }
+    details.timelines.push(timeline);
   }
 }
 
@@ -224,9 +271,9 @@ export function addAnimation(scrollTimeline, animation, tickAnimation, renormali
 function renormalizeAnimationTimings(scrollTimeline) {
   let animations = scrollTimelineOptions.get(scrollTimeline).animations;
   for (const animation of animations) {
-    animation.renormalizeTiming()
-    updateInternal(scrollTimeline)
+    animation.renormalizeTiming();
   }
+  updateInternal(scrollTimeline);
 }
 
 // TODO: this is a private function used for unit testing add function
@@ -249,7 +296,6 @@ export class ScrollTimeline {
       // Internal members
       animations: [],
       scrollListener: null,
-      resizeObserver: new ResizeObserver(() => renormalizeAnimationTimings(this))
     });
     const source =
       options && options.source !== undefined ? options.source

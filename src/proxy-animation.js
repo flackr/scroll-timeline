@@ -603,8 +603,10 @@ function tickAnimation(timelineTime) {
 
 function renormalizeTiming() {
   const details = proxyAnimations.get(this);
-  // Force renormalization.
-  details.specifiedTiming = null;
+  if (details) {
+    // Force renormalization.
+    details.specifiedTiming = null;
+  }
 }
 
 function notifyReady(details) {
