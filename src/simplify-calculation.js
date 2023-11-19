@@ -1,7 +1,7 @@
 import {isCanonical} from "./utils";
 
 /**
- * @typedef {{percentageReference: CSSUnitValue}} Info
+ * @typedef {{percentageReference: CSSUnitValue, fontSize?: CSSUnitValue}} Info
  */
 
 /**
@@ -81,7 +81,9 @@ export function simplifyCalculation(root, info) {
       root = sum.values[0];
     }
     // TODO: handle relative lengths
-
+    if (root instanceof CSSUnitValue && root.unit === 'em' && info.fontSize) {
+      root = new CSSUnitValue(root.value * info.fontSize.value, info.fontSize.unit)
+    }
     // 3. If root is a <calc-constant>, return its numeric value.
     // 4. Otherwise, return root.
     return root;

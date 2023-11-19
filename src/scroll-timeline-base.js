@@ -168,6 +168,42 @@ function validateAnonymousSource(timeline) {
   updateSource(timeline, source);
 }
 
+/**
+ * Read measurements of source element
+ * @param {HTMLElement} source
+ * @return {{clientWidth: *, scrollHeight: *, scrollLeft, clientHeight: *, scrollTop, scrollWidth: *}}
+ */
+function readMeasurements (source) {
+  return {
+    scrollLeft: source.scrollLeft,
+    scrollTop: source.scrollTop,
+    scrollWidth: source.scrollWidth,
+    scrollHeight: source.scrollHeight,
+    clientWidth: source.clientWidth,
+    clientHeight: source.clientHeight
+  };
+}
+
+/**
+ * Update measurements of source, and
+ * @param {HTMLElement} source
+ */
+function updateSourceMeasurements(source) {
+  let details = sourceDetails.get(source);
+  details.measurements = readMeasurements(source);
+  // Update dimensions of ranges before ticking the timelines
+  for (const timeline of details.timelines) {
+    updateRanges(timeline);
+  }
+  requestAnimationFrame(() => {
+    // Defer ticking timeline to animation frame to prevent
+    // "ResizeObserver loop completed with undelivered notifications"
+    for (const timeline of details.timelines) {
+      updateInternal(timeline);
+    }
+  });
+}
+
 function updateSource(timeline, source) {
   const oldSource = scrollTimelineOptions.get(timeline).source;
   if (oldSource == source)
@@ -191,46 +227,20 @@ function updateSource(timeline, source) {
     let details = sourceDetails.get(source);
     if (!details) {
       // This is the first timeline for this source
-      // Store a list of connected timelines and current scroll position
-      details = {
-        timelines: [],
-        measurements: {
-          scrollLeft: source.scrollLeft,
-          scrollTop: source.scrollTop,
-          scrollWidth: source.scrollWidth,
-          scrollHeight: source.scrollHeight,
-          clientWidth: source.clientWidth,
-          clientHeight: source.clientHeight
-        }
-      };
+      // Store a list of connected timelines and current measurements
+      details = {timelines: [], measurements: readMeasurements(source)};
       sourceDetails.set(source, details);
 
-      const resizeObserver = new ResizeObserver(() => {
-        // Sample and store scroll pos
-        details.measurements = {
-          scrollLeft: source.scrollLeft,
-          scrollTop: source.scrollTop,
-          scrollWidth: source.scrollWidth,
-          scrollHeight: source.scrollHeight,
-          clientWidth: source.clientWidth,
-          clientHeight: source.clientHeight
-        };
-        // Update dimensions of ranges before ticking the timelines
-        for (const timeline of details.timelines) {
-          updateRanges(timeline);
-        }
-        requestAnimationFrame(() => {
-          // Defer ticking timeline to animation frame to prevent
-          // "ResizeObserver loop completed with undelivered notifications"
-          for (const timeline of details.timelines) {
-            updateInternal(timeline);
-          }
-        });
-      });
+      // Use resize observer to detect changes to source size
+      const resizeObserver = new ResizeObserver(() => updateSourceMeasurements(source));
       resizeObserver.observe(source);
       for (const child of source.children) {
         resizeObserver.observe(child);
       }
+
+      // Use mutation observer to detect updated style and class attributes on source element
+      const mutationObserver = new MutationObserver(() => updateSourceMeasurements(source));
+      mutationObserver.observe(source, {attributes: true, attributeFilter: ['style', 'class']});
 
       const scrollListener = () => {
         // Sample and store scroll pos
@@ -244,6 +254,7 @@ function updateSource(timeline, source) {
       scrollEventSource(source).addEventListener("scroll", scrollListener);
       details.disconnect = () => {
         resizeObserver.disconnect();
+        mutationObserver.disconnect();
         scrollEventSource(source).removeEventListener("scroll", scrollListener);
       };
     }
@@ -557,23 +568,29 @@ export function calculateRange(phase, container, target, axis, optionsInset) {
   const rtl = style.direction == 'rtl' || style.writingMode == 'vertical-rl';
   let viewSize = undefined;
   let viewPos = undefined;
-  let containerSize = undefined;
+  let sizes = {
+    fontSize: getComputedStyle(target).fontSize
+  };
   if (axis == 'x' ||
       (axis == 'inline' && horizontalWritingMode) ||
       (axis == 'block' && !horizontalWritingMode)) {
     viewSize = target.offsetWidth;
     viewPos = left;
-    if (rtl)
+    sizes.scrollPadding = [style.scrollPaddingLeft, style.scrollPaddingRight];
+    if (rtl) {
       viewPos += container.scrollWidth - container.clientWidth;
-    containerSize = container.clientWidth;
+      sizes.scrollPadding = [style.scrollPaddingRight, style.scrollPaddingLeft];
+    }
+    sizes.containerSize = container.clientWidth;
   } else {
     // TODO: support sideways-lr
     viewSize = target.offsetHeight;
     viewPos = top;
-    containerSize = container.clientHeight;
+    sizes.scrollPadding = [style.scrollPaddingTop, style.scrollPaddingBottom];
+    sizes.containerSize = container.clientHeight;
   }
 
-  const inset = parseInset(optionsInset, containerSize);
+  const inset = parseInset(optionsInset, sizes);
 
   // Cover:
   // 0% progress represents the position at which the start border edge of the
@@ -582,7 +599,7 @@ export function calculateRange(phase, container, target, axis, optionsInset) {
   // 100% progress represents the position at which the end border edge of the
   // element’s principal box coincides with the start edge of its view progress
   // visibility range.
-  const coverStartOffset = viewPos - containerSize + inset.end;
+  const coverStartOffset = viewPos - sizes.containerSize + inset.end;
   const coverEndOffset = viewPos + viewSize - inset.start;
 
   // Contain:
@@ -605,7 +622,7 @@ export function calculateRange(phase, container, target, axis, optionsInset) {
 
   let startOffset = undefined;
   let endOffset = undefined;
-  const targetIsTallerThanContainer = viewSize > containerSize ? true : false;
+  const targetIsTallerThanContainer = viewSize > sizes.containerSize ? true : false;
 
   switch(phase) {
     case 'cover':
@@ -642,39 +659,52 @@ export function calculateRange(phase, container, target, axis, optionsInset) {
   return { start: startOffset, end: endOffset };
 }
 
-function parseInset(value, containerSize) {
-  const inset = { start: 0, end: 0 };
+function parseInset(value, sizes) {
+  const inset = {start: 0, end: 0};
 
-  if(!value)
-    return inset;
+  if (!value) return inset;
 
-  const parts = value.split(' ');
-  const insetParts = [];
-  parts.forEach(part => {
-    // TODO: Add support for relative lengths (e.g. em)
-    if(part.endsWith("%"))
-      insetParts.push(containerSize / 100 * parseFloat(part));
-    else if(part.endsWith("px"))
-      insetParts.push(parseFloat(part));
-    else if(part === "auto")
-      insetParts.push(0);
-    else
-      throw TypeError("Unsupported inset. Only % and px values are supported (for now).");
+  let parts = value;
+  // Parse string parts to
+  if (typeof value === 'string') {
+    parts = value.split(' ').map(part => {
+      if (part.endsWith('%')) {
+        return CSS.percent(parseFloat(part));
+      } else if (part.endsWith('px')) {
+        return CSS.px(parseFloat(part));
+      } else if (part.endsWith('em')) {
+        return CSS.em(parseFloat(part));
+      } else if (part === 'auto') {
+        return part;
+      } else {
+        throw TypeError('Unsupported inset. Only %, px, em and auto values are supported (for now).');
+      }
+    });
+  }
+  if (parts.length === 0 || parts.length > 2) {
+    throw TypeError('Invalid inset');
+  }
+
+  const startPart = parts[0];
+  const endPart = parts[1] ?? parts[0];
+
+  const [start, end] = [startPart, endPart].map((part, i) => {
+    if (part === 'auto') {
+      return sizes.scrollPadding[i] === 'auto' ? 0 : parseFloat(sizes.scrollPadding[i]);
+    }
+
+    const simplifiedUnit = simplifyCalculation(part, {
+        percentageReference: CSS.px(sizes.containerSize),
+        fontSize: CSS.px(parseFloat(sizes.fontSize))
+    });
+    if (simplifiedUnit instanceof CSSUnitValue && simplifiedUnit.unit === 'px') {
+      return simplifiedUnit.value;
+    } else {
+      throw TypeError('Unsupported inset. Only %, px, em and auto values are supported (for now).');
+    }
   });
 
-  if (insetParts.length > 2) {
-    throw TypeError("Invalid inset");
-  }
-
-  if(insetParts.length == 1) {
-    inset.start = insetParts[0];
-    inset.end = insetParts[0];
-  } else if(insetParts.length == 2) {
-    inset.start = insetParts[0];
-    inset.end = insetParts[1];
-  }
-
-  return inset;
+  return {start, end};
 }
 
 // Calculate the fractional offset of a (phase, percent) pair relative to the
@@ -721,7 +751,15 @@ export class ViewTimeline extends ScrollTimeline {
     const details = scrollTimelineOptions.get(this);
     details.subject = options && options.subject ? options.subject : undefined;
     // TODO: Handle insets.
+    const resizeObserver = new ResizeObserver(() => {
+      updateRanges(this)
+    })
+    resizeObserver.observe(details.subject)
 
+    const mutationObserver = new MutationObserver(() => {
+      updateRanges(this)
+    })
+    mutationObserver.observe(details.subject, {attributes: true, attributeFilter: ['class', 'style']})
     validateSource(this);
     updateInternal(this);
   }
@@ -758,6 +796,14 @@ export class ViewTimeline extends ScrollTimeline {
         (scrollPos - offsets.start) / (offsets.end - offsets.start);
 
     return CSS.percent(100 * progress);
+  }
+
+  get startOffset() {
+    return CSS.px(scrollTimelineOptions.get(this).ranges['cover'].start);
+  }
+
+  get endOffset() {
+    return CSS.px(scrollTimelineOptions.get(this).ranges['cover'].end);
   }
 
 }
