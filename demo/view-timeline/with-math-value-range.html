@@ -84,12 +84,15 @@
     <div style="height: 99px"></div>
     <div style="border-top: 1px solid red"></div>
   </div>
-
+  <input type="radio" name="range-type" id="as-string" checked>
+  <label for="as-string">Range as string</label>
+  <input type="radio" name="range-type" id="as-timeline-range-offset">
+  <label for="as-timeline-range-offset">Range as TimelineRangeOffset </label>
 </body>
 <script src="../../dist/scroll-timeline.js"></script>
 <script type="text/javascript">
   "use strict";
-
+  let ranges = [ "cover calc(0% + 2 * 100px)", "cover calc(100% - 100px)"]
   const progressBars = document.querySelectorAll('.progress-bar-progress');
   const createProgressAnimation = (bar, rangeStart, rangeEnd, axis, inset = 'auto') => {
     const subject = document.getElementById('subject');
@@ -112,16 +115,38 @@
     });
     createProgressAnimation(progressBars[0], { rangeName: 'cover', offset: CSS.percent(0) },
       { rangeName: 'cover', offset: CSS.percent(100) }, axis);
-    createProgressAnimation(progressBars[1],
-      {
-        rangeName: "cover",
-        offset: new CSSMathSum(CSS.percent(0), new CSSMathProduct(CSS.number(2), CSS.px(100))),
-      },
-      {
-        rangeName: "cover",
-        offset: new CSSMathSum(CSS.percent(100), CSS.px(-100)),
-      }, axis)
+    createProgressAnimation(progressBars[1], ranges[0], ranges[1], axis);
   };
+
+  document.querySelectorAll('input').forEach(input => {
+    input.addEventListener('change', (evt) => {
+      document.getAnimations().forEach(anim => {
+        anim.cancel();
+      });
+
+      switch (event.target.name) {
+        case 'range-type':
+          const selection = event.target.id;
+          switch (selection) {
+            case 'as-string':
+              ranges = [ "cover calc(0% + 2 * 100px)", "cover calc(100% - 100px)"]
+              break;
+            case 'as-timeline-range-offset':
+              ranges = [{
+                rangeName: 'cover',
+                offset: new CSSMathSum(CSS.percent(0), new CSSMathProduct(CSS.number(2), CSS.px(100))),
+              },
+              {
+                rangeName: 'cover',
+                offset: new CSSMathSum(CSS.percent(100), CSS.px(-100)),
+              }];
+              break;
+          }
+      }
+
+      createAnimations();
+    });
+  });
 
   createAnimations();
 </script>

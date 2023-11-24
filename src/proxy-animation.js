@@ -1731,7 +1731,7 @@ function parseTimelineRangeOffset(value, position) {
   if (value instanceof Object) {
     if (value.rangeName != undefined) {
       rangeName = value.rangeName;
-    };
+    }
 
     if (value.offset !== undefined) {
       offset = value.offset;
@@ -1739,37 +1739,23 @@ function parseTimelineRangeOffset(value, position) {
   }
   // Author passed in something like `"cover 100%"`
   else {
-    const parts = value.split(' ');
+    const parts = value.split(new RegExp(`(${ANIMATION_RANGE_NAMES.join('|')})`)).map(part => part.trim()).filter(Boolean);
 
     if (parts.length === 1) {
       if (ANIMATION_RANGE_NAMES.includes(parts[0])) {
         rangeName = parts[0];
       } else {
-        offset = parts[0];
+        offset = CSSNumericValue.parse(parts[0]);
       }
     } else if (parts.length === 2) {
       rangeName = parts[0];
-      offset = parts[1];
+      offset = CSSNumericValue.parse(parts[1]);
     }
   }
 
   // Validate rangeName
   if (!ANIMATION_RANGE_NAMES.includes(rangeName)) {
     throw TypeError("Invalid range name");
-  }
-
-  // Validate and process offset
-  // TODO: support more than % and px. Don’t forget about calc() along with that.
-  if (!(offset instanceof Object)) {
-    if (offset.endsWith('%')) {
-      offset = CSS.percent(parseFloat(offset));
-    } else if (offset.endsWith('px')) {
-      offset = CSS.px(parseFloat(offset));
-    } else if (offset.endsWith('em')) {
-      offset = CSS.em(parseFloat(offset))
-    } else {
-      throw TypeError("Invalid range offset. Only % and px are supported (for now)");
-    }
   }
 
   return { rangeName, offset };
