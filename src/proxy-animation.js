@@ -574,10 +574,16 @@ function tickAnimation(timelineTime) {
   const details = proxyAnimations.get(this);
   if (timelineTime == null) {
     // While the timeline is inactive, it's effect should not be applied.
-    // To polyfill this behavior, we cancel the underlying animation.
-    if (details.animation.playState != 'idle')
-      details.animation.cancel();
+    // To polyfill this behavior, we remove the underlying effect from animation and store it
+    if (details.animation.effect) {
+      details.tempEffect = details.animation.effect
+      details.animation.effect = null
+    }
     return;
+  } else if (details.animation.effect === null && details.tempEffect) {
+    // Restore effect if it previously was removed due to an inactive timeline
+    details.animation.effect = details.tempEffect
+    details.tempEffect = null
   }
 
   if (details.pendingTask) {
