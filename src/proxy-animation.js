@@ -576,14 +576,14 @@ function tickAnimation(timelineTime) {
     // While the timeline is inactive, it's effect should not be applied.
     // To polyfill this behavior, we remove the underlying effect from animation and store it
     if (details.animation.effect) {
-      details.tempEffect = details.animation.effect
-      details.animation.effect = null
+      details.tempEffect = details.animation.effect;
+      details.animation.effect = null;
     }
     return;
   } else if (details.animation.effect === null && details.tempEffect) {
     // Restore effect if it previously was removed due to an inactive timeline
-    details.animation.effect = details.tempEffect
-    details.tempEffect = null
+    details.animation.effect = details.tempEffect;
+    details.tempEffect = null;
   }
 
   if (details.pendingTask) {
