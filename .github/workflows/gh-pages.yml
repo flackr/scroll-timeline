@@ -1,4 +1,4 @@
-name: Deploy site to Pages
+name: Build and test
 
 on:
   # Runs on pushes targeting the default branch
@@ -52,6 +52,8 @@ jobs:
         run: "./test/wpt/wpt make-hosts-file | sudo tee -a /etc/hosts"
       - name: WPT tests
         run: "npm run test:wpt"
+      - name: Expected results
+        run: "npm run test:compare"
       - name: Clean build files
         run: "rm -rf node_modules test/wpt"
       - name: Upload artifact
