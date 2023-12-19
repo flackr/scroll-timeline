@@ -143,10 +143,10 @@ function resolveLength(length, containerSize) {
   return length[0];
 }
 
-export function calculateOffset(source, orientation, offset, startOrEnd) {
+export function calculateOffset(source, axis, offset, startOrEnd) {
   // TODO: Support other writing directions.
-  if (orientation == "block") orientation = "vertical";
-  else if (orientation == "inline") orientation = "horizontal";
+  if (axis == "block") axis = "y";
+  else if (axis == "inline") axis = "x";
   let originalViewport =
     source == document.scrollingElement
       ? {
@@ -193,7 +193,7 @@ export function calculateOffset(source, orientation, offset, startOrEnd) {
   // Invert threshold for start position.
   if (offset.edge == "start") threshold = 1 - threshold;
   // Projected point into the scroller scroll range.
-  if (orientation == "vertical") {
+  if (axis == "y") {
     let point =
       target.top +
       target.height * threshold -
@@ -207,7 +207,7 @@ export function calculateOffset(source, orientation, offset, startOrEnd) {
       return point;
     }
   } else {
-    // orientation == 'horizontal'
+    // axis == 'x'
     let point =
       target.left +
       target.width * threshold -

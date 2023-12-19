@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>view-timeline demo</title>
+</head>
+<style type="text/css">
+  #container {
+    display:  flex;
+    flex-direction: column;
+    border:  1px solid black;
+    height:  500px;
+    width:  500px;
+    overflow-x:  hidden;
+    overflow-y:  scroll;
+    position:  relative;
+    align-items:  flex-start;
+    timeline-scope: --firstVT, --secondVT;
+  }
+
+  .overlay {
+    position: fixed;
+    top:  10px;
+    left:  10px;
+    width:  500px;
+    height:  500px;
+    pointer-events: none;
+  }
+
+  .spacer {
+    display:  inline-block;
+    flex:  none;
+    height:  120vh;
+    width:  120vw;
+  }
+
+  #subject {
+    background-color:  rgba(0, 0, 255, 0.5);
+    display:  inline-block;
+    flex:  none;
+    height: 100px;
+    width:  90%;
+    view-timeline-name: --firstVT, --secondVT;
+    view-timeline-inset: auto, 100px 200px;
+  }
+
+  .progress-bar,
+  .progress-bar-progress {
+    border:  1px solid green;
+    height:  20px;
+    width:  200px;
+    position:  absolute;
+    inset-inline-start:  20px;
+    padding:  0;
+  }
+
+  .progress-bar > span {
+    padding-left:  5px;
+    padding-right:  5px;
+  }
+
+  .progress-bar-progress {
+    border-color:  transparent;
+    background-color: rgba(0, 200, 0, 0.3);
+    width: 0px;
+    animation: linear simpleAnimation both;
+  }
+
+  @keyframes simpleAnimation {
+    from { width: 0px; }
+    to { width: 200px;  }
+  }
+
+  #first {
+    animation-timeline: --firstVT;
+  }
+
+  #second {
+    animation-timeline: --secondVT;
+  }
+
+</style>
+<body>
+  <div id="container">
+    <div class="spacer"></div>
+    <div id="subject"></div>
+    <div class="spacer"></div>
+
+    <div class="overlay">
+      <div class="progress-bar" style="top: 20px;"><span>cover</span></div>
+      <div class="progress-bar" style="top: 70px;"><span>cover, inset 100px 200px</span></div>
+      <div id=first class="progress-bar-progress" style="top: 20px;"></div>
+      <div id=second class="progress-bar-progress" style="top: 70px;"></div>
+    </div>
+
+    <div class="overlay">
+      <div style="height: 99px"></div>
+      <div style="border-top: 1px solid red"></div>
+      <div style="height: 100px"></div>
+      <div style="height: 99px"></div>
+      <div style="border-top: 1px solid red"></div>
+    </div>  
+  
+  </div>
+</body>
+<script src="../../dist/scroll-timeline.js"></script>
+</html>

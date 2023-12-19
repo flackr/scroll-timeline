@@ -85,11 +85,11 @@
   </style>
   <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.10/styles/default.min.css">
   <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.10/highlight.min.js"></script>
-  <title>Parallax using ScrollTimeline</title>
+  <title>Parallax using ViewTimeline</title>
 </head>
 <body>
   <div class="header">
-    <h1>Parallax using ScrollTimeline</h1>
+    <h1>Parallax using ViewTimeline</h1>
     <div class="background"></div>
   </div>
 
@@ -98,7 +98,7 @@
     <h2>Introduction</h2>
 
     <p>Flat static webpages are not very exciting. Users expect content to come
-    alive when scrolling. Explore some examples of how ScrollTimeline can make
+    alive when scrolling. Explore some examples of how ViewTimeline can make
     this happen</p>
 
     <pre id="demo1"><code class="javascript"></code></pre>
@@ -174,9 +174,8 @@ function animateParallax() {
       transform: ['none', 'translateY(30%)']}, {
       fill: 'both',
       timeline: new ViewTimeline({subject: header}),
-      delay: { phase: 'exit', percent: CSS.percent(0) },
-      endDelay: { phase: 'exit', percent: CSS.percent(100) },
-      // timeRange: 'exit'
+      rangeStart: { rangeName: 'exit', offset: CSS.percent(0) },
+      rangeEnd: { rangeName: 'exit', offset: CSS.percent(100) },
     });
 }
 
@@ -186,9 +185,8 @@ function animateZoom() {
       transform: ['scale(3) translateX(10%)', 'scale(1)']}, {
       fill: 'both',
       timeline: new ViewTimeline({ subject: container }),
-      delay: { phase: 'contain', percent: CSS.percent(30) },
-      endDelay: { phase: 'contain', percent: CSS.percent(80) },
-      // timeRange: 'contain 20% 80%'
+      rangeStart: { rangeName: 'contain', offset: CSS.percent(30) },
+      rangeEnd: { rangeName: 'contain', offset: CSS.percent(80) },
   });
 }
 
@@ -198,9 +196,8 @@ function animatePan() {
       backgroundPosition: ['left center', 'right center']}, {
       fill: 'both',
       timeline: new ViewTimeline({ subject: container }),
-      delay: { phase: 'contain', percent: CSS.percent(0) },
-      endDelay: { phase: 'contain', percent: CSS.percent(100) },
-      // timeRange: 'contain'
+      rangeStart: { rangeName: 'contain', offset: CSS.percent(0) },
+      rangeEnd: { rangeName: 'contain', offset: CSS.percent(100) },
   });
 }
 
@@ -210,9 +207,8 @@ function animateWipe() {
       width: ['100%', '0']}, {
       fill: 'both',
       timeline: new ViewTimeline({ subject: container }),
-      delay: { phase: 'enter', percent: CSS.percent(100) },
-      endDelay: { phase: 'enter', percent: CSS.percent(120) },
-      // timeRange: 'enter 100% 120%'
+      rangeStart: { rangeName: 'entry', offset: CSS.percent(50) },
+      rangeEnd: { rangeName: 'entry', offset: CSS.percent(100) },
   });
 }
 
@@ -229,9 +225,8 @@ function animateHeaders() {
         {
           fill: 'both',
           timeline: new ViewTimeline({ subject: headers[i] }),
-          delay: { phase: 'contain', percent: CSS.percent(0) },
-          endDelay: { phase: 'contain', percent: CSS.percent(100) },
-          // timeRange: 'contain'
+          rangeStart: { rangeName: 'contain', offset: CSS.percent(0) },
+          rangeEnd: { rangeName: 'contain', offset: CSS.percent(100) },
         });
   }
 }

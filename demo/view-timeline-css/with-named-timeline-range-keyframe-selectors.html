@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Named Timeline Range Keyframe Selectors</title>
+</head>
+
+<style type="text/css">  
+  
+  @keyframes fade-in-out-animation {
+    entry 0%, exit 100% { opacity: 0 }
+    entry 100%, exit 0% { opacity: 1 }
+  }
+
+  #subject {
+    background-color:  rgba(0, 0, 255);
+    display:  inline-block;
+    flex:  none;
+    height: 200px;
+    width:  90%;
+    view-timeline-name: --foo;
+    animation: linear fade-in-out-animation;
+    animation-timeline: --foo;
+  }
+
+  #container {
+    display:  flex;
+    flex-direction: column;
+    border:  1px solid black;
+    height:  500px;
+    width:  500px;
+    overflow-x:  hidden;
+    overflow-y:  scroll;
+    position:  relative;
+    align-items:  flex-start;
+    timeline-scope: --foo;
+  }
+
+  .spacer {
+    display:  inline-block;
+    flex:  none;
+    height:  120vh;
+    width:  120vw;
+  }
+</style>
+
+<body>
+  <div id="container">
+    <div class="spacer"></div>
+    <div id="subject"></div>
+    <div class="spacer"></div>
+  </div>
+</body>
+
+<script src="../../dist/scroll-timeline.js"></script>
+</html>

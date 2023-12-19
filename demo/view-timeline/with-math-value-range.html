@@ -46,7 +46,7 @@
   .progress-bar-progress {
     border:  1px solid green;
     height:  20px;
-    width:  200px;
+    width:  300px;
     position:  absolute;
     inset-inline-start:  20px;
     padding:  0;
@@ -72,7 +72,7 @@
   </div>
   <div class="overlay">
     <div class="progress-bar" style="top: 20px;"><span>cover</span></div>
-    <div class="progress-bar" style="top: 70px;"><span>cover, inset 100px 200px</span></div>
+    <div class="progress-bar" style="top: 70px;"><span>cover calc(0% + 200px) calc(100% - 100px)</span></div>
     <div class="progress-bar-progress" style="top: 20px;"></div>
     <div class="progress-bar-progress" style="top: 70px;"></div>
   </div>
@@ -98,7 +98,7 @@
       'axis': axis,
       'inset': inset
     });
-    bar.animate( { width: ['0px', '200px' ] }, {
+    bar.animate( { width: ['0px', '300px' ] }, {
       timeline: viewTimeline,
       rangeStart: rangeStart,
       rangeEnd: rangeEnd,
@@ -112,8 +112,15 @@
     });
     createProgressAnimation(progressBars[0], { rangeName: 'cover', offset: CSS.percent(0) },
       { rangeName: 'cover', offset: CSS.percent(100) }, axis);
-    createProgressAnimation(progressBars[1], { rangeName: 'cover', offset: CSS.percent(0) },
-      { rangeName: 'cover', offset: CSS.percent(100) }, axis, '100px 200px');
+    createProgressAnimation(progressBars[1],
+      {
+        rangeName: "cover",
+        offset: new CSSMathSum(CSS.percent(0), new CSSMathProduct(CSS.number(2), CSS.px(100))),
+      },
+      {
+        rangeName: "cover",
+        offset: new CSSMathSum(CSS.percent(100), CSS.px(-100)),
+      }, axis)
   };
 
   createAnimations();

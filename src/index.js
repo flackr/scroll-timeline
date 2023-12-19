@@ -25,43 +25,54 @@ import {
 
 import { initCSSPolyfill } from "./scroll-timeline-css"
 
-initCSSPolyfill();
+function initPolyfill() {
+  // initCSSPolyfill returns true iff the host browser supports SDA
+  if (initCSSPolyfill()) {
+    return;
+  }
 
-if ([...document.styleSheets].filter(s => s.href !== null).length) {
-  console.warn("Non-Inline StyleSheets detected: ScrollTimeline polyfill currently only" +
-    " supports inline styles within style tags");
+  if ([...document.styleSheets].filter((s) => s.href !== null).length) {
+    console.warn(
+      'Non-Inline StyleSheets detected: ScrollTimeline polyfill currently only' +
+        ' supports inline styles within style tags'
+    );
+  }
+
+  if (
+    !Reflect.defineProperty(window, 'ScrollTimeline', { value: ScrollTimeline })
+  ) {
+    throw Error(
+      'Error installing ScrollTimeline polyfill: could not attach ScrollTimeline to window'
+    );
+  }
+  if (
+    !Reflect.defineProperty(window, 'ViewTimeline', { value: ViewTimeline })
+  ) {
+    throw Error(
+      'Error installing ViewTimeline polyfill: could not attach ViewTimeline to window'
+    );
+  }
+
+  if (
+    !Reflect.defineProperty(Element.prototype, 'animate', { value: animate })
+  ) {
+    throw Error(
+      "Error installing ScrollTimeline polyfill: could not attach WAAPI's animate to DOM Element"
+    );
+  }
+  if (!Reflect.defineProperty(window, 'Animation', { value: ProxyAnimation })) {
+    throw Error('Error installing Animation constructor.');
+  }
+  if (!Reflect.defineProperty(Element.prototype, "getAnimations", { value: elementGetAnimations })) {
+    throw Error(
+      "Error installing ScrollTimeline polyfill: could not attach WAAPI's getAnimations to DOM Element"
+    );
+  }
+  if (!Reflect.defineProperty(document, "getAnimations", { value: documentGetAnimations })) {
+    throw Error(
+      "Error installing ScrollTimeline polyfill: could not attach WAAPI's getAnimations to document"
+    );
+  }
 }
 
-if (
-  !Reflect.defineProperty(window, "ScrollTimeline", { value: ScrollTimeline })
-) {
-  throw Error(
-    "Error installing ScrollTimeline polyfill: could not attach ScrollTimeline to window"
-  );
-}
-if (
-  !Reflect.defineProperty(window, "ViewTimeline", { value: ViewTimeline })
-) {
-  throw Error(
-    "Error installing ViewTimeline polyfill: could not attach ViewTimeline to window"
-  );
-}
-
-if (!Reflect.defineProperty(Element.prototype, "animate", { value: animate })) {
-  throw Error(
-    "Error installing ScrollTimeline polyfill: could not attach WAAPI's animate to DOM Element"
-  );
-}
-if (!Reflect.defineProperty(window, "Animation", {value: ProxyAnimation})) {
-  throw Error("Error installing Animation constructor.");
-}
-if (!Reflect.defineProperty(Element.prototype, "getAnimations", { value: elementGetAnimations })) {
-  throw Error(
-    "Error installing ScrollTimeline polyfill: could not attach WAAPI's getAnimations to DOM Element"
-  );
-}
-if (!Reflect.defineProperty(document, "getAnimations", { value: documentGetAnimations })) {
-  throw Error(
-    "Error installing ScrollTimeline polyfill: could not attach WAAPI's getAnimations to document"
-  );
-}
+initPolyfill();

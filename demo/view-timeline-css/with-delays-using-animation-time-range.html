@@ -22,6 +22,7 @@
     overflow-y:  scroll;
     position:  relative;
     align-items:  flex-start;
+    timeline-scope: --foo;
   }
 
   #overlay {
@@ -46,7 +47,7 @@
     flex:  none;
     height: 125px;
     width:  90%;
-    view-timeline-name: foo;
+    view-timeline-name: --foo;
   }
 
   .progress-bar {
@@ -65,13 +66,13 @@
     position:  absolute;
     inset-inline-start:  20px;
     padding:  0;
-    animation: linear progress;
-    animation-timeline: foo;
+    animation: linear progress forwards;
+    animation-timeline: --foo;
     border-color:  transparent;
     background-color: rgba(0, 200, 0, 0.3);
     width: 0px;
 
-    animation-time-range: cover;
+    animation-range: cover;
   }
 
   #progress-bar-progress-b {
@@ -81,13 +82,13 @@
     position:  absolute;
     inset-inline-start:  20px;
     padding:  0;
-    animation: linear progress;
-    animation-timeline: foo;
+    animation: linear progress forwards;
+    animation-timeline: --foo;
     border-color:  transparent;
     background-color: rgba(0, 200, 0, 0.3);
     width: 0px;
 
-    animation-time-range: contain;
+    animation-range: contain;
   }
 
   #progress-bar-progress-c {
@@ -97,13 +98,13 @@
     position:  absolute;
     inset-inline-start:  20px;
     padding:  0;
-    animation: linear progress;
-    animation-timeline: foo;
+    animation: linear progress forwards;
+    animation-timeline: --foo;
     border-color:  transparent;
     background-color: rgba(0, 200, 0, 0.3);
     width: 0px;
 
-    animation-time-range: enter;
+    animation-range: entry;
   }
 
   #progress-bar-progress-d {
@@ -113,13 +114,13 @@
     position:  absolute;
     inset-inline-start:  20px;
     padding:  0;
-    animation: linear progress;
-    animation-timeline: foo;
+    animation: linear progress forwards;
+    animation-timeline: --foo;
     border-color:  transparent;
     background-color: rgba(0, 200, 0, 0.3);
     width: 0px;
 
-    animation-time-range: exit;
+    animation-range: exit;
   }
 
   #progress-bar-progress-e {
@@ -129,13 +130,13 @@
     position:  absolute;
     inset-inline-start:  20px;
     padding:  0;
-    animation: linear progress;
-    animation-timeline: foo;
+    animation: linear progress forwards;
+    animation-timeline: --foo;
     border-color:  transparent;
     background-color: rgba(0, 200, 0, 0.3);
     width: 0px;
 
-    animation-time-range: contain 25% 75%;
+    animation-range: contain 25% 75%;
   }
 
   #progress-bar-progress-f {
@@ -145,13 +146,13 @@
     position:  absolute;
     inset-inline-start:  20px;
     padding:  0;
-    animation: linear progress;
-    animation-timeline: foo;
+    animation: linear progress forwards;
+    animation-timeline: --foo;
     border-color:  transparent;
     background-color: rgba(0, 200, 0, 0.3);
     width: 0px;
 
-    animation-time-range: enter 150% exit -50%;
+    animation-range: entry 150% exit -50%;
   }
 
   #progress-bar-progress-g {
@@ -161,14 +162,14 @@
     position:  absolute;
     inset-inline-start:  20px;
     padding:  0;
-    animation: linear progress;
-    animation-timeline: foo;
+    animation: linear progress forwards;
+    animation-timeline: --foo;
     border-color:  transparent;
     background-color: rgba(0, 200, 0, 0.3);
     width: 0px;
 
     /* mixed shorthand and longhands */
-    animation-time-range: enter;
+    animation-range: entry;
     animation-delay: cover;
     animation-end-delay: contain;
   }
@@ -180,14 +181,14 @@
     position:  absolute;
     inset-inline-start:  20px;
     padding:  0;
-    animation: linear progress;
-    animation-timeline: foo;
+    animation: linear progress forwards;
+    animation-timeline: --foo;
     border-color:  transparent;
     background-color: rgba(0, 200, 0, 0.3);
     width: 0px;
 
     /* mixed shorthand and longhands */
-    animation-time-range: enter 100% exit 200%;
+    animation-range: entry 100% exit 200%;
     animation-end-delay: contain;
   }
 
@@ -206,12 +207,12 @@
     <div id="overlay">
       <div class="progress-bar" style="top: 20px;"><span>cover</span></div>
       <div class="progress-bar" style="top: 70px;"><span>contain</span></div>
-      <div class="progress-bar" style="top: 120px;"><span>enter</span></div>
+      <div class="progress-bar" style="top: 120px;"><span>entry</span></div>
       <div class="progress-bar" style="top: 170px;"><span>exit</span></div>
       <div class="progress-bar" style="top: 220px"><span>contain 25% 75%</span></div>
-      <div class="progress-bar" style="top: 270px"><span>enter 150% exit -50%</span></div>
+      <div class="progress-bar" style="top: 270px"><span>entry 150% exit -50%</span></div>
       <div class="progress-bar" style="top: 320px"><span>* cover 0% contain 100%</span></div>
-      <div class="progress-bar" style="top: 370px"><span>* enter 100% contain 100%</span></div>
+      <div class="progress-bar" style="top: 370px"><span>* entry 100% contain 100%</span></div>
       <div id="progress-bar-progress-a" class="progress-bar-progress" style="top: 20px;"></div>
       <div id="progress-bar-progress-b" class="progress-bar-progress" style="top: 70px;"></div>
       <div id="progress-bar-progress-c" class="progress-bar-progress" style="top: 120px;"></div>

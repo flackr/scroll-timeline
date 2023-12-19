@@ -12,15 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { parseLength } from "./utils";
+import {installCSSOM} from "./proxy-cssom.js";
+import {simplifyCalculation} from "./simplify-calculation";
 
-import { installCSSOM } from "./proxy-cssom.js";
 installCSSOM();
 
-const AUTO = new CSSKeywordValue("auto");
+const DEFAULT_TIMELINE_AXIS = 'block';
 
 let scrollTimelineOptions = new WeakMap();
-let extensionScrollOffsetFunctions = [];
+let sourceDetails = new WeakMap();
 
 function scrollEventSource(source) {
   if (source === document.scrollingElement) return document;
@@ -44,31 +44,31 @@ function updateInternal(scrollTimelineInstance) {
 
 /**
  * Calculates a scroll offset that corrects for writing modes, text direction
- * and a logical orientation.
+ * and a logical axis.
  * @param scrollTimeline {ScrollTimeline}
- * @param orientation {String}
+ * @param axis {String}
  * @returns {Number}
  */
-function directionAwareScrollOffset(source, orientation) {
+function directionAwareScrollOffset(source, axis) {
   if (!source)
     return null;
-
+  const scrollPos = sourceDetails.get(source).scrollPos;
   const style = getComputedStyle(source);
   // All writing modes are vertical except for horizontal-tb.
   // TODO: sideways-lr should flow bottom to top, but is currently unsupported
   // in Chrome.
   // http://drafts.csswg.org/css-writing-modes-4/#block-flow
   const horizontalWritingMode = style.writingMode == 'horizontal-tb';
-  let currentScrollOffset  = source.scrollTop;
-  if (orientation == 'horizontal' ||
-     (orientation == 'inline' && horizontalWritingMode) ||
-     (orientation == 'block' && !horizontalWritingMode)) {
+  let currentScrollOffset  = scrollPos.scrollTop;
+  if (axis == 'x' ||
+     (axis == 'inline' && horizontalWritingMode) ||
+     (axis == 'block' && !horizontalWritingMode)) {
     // Negative values are reported for scrollLeft when the inline text
     // direction is right to left or for vertical text with a right to left
     // block flow. This is a consequence of shifting the scroll origin due to
     // changes in the overflow direction.
     // http://drafts.csswg.org/cssom-view/#overflow-directions.
-    currentScrollOffset = Math.abs(source.scrollLeft);
+    currentScrollOffset = Math.abs(scrollPos.scrollLeft);
   }
   return currentScrollOffset;
 }
@@ -84,28 +84,29 @@ export function calculateTargetEffectEnd(animation) {
 }
 
 /**
- * Calculates scroll offset based on orientation and source geometry
+ * Calculates scroll offset based on axis and source geometry
  * @param source {DOMElement}
- * @param orientation {String}
+ * @param axis {String}
  * @returns {number}
  */
-export function calculateMaxScrollOffset(source, orientation) {
+export function calculateMaxScrollOffset(source, axis) {
   // Only one horizontal writing mode: horizontal-tb.  All other writing modes
   // flow vertically.
   const horizontalWritingMode =
     getComputedStyle(source).writingMode == 'horizontal-tb';
-  if (orientation === "block")
-    orientation = horizontalWritingMode ? "vertical" : "horizontal";
-  else if (orientation === "inline")
-    orientation = horizontalWritingMode ? "horizontal" : "vertical";
-  if (orientation === "vertical")
+  if (axis === "block")
+    axis = horizontalWritingMode ? "y" : "x";
+  else if (axis === "inline")
+    axis = horizontalWritingMode ? "x" : "y";
+  if (axis === "y")
     return source.scrollHeight - source.clientHeight;
-  else if (orientation === "horizontal")
+  else if (axis === "x")
     return source.scrollWidth - source.clientWidth;
 }
 
 function resolvePx(cssValue, resolvedLength) {
   if (cssValue instanceof CSSUnitValue) {
+    // TODO: Add support for em, vh
     if (cssValue.unit == "percent")
       return cssValue.value * resolvedLength / 100;
     else if (cssValue.unit == "px")
@@ -118,15 +119,19 @@ function resolvePx(cssValue, resolvedLength) {
       total += resolvePx(value, resolvedLength);
     }
     return total;
-  }
+  } else if (cssValue instanceof CSSMathNegate) {
+    return -resolvePx(cssValue.value, resolvedLength);
+  } 
   throw TypeError("Unsupported value type: " + typeof(cssValue));
 }
 
 // Detects if the cached source is obsolete, and updates if required
 // to ensure the new source has a scroll listener.
 function validateSource(timeline) {
-  if (!(timeline instanceof ViewTimeline))
+  if (!(timeline instanceof ViewTimeline)) {
+    validateAnonymousSource(timeline);
     return;
+  }
 
   const node = timeline.subject;
   if (!node) {
@@ -144,24 +149,82 @@ function validateSource(timeline) {
   updateSource(timeline, source);
 }
 
-function updateSource(timeline, source) {
+function validateAnonymousSource(timeline) {
   const details = scrollTimelineOptions.get(timeline);
-  const oldSource = details.source;
-  const oldScrollListener = details.scrollListener;
+  if(!details.anonymousSource)
+    return;
+
+  const source = getAnonymousSourceElement(details.anonymousSource, details.anonymousTarget);
+  updateSource(timeline, source);
+}
+
+function updateSource(timeline, source) {
+  const oldSource = scrollTimelineOptions.get(timeline).source;
   if (oldSource == source)
     return;
 
-  if (oldSource && oldScrollListener) {
-    scrollEventSource(oldSource).removeEventListener("scroll",
-                                                     oldScrollListener);
+  if (oldSource) {
+    const details = sourceDetails.get(oldSource);
+    if (details) {
+      // Remove timelines from source
+      details.timelines = details.timelines.filter(t => t !== timeline);
+      if (details.timelines.length === 0) {
+        // All timelines have been disconnected from the source
+        // Clean up
+        details.disconnect();
+        sourceDetails.delete(oldSource);
+      }
+    }
   }
   scrollTimelineOptions.get(timeline).source = source;
   if (source) {
-    const listener = () => {
-      updateInternal(timeline);
-    };
-    scrollEventSource(source).addEventListener("scroll", listener);
-    details.scrollListener = listener;
+    let details = sourceDetails.get(source);
+    if (!details) {
+      // This is the first timeline for this source
+      // Store a list of connected timelines and current scroll position
+      details = {
+        timelines: [],
+        scrollPos: {
+          scrollLeft: source.scrollLeft,
+          scrollTop: source.scrollTop
+        }
+      };
+      sourceDetails.set(source, details);
+
+      const resizeObserver = new ResizeObserver(() => {
+        // Sample and store scroll pos
+        details.scrollPos = {
+          scrollLeft: source.scrollLeft,
+          scrollTop: source.scrollTop
+        };
+        requestAnimationFrame(() => {
+          // Defer ticking timeline to animation frame to prevent
+          // "ResizeObserver loop completed with undelivered notifications"
+          for (const timeline of details.timelines) {
+            renormalizeAnimationTimings(timeline);
+          }
+        });
+      });
+      resizeObserver.observe(source);
+
+      const scrollListener = () => {
+        // Sample and store scroll pos
+        details.scrollPos = {
+          scrollLeft: source.scrollLeft,
+          scrollTop: source.scrollTop
+        };
+        for (const timeline of details.timelines) {
+          updateInternal(timeline);
+        }
+      };
+      scrollEventSource(source).addEventListener("scroll", scrollListener);
+      details.disconnect = () => {
+        resizeObserver.unobserve(source);
+        resizeObserver.disconnect();
+        scrollEventSource(source).removeEventListener("scroll", scrollListener);
+      };
+    }
+    details.timelines.push(timeline);
   }
 }
 
@@ -185,18 +248,33 @@ export function removeAnimation(scrollTimeline, animation) {
  * @param scrollTimeline {ScrollTimeline}
  * @param animation {Animation}
  * @param tickAnimation {function(number)}
+ * @param renormalizeTiming {function()}
  */
-export function addAnimation(scrollTimeline, animation, tickAnimation) {
+export function addAnimation(scrollTimeline, animation, tickAnimation, renormalizeTiming) {
   let animations = scrollTimelineOptions.get(scrollTimeline).animations;
   for (let i = 0; i < animations.length; i++) {
+    // @TODO: This early return causes issues when a page with the polyfill
+    // is loaded from the BFCache. Ideally, this code gets fixed instead of
+    // the workaround which clears the proxyAnimations cache on pagehide.
+    // See https://github.com/flackr/scroll-timeline/issues/146#issuecomment-1698159183
+    // for details.
     if (animations[i].animation == animation)
       return;
   }
 
   animations.push({
     animation: animation,
-    tickAnimation: tickAnimation
+    tickAnimation: tickAnimation,
+    renormalizeTiming: renormalizeTiming
   });
+  updateInternal(scrollTimeline);
+}
+
+function renormalizeAnimationTimings(scrollTimeline) {
+  let animations = scrollTimelineOptions.get(scrollTimeline).animations;
+  for (const animation of animations) {
+    animation.renormalizeTiming();
+  }
   updateInternal(scrollTimeline);
 }
 
@@ -209,7 +287,9 @@ export class ScrollTimeline {
   constructor(options) {
     scrollTimelineOptions.set(this, {
       source: null,
-      orientation: "block",
+      axis: DEFAULT_TIMELINE_AXIS,
+      anonymousSource: (options ? options.anonymousSource : null),
+      anonymousTarget: (options ? options.anonymousTarget : null),
 
       // View timeline
       subject: null,
@@ -217,13 +297,22 @@ export class ScrollTimeline {
 
       // Internal members
       animations: [],
-      scrollListener: null
+      scrollListener: null,
     });
     const source =
       options && options.source !== undefined ? options.source
                                               : document.scrollingElement;
     updateSource(this, source);
-    this.orientation = (options && options.orientation) || "block";
+
+    if ((options && options.axis !== undefined) && 
+        (options.axis != DEFAULT_TIMELINE_AXIS)) {
+      if (!ScrollTimeline.isValidAxis(options.axis)) {
+        throw TypeError("Invalid axis");
+      }
+
+      scrollTimelineOptions.get(this).axis = options.axis;
+    }
+
     updateInternal(this);
   }
 
@@ -236,18 +325,17 @@ export class ScrollTimeline {
     return scrollTimelineOptions.get(this).source;
   }
 
-  set orientation(orientation) {
-    if (
-      ["block", "inline", "horizontal", "vertical"].indexOf(orientation) === -1
-    ) {
-      throw TypeError("Invalid orientation");
+  set axis(axis) {
+    if (!ScrollTimeline.isValidAxis(axis)) {
+      throw TypeError("Invalid axis");
     }
-    scrollTimelineOptions.get(this).orientation = orientation;
+
+    scrollTimelineOptions.get(this).axis = axis;
     updateInternal(this);
   }
 
-  get orientation() {
-    return scrollTimelineOptions.get(this).orientation;
+  get axis() {
+    return scrollTimelineOptions.get(this).axis;
   }
 
   get duration() {
@@ -283,10 +371,17 @@ export class ScrollTimeline {
     if (!container) return unresolved;
     if (this.phase == 'inactive')
       return unresolved;
+    const scrollerStyle = getComputedStyle(container);
+    if (
+      scrollerStyle.display === "inline" ||
+      scrollerStyle.display === "none"
+    ) {
+      return unresolved;
+    }
 
-    const orientation = this.orientation;
-    const scrollPos = directionAwareScrollOffset(container, orientation);
-    const maxScrollPos = calculateMaxScrollOffset(container, orientation);
+    const axis = this.axis;
+    const scrollPos = directionAwareScrollOffset(container, axis);
+    const maxScrollPos = calculateMaxScrollOffset(container, axis);
 
     return maxScrollPos > 0 ? CSS.percent(100 * scrollPos / maxScrollPos)
                             : CSS.percent(100);
@@ -294,6 +389,10 @@ export class ScrollTimeline {
 
   get __polyfill() {
     return true;
+  }
+
+  static isValidAxis(axis) {
+    return ["block", "inline", "x", "y"].includes(axis);
   }
 }
 
@@ -307,6 +406,10 @@ function findClosestAncestor(element, matcher) {
       return candidate;
     candidate = candidate.parentElement;
   }
+}
+
+export function getAnonymousSourceElement(sourceType, node) {
+  return sourceType == 'root' ? document.scrollingElement : getScrollParent(node);
 }
 
 function isBlockContainer(element) {
@@ -411,10 +514,11 @@ function range(timeline, phase) {
   const container = timeline.source;
   const target = timeline.subject;
 
-  return calculateRange(phase, container, target, details.orientation, details.inset);
+  return calculateRange(phase, container, target, details.axis, details.inset);
 }
 
-export function calculateRange(phase, container, target, orientation, optionsInset) {
+export function calculateRange(phase, container, target, axis, optionsInset) {
+  // TODO: handle position sticky
   let top = 0;
   let left = 0;
   let node = target;
@@ -436,17 +540,17 @@ export function calculateRange(phase, container, target, orientation, optionsIns
   let viewSize = undefined;
   let viewPos = undefined;
   let containerSize = undefined;
-  if (orientation == 'horizontal' ||
-      (orientation == 'inline' && horizontalWritingMode) ||
-      (orientation == 'block' && !horizontalWritingMode)) {
-    viewSize = target.clientWidth;
+  if (axis == 'x' ||
+      (axis == 'inline' && horizontalWritingMode) ||
+      (axis == 'block' && !horizontalWritingMode)) {
+    viewSize = target.offsetWidth;
     viewPos = left;
     if (rtl)
       viewPos += container.scrollWidth - container.clientWidth;
     containerSize = container.clientWidth;
   } else {
     // TODO: support sideways-lr
-    viewSize = target.clientHeight;
+    viewSize = target.offsetHeight;
     viewPos = top;
     containerSize = container.clientHeight;
   }
@@ -479,10 +583,11 @@ export function calculateRange(phase, container, target, orientation, optionsIns
   const containStartOffset = Math.min(alignStartOffset, alignEndOffset);
   const containEndOffset = Math.max(alignStartOffset, alignEndOffset);
 
-  // Enter and Exit bounds align with cover and contains bounds.
+  // Entry and Exit bounds align with cover and contains bounds.
 
   let startOffset = undefined;
   let endOffset = undefined;
+  const targetIsTallerThanContainer = viewSize > containerSize ? true : false;
 
   switch(phase) {
     case 'cover':
@@ -495,13 +600,23 @@ export function calculateRange(phase, container, target, orientation, optionsIns
       endOffset = containEndOffset;
       break;
 
-    case 'enter':
+    case 'entry':
       startOffset = coverStartOffset;
       endOffset = containStartOffset;
       break;
 
     case 'exit':
       startOffset = containEndOffset;
+      endOffset = coverEndOffset;
+      break;
+
+    case 'entry-crossing':
+      startOffset = coverStartOffset;
+      endOffset = targetIsTallerThanContainer ? containEndOffset : containStartOffset;
+      break;
+
+    case 'exit-crossing':
+      startOffset = targetIsTallerThanContainer ? containStartOffset : containEndOffset;
       endOffset = coverEndOffset;
       break;
   }
@@ -525,6 +640,8 @@ function parseInset(value, containerSize) {
       insetParts.push(parseFloat(part));
     else if(part === "auto")
       insetParts.push(0);
+    else
+      throw TypeError("Unsupported inset. Only % and px values are supported (for now).");
   });
 
   if (insetParts.length > 2) {
@@ -544,23 +661,29 @@ function parseInset(value, containerSize) {
 
 // Calculate the fractional offset of a (phase, percent) pair relative to the
 // full cover range.
-export function relativePosition(timeline, phase, percent) {
+export function relativePosition(timeline, phase, offset) {
   const phaseRange = range(timeline, phase);
   const coverRange = range(timeline, 'cover');
-  return calculateRelativePosition(phaseRange, percent, coverRange);
+  return calculateRelativePosition(phaseRange, offset, coverRange);
 }
 
-export function calculateRelativePosition(phaseRange, percent, coverRange) {
+
+
+export function calculateRelativePosition(phaseRange, offset, coverRange) {
   if (!phaseRange || !coverRange)
     return 0;
 
-  const fraction = percent.value / 100;
-  const offset =
-      (phaseRange.end - phaseRange.start) * fraction + phaseRange.start;
-  return (offset - coverRange.start) / (coverRange.end - coverRange.start);
+  const info = {percentageReference: new CSSUnitValue(phaseRange.end - phaseRange.start, "px")};
+  const simplifiedRangeOffset = simplifyCalculation(offset, info);
+  if (!(simplifiedRangeOffset instanceof CSSUnitValue) || simplifiedRangeOffset.unit !== 'px') {
+    throw new Error(`Unsupported offset '${simplifiedRangeOffset.toString()}'`)
+  }
+
+  const offsetPX = simplifiedRangeOffset.value + phaseRange.start;
+  return (offsetPX - coverRange.start) / (coverRange.end - coverRange.start);
 }
 
-// https://drafts.csswg.org/scroll-animations-1/rewrite#view-progress-timelines
+// https://drafts.csswg.org/scroll-animations-1/#view-progress-timelines
 export class ViewTimeline extends ScrollTimeline {
   // As specced, ViewTimeline has a subject and a source, but
   // ViewTimelineOptions only has source. Furthermore, there is a strict
@@ -571,11 +694,6 @@ export class ViewTimeline extends ScrollTimeline {
   // ViewTimelineOptions. Inferring the source from the subject if not
   // explicitly set.
   constructor(options) {
-    if (options.axis) {
-      // Orientation called axis for a view timeline. Internally we can still
-      // call this orientation, since the internal naming is not exposed.
-      options.orientation = options.axis;
-    }
     super(options);
     const details = scrollTimelineOptions.get(this);
     details.subject = options && options.subject ? options.subject : undefined;
@@ -598,15 +716,15 @@ export class ViewTimeline extends ScrollTimeline {
     return scrollTimelineOptions.get(this).subject;
   }
 
-  // The orientation is called "axis" for a view timeline.
-  // Internally we still call it orientation.
+  // The axis is called "axis" for a view timeline.
+  // Internally we still call it axis.
   get axis() {
-    return scrollTimelineOptions.get(this).orientation;
+    return scrollTimelineOptions.get(this).axis;
   }
 
   get currentTime() {
     const unresolved = null;
-    const scrollPos = directionAwareScrollOffset(this.source, this.orientation);
+    const scrollPos = directionAwareScrollOffset(this.source, this.axis);
     if (scrollPos == unresolved)
       return unresolved;
 

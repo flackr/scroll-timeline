@@ -1,32 +1,45 @@
 # Scroll-timeline Polyfill
 
-Automated tests in CI provided by  [<img width="120px" src="https://saucelabs.com/images/logo-saucelabs.png">](https://saucelabs.com/)
-
-[![Sauce Test Status](https://saucelabs.com/browser-matrix/zochahou.svg)](https://saucelabs.com/u/zochahou)
-
-A polyfill of ScrollTimeline as defined by the [spec](https://wicg.github.io/scroll-animations/).
+A polyfill of ScrollTimeline and ViewTimeline as defined by the [spec](https://drafts.csswg.org/scroll-animations-1/).
 
 View a [cool demo showing its usage](https://flackr.github.io/scroll-timeline/demo/parallax/)!
 
 # Usage
 
-To play with ScrollTimeline, simply import the module into your site and you can start creating animations.
+To use this polyfill, import the module into your site and you can start creating animations that use a `ScrollTimeline` or `ViewTimeline`.
 
 ```js
 import 'https://flackr.github.io/scroll-timeline/dist/scroll-timeline.js';
 
 document.getElementById('parallax').animate(
     { transform: ['translateY(0)', 'translateY(100px)']},
-    { duration: 10000, // Totally arbitrary!
-      fill: 'both',
+    { fill: 'both',
       timeline: new ScrollTimeline({
-          scrollOffsets: [
-              new CSSUnitValue(0, 'px'),
-              new CSSUnitValue(200, 'px')
-          ]
-      })
+        source: document.documentElement,
+      }),
+      rangeStart: new CSSUnitValue(0, 'px'),
+      rangeEnd: new CSSUnitValue(200, 'px'),
     });
 ```
+
+Also works with CSS Animations that use a `view-timeline` or `scroll-timeline`
+
+```html
+<script src="https://flackr.github.io/scroll-timeline/dist/scroll-timeline.js"></script>
+```
+
+```css
+@keyframes parallax-effect {
+  to { transform: translateY(100px) }
+}
+#parallax {
+  animation: parallax-effect linear both;
+  animation-timeline: scroll(block root);
+  animation-range: 0px 200px;
+}
+```
+
+For more details on and use-cases of scroll-driven animations, please refer to [https://developer.chrome.com/articles/scroll-driven-animations/](https://developer.chrome.com/articles/scroll-driven-animations/) and [https://scroll-animations.style/](https://scroll-animations.style/)
 
 # Contributing
  
@@ -39,7 +52,7 @@ npm i
 npm run dev 
 ```
 
-Then open the browser `http://localhost:5000`, choose one of the demos (test) to see how your changes. 
+Then open the browser `http://localhost:3000`, choose one of the demos (test) to see how your changes. 
 
 ### 2. Configure & Run Tests
 
@@ -85,7 +98,7 @@ LOCAL_WEBDRIVER_BIN=? #/path/to/webdriver-binaries
 *Command*
 
 ```shell script
-npm run test:webdriver
+npm run test:wpt
 ```
 
 ##### SauceLabs / CI
@@ -105,5 +118,5 @@ SAUCE_KEY=<secret> # Your API key
 *Command*
 
 ```shell script
-TEST_ENV=sauce npm run test:webdriver
+TEST_ENV=sauce npm run test:wpt
 ```

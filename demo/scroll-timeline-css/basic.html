@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<style>
+#container {
+  scroll-timeline-name: --foo, --bar;
+  overflow: scroll;
+  width: 500px;
+  height: 500px;
+  border: 1px solid #333;
+}
+
+.spacer {
+  width: 100%;
+  height: 500px;
+}
+
+#progress {
+  position: fixed;
+  height: 10px;
+  background-color: red;
+  animation: progress linear forwards;
+  animation-timeline: --foo;
+}
+
+body {
+  margin: 0px;
+}
+
+@keyframes progress {
+  from {
+    width: 0px;
+  }
+  to {
+    width: 500px;
+  }
+}
+</style>
+
+<body>
+  <div id=container>
+    <div id=progress></div>
+    <div class="spacer"></div>
+    <div class="spacer"></div>
+    <div class="spacer"></div>
+  </div>
+
+  <script src="../../dist/scroll-timeline.js"></script>
+</body>

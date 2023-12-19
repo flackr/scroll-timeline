@@ -20,11 +20,13 @@ node_modules
 
 # demos deployment directory
 build
+dist
 
 # jest coverage folder
 coverage
 
 test/wpt
+test/report
 
 .DS_Store
 

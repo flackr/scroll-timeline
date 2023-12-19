@@ -1,4 +1,4 @@
-import { StyleParser, RegexMatcher } from "./scroll-timeline-css-parser";
+import { StyleParser } from "./scroll-timeline-css-parser";
 import { ProxyAnimation } from "./proxy-animation"
 import { ScrollTimeline, ViewTimeline, getScrollParent, calculateRange,
   calculateRelativePosition } from "./scroll-timeline-base";
@@ -51,26 +51,22 @@ function initMutationObserver() {
     .forEach((tag) => handleLinkedStylesheet(tag));
 }
 
-function relativePosition(phase, container, target, orientation, optionsInset, percent) {
-  const phaseRange = calculateRange(phase, container, target, orientation, optionsInset);
-  const coverRange = calculateRange('cover', container, target, orientation, optionsInset);
+function relativePosition(phase, container, target, axis, optionsInset, percent) {
+  const phaseRange = calculateRange(phase, container, target, axis, optionsInset);
+  const coverRange = calculateRange('cover', container, target, axis, optionsInset);
   return calculateRelativePosition(phaseRange, percent, coverRange);
-}
-
-function isDescendant(child, parent) {
-  while (child) {
-    if (child == parent) return true;
-    child = child.parentNode;
-  }
-  return false;
 }
 
 function createScrollTimeline(anim, animationName, target) {
   const animOptions = parser.getAnimationTimelineOptions(animationName, target);
+
+  if(!animOptions)
+    return null;
+
   const timelineName = animOptions['animation-timeline'];
   if(!timelineName) return null;
 
-  let options = parser.getScrollTimelineOptions(timelineName) ||
+  let options = parser.getScrollTimelineOptions(timelineName, target) ||
     parser.getViewTimelineOptions(timelineName, target);
   if (!options) return null;
 
@@ -86,7 +82,7 @@ function createScrollTimeline(anim, animationName, target) {
 
 function updateKeyframesIfNecessary(anim, options) {
   const container = getScrollParent(options.subject);
-  const orientation = (options.axis || options.orientation);
+  const axis = (options.axis || options.axis);
 
   function calculateNewOffset(mapping, keyframe) {
     let newOffset = null;
@@ -102,7 +98,7 @@ function updateKeyframesIfNecessary(anim, options) {
             newOffset = parseFloat(tokens[0]);
           } else {
             newOffset = relativePosition(tokens[0], container, options.subject,
-              orientation, options.inset, CSS.percent(parseFloat(tokens[1]))) * 100;
+              axis, options.inset, CSS.percent(parseFloat(tokens[1]))) * 100;
           }
         }
         break;
@@ -131,15 +127,13 @@ function updateKeyframesIfNecessary(anim, options) {
     });
 
     anim.effect.setKeyframes(sortedKeyframes);
-    // Since the mapping has been applied to these @keyframes, we no longer need them.
-    parser.keyframeNamesSelectors.set(anim.animationName, null);
   }
 }
 
 export function initCSSPolyfill() {
   // Don't load if browser claims support
-  if (CSS.supports("animation-timeline: works")) {
-    return;
+  if (CSS.supports("animation-timeline: --works")) {
+    return true;
   }
 
   initMutationObserver();
@@ -161,4 +155,11 @@ export function initCSSPolyfill() {
       }
     });
   });
+
+  // Clear cache containing the ProxyAnimation instances when leaving the page.
+  // See https://github.com/flackr/scroll-timeline/issues/146#issuecomment-1698159183
+  // for details.
+  window.addEventListener('pagehide', (e) => {
+    proxyAnimations = new WeakMap();
+  }, false);
 }
