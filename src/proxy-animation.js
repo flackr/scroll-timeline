@@ -37,7 +37,7 @@ function createReadyPromise(details) {
   details.readyPromise = new PromiseWrapper();
   // Trigger the pending task on the next animation frame.
   requestAnimationFrame(() => {
-    const timelineTime = details.timeline.currentTime;
+    const timelineTime = details.timeline ? details.timeline.currentTime : null;
     if (timelineTime !== null)
       notifyReady(details);
   });
@@ -612,6 +612,11 @@ function renormalizeTiming() {
 }
 
 function notifyReady(details) {
+  // If the timeline has been changed, resolve the previous ready promise.
+  if (!details.timeline) {
+    details.readyPromise.resolve(details.proxy);
+    return;
+  }
   if (details.pendingTask == 'pause') {
     commitPendingPause(details);
   } else if (details.pendingTask == 'play') {

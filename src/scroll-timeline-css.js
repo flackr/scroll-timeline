@@ -143,15 +143,17 @@ export function initCSSPolyfill() {
   window.addEventListener('animationstart', (evt) => {
     evt.target.getAnimations().filter(anim => anim.animationName === evt.animationName).forEach(anim => {
       const result = createScrollTimeline(anim, anim.animationName, evt.target);
-      // If the CSS Animation refers to a scroll or view timeline we need to proxy the animation instance.
-      if (result.timeline && !(anim instanceof ProxyAnimation)) {
-        const proxyAnimation = new ProxyAnimation(anim, result.timeline, result.animOptions);
-        anim.pause();
-        proxyAnimation.play();
-      } else {
-        // If the timeline was removed or the animation was already an instance of a proxy animation,
-        // invoke the set the timeline procedure on the existing animation.
-        anim.timeline = result.timeline;
+      if (result) {
+        // If the CSS Animation refers to a scroll or view timeline we need to proxy the animation instance.
+        if (result.timeline && !(anim instanceof ProxyAnimation)) {
+          const proxyAnimation = new ProxyAnimation(anim, result.timeline, result.animOptions);
+          anim.pause();
+          proxyAnimation.play();
+        } else {
+          // If the timeline was removed or the animation was already an instance of a proxy animation,
+          // invoke the set the timeline procedure on the existing animation.
+          anim.timeline = result.timeline;
+        }
       }
     });
   });
