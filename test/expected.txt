@@ -79,10 +79,10 @@ FAIL	/scroll-animations/css/animation-timeline-deferred.html	Animation.timeline 
 FAIL	/scroll-animations/css/animation-timeline-deferred.html	Animation.timeline returns null for inactive deferred timeline
 FAIL	/scroll-animations/css/animation-timeline-deferred.html	Animation.timeline returns null for inactive (overattached) deferred timeline
 FAIL	/scroll-animations/css/animation-timeline-ignored.tentative.html	Changing animation-timeline changes the timeline (sanity check)
-FAIL	/scroll-animations/css/animation-timeline-ignored.tentative.html	animation-timeline ignored after setting timeline with JS (ScrollTimeline from JS)
+PASS	/scroll-animations/css/animation-timeline-ignored.tentative.html	animation-timeline ignored after setting timeline with JS (ScrollTimeline from JS)
 FAIL	/scroll-animations/css/animation-timeline-ignored.tentative.html	animation-timeline ignored after setting timeline with JS (ScrollTimeline from CSS)
-PASS	/scroll-animations/css/animation-timeline-ignored.tentative.html	animation-timeline ignored after setting timeline with JS (document timeline)
-PASS	/scroll-animations/css/animation-timeline-ignored.tentative.html	animation-timeline ignored after setting timeline with JS (null)
+FAIL	/scroll-animations/css/animation-timeline-ignored.tentative.html	animation-timeline ignored after setting timeline with JS (document timeline)
+FAIL	/scroll-animations/css/animation-timeline-ignored.tentative.html	animation-timeline ignored after setting timeline with JS (null)
 FAIL	/scroll-animations/css/animation-timeline-in-keyframe.html	The animation-timeline property may not be used in keyframes
 PASS	/scroll-animations/css/animation-timeline-multiple.html	animation-timeline works with multiple timelines
 FAIL	/scroll-animations/css/animation-timeline-none.html	Animation with animation-timeline:none holds current time at zero
@@ -957,4 +957,4 @@ FAIL	/scroll-animations/view-timelines/view-timeline-sticky-block.html	View time
 FAIL	/scroll-animations/view-timelines/view-timeline-sticky-inline.html	View timeline with sticky target, block axis.
 FAIL	/scroll-animations/view-timelines/view-timeline-subject-size-changes.html	View timeline with subject size change after the creation of the animation
 FAIL	/scroll-animations/view-timelines/zero-intrinsic-iteration-duration.tentative.html	Intrinsic iteration duration is non-negative
-Passed 432 of 959 tests.
+Passed 431 of 959 tests.
