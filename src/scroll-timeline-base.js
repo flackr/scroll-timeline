@@ -52,14 +52,14 @@ function updateInternal(scrollTimelineInstance) {
 function directionAwareScrollOffset(source, axis) {
   if (!source)
     return null;
-  const scrollPos = sourceDetails.get(source).scrollPos;
+  const sourceMeasurements = sourceDetails.get(source).sourceMeasurements;
   const style = getComputedStyle(source);
   // All writing modes are vertical except for horizontal-tb.
   // TODO: sideways-lr should flow bottom to top, but is currently unsupported
   // in Chrome.
   // http://drafts.csswg.org/css-writing-modes-4/#block-flow
   const horizontalWritingMode = style.writingMode == 'horizontal-tb';
-  let currentScrollOffset  = scrollPos.scrollTop;
+  let currentScrollOffset = sourceMeasurements.scrollTop;
   if (axis == 'x' ||
      (axis == 'inline' && horizontalWritingMode) ||
      (axis == 'block' && !horizontalWritingMode)) {
@@ -68,7 +68,7 @@ function directionAwareScrollOffset(source, axis) {
     // block flow. This is a consequence of shifting the scroll origin due to
     // changes in the overflow direction.
     // http://drafts.csswg.org/cssom-view/#overflow-directions.
-    currentScrollOffset = Math.abs(scrollPos.scrollLeft);
+    currentScrollOffset = Math.abs(sourceMeasurements.scrollLeft);
   }
   return currentScrollOffset;
 }
@@ -90,6 +90,7 @@ export function calculateTargetEffectEnd(animation) {
  * @returns {number}
  */
 export function calculateMaxScrollOffset(source, axis) {
+  const sourceMeasurements = sourceDetails.get(source).sourceMeasurements;
   // Only one horizontal writing mode: horizontal-tb.  All other writing modes
   // flow vertically.
   const horizontalWritingMode =
@@ -99,9 +100,9 @@ export function calculateMaxScrollOffset(source, axis) {
   else if (axis === "inline")
     axis = horizontalWritingMode ? "x" : "y";
   if (axis === "y")
-    return source.scrollHeight - source.clientHeight;
+    return sourceMeasurements.scrollHeight - sourceMeasurements.clientHeight;
   else if (axis === "x")
-    return source.scrollWidth - source.clientWidth;
+    return sourceMeasurements.scrollWidth - sourceMeasurements.clientWidth;
 }
 
 function resolvePx(cssValue, resolvedLength) {
@@ -121,7 +122,7 @@ function resolvePx(cssValue, resolvedLength) {
     return total;
   } else if (cssValue instanceof CSSMathNegate) {
     return -resolvePx(cssValue.value, resolvedLength);
-  } 
+  }
   throw TypeError("Unsupported value type: " + typeof(cssValue));
 }
 
@@ -158,6 +159,83 @@ function validateAnonymousSource(timeline) {
   updateSource(timeline, source);
 }
 
+/**
+ * Read measurements of source element
+ * @param {HTMLElement} source
+ * @return {{clientWidth: *, scrollHeight: *, scrollLeft, clientHeight: *, scrollTop, scrollWidth: *}}
+ */
+export function measureSource (source) {
+  const style = getComputedStyle(source);
+  return {
+    scrollLeft: source.scrollLeft,
+    scrollTop: source.scrollTop,
+    scrollWidth: source.scrollWidth,
+    scrollHeight: source.scrollHeight,
+    clientWidth: source.clientWidth,
+    clientHeight: source.clientHeight,
+    writingMode: style.writingMode,
+    direction: style.direction
+  };
+}
+
+/**
+ * Measure subject element relative to source
+ * @param {HTMLElement} source
+ * @param {HTMLElement|undefined} subject
+ * @param subject
+ */
+export function measureSubject(source, subject) {
+  if (!source || !subject) {
+    return
+  }
+  let top = 0;
+  let left = 0;
+  let node = subject;
+  const ancestor = source.offsetParent;
+  while (node && node != ancestor) {
+    left += node.offsetLeft;
+    top += node.offsetTop;
+    node = node.offsetParent;
+  }
+  left -= source.offsetLeft + source.clientLeft;
+  top -= source.offsetTop + source.clientTop;
+  return {
+    top,
+    left,
+    offsetWidth: subject.offsetWidth,
+    offsetHeight: subject.offsetHeight
+  };
+}
+
+/**
+ * Update measurements of source, and update timelines
+ * @param {HTMLElement} source
+ */
+function updateMeasurements(source) {
+  let details = sourceDetails.get(source);
+  details.sourceMeasurements = measureSource(source);
+
+  // Update measurements of the subject of connected view timelines
+  for (const ref of details.timelineRefs) {
+    const timeline = ref.deref();
+    if ((timeline instanceof ViewTimeline)) {
+      const timelineDetails = scrollTimelineOptions.get(timeline)
+      timelineDetails.subjectMeasurements = measureSubject(source, timeline.subject)
+    }
+  }
+
+  requestAnimationFrame(() => {
+    // Defer ticking timeline to animation frame to prevent
+    // "ResizeObserver loop completed with undelivered notifications"
+    for (const ref of details.timelineRefs) {
+      const timeline = ref.deref();
+      if (timeline) {
+        updateInternal(timeline);
+      }
+    }
+  });
+}
+
 function updateSource(timeline, source) {
   const oldSource = scrollTimelineOptions.get(timeline).source;
   if (oldSource == source)
@@ -166,9 +244,16 @@ function updateSource(timeline, source) {
   if (oldSource) {
     const details = sourceDetails.get(oldSource);
     if (details) {
-      // Remove timelines from source
-      details.timelines = details.timelines.filter(t => t !== timeline);
-      if (details.timelines.length === 0) {
+      // Remove timeline reference from old source
+      details.timelineRefs.delete(timeline);
+
+      // Clean up timeline refs that have been garbage-collected
+      const undefinedRefs = Array.from(details.timelineRefs).filter(ref => typeof ref.deref() === 'undefined');
+      for (const ref of undefinedRefs) {
+        details.timelineRefs.delete(ref);
+      }
+
+      if (details.timelineRefs.size === 0) {
         // All timelines have been disconnected from the source
         // Clean up
         details.disconnect();
@@ -181,50 +266,50 @@ function updateSource(timeline, source) {
     let details = sourceDetails.get(source);
     if (!details) {
       // This is the first timeline for this source
-      // Store a list of connected timelines and current scroll position
+      // Store a set of weak refs to connected timelines and current measurements
       details = {
-        timelines: [],
-        scrollPos: {
-          scrollLeft: source.scrollLeft,
-          scrollTop: source.scrollTop
-        }
+        timelineRefs: new Set(),
+        sourceMeasurements: measureSource(source)
       };
       sourceDetails.set(source, details);
 
-      const resizeObserver = new ResizeObserver(() => {
-        // Sample and store scroll pos
-        details.scrollPos = {
-          scrollLeft: source.scrollLeft,
-          scrollTop: source.scrollTop
-        };
-        requestAnimationFrame(() => {
-          // Defer ticking timeline to animation frame to prevent
-          // "ResizeObserver loop completed with undelivered notifications"
-          for (const timeline of details.timelines) {
-            renormalizeAnimationTimings(timeline);
-          }
-        });
+      // Use resize observer to detect changes to source size
+      const resizeObserver = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          updateMeasurements(entry.target)
+        }
       });
       resizeObserver.observe(source);
 
+      // Use mutation observer to detect updated style attributes on source element
+      const mutationObserver = new MutationObserver((records) => {
+        for (const record of records) {
+          updateMeasurements(record.target);
+        }
+      });
+      mutationObserver.observe(source, {attributes: true, attributeFilter: ['style']});
+
       const scrollListener = () => {
         // Sample and store scroll pos
-        details.scrollPos = {
-          scrollLeft: source.scrollLeft,
-          scrollTop: source.scrollTop
-        };
-        for (const timeline of details.timelines) {
-          updateInternal(timeline);
+        details.sourceMeasurements.scrollLeft = source.scrollLeft;
+        details.sourceMeasurements.scrollTop = source.scrollTop;
+
+        for (const ref of details.timelineRefs) {
+          const timeline = ref.deref();
+          if (timeline) {
+            updateInternal(timeline);
+          }
         }
       };
       scrollEventSource(source).addEventListener("scroll", scrollListener);
       details.disconnect = () => {
-        resizeObserver.unobserve(source);
         resizeObserver.disconnect();
         scrollEventSource(source).removeEventListener("scroll", scrollListener);
       };
     }
-    details.timelines.push(timeline);
+
+    // Add a weak ref to the timeline so that we can update it when the source changes
+    details.timelineRefs.add(new WeakRef(timeline));
   }
 }
 
@@ -248,9 +333,8 @@ export function removeAnimation(scrollTimeline, animation) {
  * @param scrollTimeline {ScrollTimeline}
  * @param animation {Animation}
  * @param tickAnimation {function(number)}
- * @param renormalizeTiming {function()}
  */
-export function addAnimation(scrollTimeline, animation, tickAnimation, renormalizeTiming) {
+export function addAnimation(scrollTimeline, animation, tickAnimation) {
   let animations = scrollTimelineOptions.get(scrollTimeline).animations;
   for (let i = 0; i < animations.length; i++) {
     // @TODO: This early return causes issues when a page with the polyfill
@@ -264,17 +348,8 @@ export function addAnimation(scrollTimeline, animation, tickAnimation, renormali
 
   animations.push({
     animation: animation,
-    tickAnimation: tickAnimation,
-    renormalizeTiming: renormalizeTiming
+    tickAnimation: tickAnimation
   });
-  updateInternal(scrollTimeline);
-}
-
-function renormalizeAnimationTimings(scrollTimeline) {
-  let animations = scrollTimelineOptions.get(scrollTimeline).animations;
-  for (const animation of animations) {
-    animation.renormalizeTiming();
-  }
   updateInternal(scrollTimeline);
 }
 
@@ -297,14 +372,14 @@ export class ScrollTimeline {
 
       // Internal members
       animations: [],
-      scrollListener: null,
+      subjectMeasurements: null
     });
     const source =
       options && options.source !== undefined ? options.source
                                               : document.scrollingElement;
     updateSource(this, source);
 
-    if ((options && options.axis !== undefined) && 
+    if ((options && options.axis !== undefined) &&
         (options.axis != DEFAULT_TIMELINE_AXIS)) {
       if (!ScrollTimeline.isValidAxis(options.axis)) {
         throw TypeError("Invalid axis");
@@ -501,6 +576,8 @@ export function getScrollParent(node) {
 // timing to be renormalized.
 function range(timeline, phase) {
   const details = scrollTimelineOptions.get(timeline);
+  const subjectMeasurements = details.subjectMeasurements
+  const sourceMeasurements = sourceDetails.get(details.source).sourceMeasurements
 
   const unresolved = null;
   if (timeline.phase === 'inactive')
@@ -509,50 +586,33 @@ function range(timeline, phase) {
   if (!(timeline instanceof ViewTimeline))
     return unresolved;
 
-  // Compute the offset of the top-left corner of subject relative to
-  // top-left corner of the container.
-  const container = timeline.source;
-  const target = timeline.subject;
-
-  return calculateRange(phase, container, target, details.axis, details.inset);
+  return calculateRange(phase, sourceMeasurements, subjectMeasurements, details.axis, details.inset);
 }
 
-export function calculateRange(phase, container, target, axis, optionsInset) {
+export function calculateRange(phase, sourceMeasurements, subjectMeasurements, axis, optionsInset) {
   // TODO: handle position sticky
-  let top = 0;
-  let left = 0;
-  let node = target;
-  const ancestor = container.offsetParent;
-  while (node && node != ancestor) {
-    left += node.offsetLeft;
-    top += node.offsetTop;
-    node = node.offsetParent;
-  }
-  left -= container.offsetLeft + container.clientLeft;
-  top -= container.offsetTop + container.clientTop;
 
   // Determine the view and container size based on the scroll direction.
   // The view position is the scroll position of the logical starting edge
   // of the view.
-  const style = getComputedStyle(container);
-  const horizontalWritingMode = style.writingMode == 'horizontal-tb';
-  const rtl = style.direction == 'rtl' || style.writingMode == 'vertical-rl';
+  const horizontalWritingMode = sourceMeasurements.writingMode == 'horizontal-tb';
+  const rtl = sourceMeasurements.direction == 'rtl' || sourceMeasurements.writingMode == 'vertical-rl';
   let viewSize = undefined;
   let viewPos = undefined;
   let containerSize = undefined;
   if (axis == 'x' ||
       (axis == 'inline' && horizontalWritingMode) ||
       (axis == 'block' && !horizontalWritingMode)) {
-    viewSize = target.offsetWidth;
-    viewPos = left;
+    viewSize = subjectMeasurements.offsetWidth;
+    viewPos = subjectMeasurements.left;
     if (rtl)
-      viewPos += container.scrollWidth - container.clientWidth;
-    containerSize = container.clientWidth;
+      viewPos += sourceMeasurements.scrollWidth - sourceMeasurements.clientWidth;
+    containerSize = sourceMeasurements.clientWidth;
   } else {
     // TODO: support sideways-lr
-    viewSize = target.offsetHeight;
-    viewPos = top;
-    containerSize = container.clientHeight;
+    viewSize = subjectMeasurements.offsetHeight;
+    viewPos = subjectMeasurements.top;
+    containerSize = sourceMeasurements.clientHeight;
   }
 
   const inset = parseInset(optionsInset, containerSize);
@@ -620,8 +680,13 @@ export function calculateRange(phase, container, target, axis, optionsInset) {
       endOffset = coverEndOffset;
       break;
   }
-
   return { start: startOffset, end: endOffset };
+}
+
+function validateInset(value) {
+  // Validating insets when constructing ViewTimeline by running the parse function.
+  // TODO: parse insets to CSSNumericValue when constructing ViewTimeline
+  parseInset(value, 0)
 }
 
 function parseInset(value, containerSize) {
@@ -668,7 +733,6 @@ export function relativePosition(timeline, phase, offset) {
 }
 
 
-
 export function calculateRelativePosition(phaseRange, offset, coverRange) {
   if (!phaseRange || !coverRange)
     return 0;
@@ -698,8 +762,12 @@ export class ViewTimeline extends ScrollTimeline {
     const details = scrollTimelineOptions.get(this);
     details.subject = options && options.subject ? options.subject : undefined;
     // TODO: Handle insets.
+    if (options && options.inset) {
+      validateInset(options.inset)
+    }
 
     validateSource(this);
+    details.subjectMeasurements = measureSubject(details.source, details.subject)
     updateInternal(this);
   }
 
