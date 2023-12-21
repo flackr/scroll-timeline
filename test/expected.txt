@@ -575,7 +575,7 @@ PASS	/scroll-animations/scroll-timelines/current-time-root-scroller.html	current
 PASS	/scroll-animations/scroll-timelines/current-time-writing-modes.html	currentTime handles direction: rtl correctly
 PASS	/scroll-animations/scroll-timelines/current-time-writing-modes.html	currentTime handles writing-mode: vertical-rl correctly
 PASS	/scroll-animations/scroll-timelines/current-time-writing-modes.html	currentTime handles writing-mode: vertical-lr correctly
-FAIL	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the delay to a positive number
+PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the delay to a positive number
 PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the delay to a negative number
 PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the delay of an animation in progress: positive delay that causes the animation to be no longer in-effect
 PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the delay of an animation in progress: negative delay that seeks into the active interval
@@ -583,14 +583,14 @@ PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting
 PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Throws when setting invalid delay value: NaN
 PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Throws when setting invalid delay value: Infinity
 PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Throws when setting invalid delay value: -Infinity
-FAIL	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the endDelay to a positive number
-FAIL	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the endDelay to a negative number
+PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the endDelay to a positive number
+PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the endDelay to a negative number
 PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Throws when setting the endDelay to infinity
 PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Throws when setting the endDelay to negative infinity
-FAIL	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the fill to 'none'
-FAIL	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the fill to 'forwards'
-FAIL	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the fill to 'backwards'
-FAIL	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the fill to 'both'
+PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the fill to 'none'
+PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the fill to 'forwards'
+PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the fill to 'backwards'
+PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the fill to 'both'
 PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the iterationStart of an animation in progress: backwards-filling
 PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the iterationStart of an animation in progress: active phase
 PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the iterationStart of an animation in progress: forwards-filling
@@ -598,12 +598,12 @@ PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Throws when se
 PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Throws when setting invalid iterationStart value: NaN
 PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Throws when setting invalid iterationStart value: Infinity
 PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Throws when setting invalid iterationStart value: -Infinity
-FAIL	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting iterations to a double value
+PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting iterations to a double value
 PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Throws when setting iterations to Infinity
 FAIL	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the iterations of an animation in progress
 PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the iterations of an animation in progress with duration "auto"
-FAIL	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the duration to 123.45
-FAIL	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the duration to auto
+PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the duration to 123.45
+PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the duration to auto
 PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Throws when setting invalid duration: -1
 PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Throws when setting invalid duration: NaN
 PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Throws when setting invalid duration: Infinity
@@ -612,34 +612,34 @@ PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Throws when se
 PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Throws when setting invalid duration: "100"
 FAIL	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the duration of an animation in progress
 PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the duration of an animation in progress such that the the start and current time do not change
-FAIL	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the direction to each of the possible keywords
+PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the direction to each of the possible keywords
 PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the direction of an animation in progress from 'normal' to 'reverse'
 PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the direction of an animation in progress from 'normal' to 'reverse' while at start of active interval
 PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the direction of an animation in progress from 'normal' to 'reverse' while filling backwards
 PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the direction of an animation in progress from 'normal' to 'alternate'
 PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the direction of an animation in progress from 'alternate' to 'alternate-reverse'
-FAIL	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the easing to a step-start function
-FAIL	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the easing to a steps(1, start) function
-FAIL	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the easing to a steps(2, start) function
+PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the easing to a step-start function
+PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the easing to a steps(1, start) function
+PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the easing to a steps(2, start) function
 FAIL	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the easing to a step-end function
 FAIL	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the easing to a steps(1) function
 FAIL	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the easing to a steps(1, end) function
 FAIL	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the easing to a steps(2, end) function
 PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the easing to a linear function
-FAIL	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the easing to a ease function
-FAIL	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the easing to a ease-in function
-FAIL	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the easing to a ease-in-out function
-FAIL	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the easing to a ease-out function
-FAIL	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the easing to a easing function which produces values greater than 1
-FAIL	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the easing to a easing function which produces values less than 1
-FAIL	/scroll-animations/scroll-timelines/effect-updateTiming.html	Updates the specified value when setting the easing to 'ease'
+PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the easing to a ease function
+PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the easing to a ease-in function
+PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the easing to a ease-in-out function
+PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the easing to a ease-out function
+PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the easing to a easing function which produces values greater than 1
+PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the easing to a easing function which produces values less than 1
+PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Updates the specified value when setting the easing to 'ease'
 PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Updates the specified value when setting the easing to 'linear'
-FAIL	/scroll-animations/scroll-timelines/effect-updateTiming.html	Updates the specified value when setting the easing to 'ease-in'
-FAIL	/scroll-animations/scroll-timelines/effect-updateTiming.html	Updates the specified value when setting the easing to 'ease-out'
-FAIL	/scroll-animations/scroll-timelines/effect-updateTiming.html	Updates the specified value when setting the easing to 'ease-in-out'
-FAIL	/scroll-animations/scroll-timelines/effect-updateTiming.html	Updates the specified value when setting the easing to 'cubic-bezier(0.1, 5, 0.23, 0)'
-FAIL	/scroll-animations/scroll-timelines/effect-updateTiming.html	Updates the specified value when setting the easing to 'steps(3, start)'
-FAIL	/scroll-animations/scroll-timelines/effect-updateTiming.html	Updates the specified value when setting the easing to 'steps(3)'
+PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Updates the specified value when setting the easing to 'ease-in'
+PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Updates the specified value when setting the easing to 'ease-out'
+PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Updates the specified value when setting the easing to 'ease-in-out'
+PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Updates the specified value when setting the easing to 'cubic-bezier(0.1, 5, 0.23, 0)'
+PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Updates the specified value when setting the easing to 'steps(3, start)'
+PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Updates the specified value when setting the easing to 'steps(3)'
 FAIL	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the easing of an animation in progress
 PASS	/scroll-animations/scroll-timelines/finish-animation.html	Finishing an animation with a zero playback rate throws
 PASS	/scroll-animations/scroll-timelines/finish-animation.html	Finishing an animation seeks to the end time
@@ -702,7 +702,7 @@ PASS	/scroll-animations/scroll-timelines/pause-animation.html	A pending ready pr
 FAIL	/scroll-animations/scroll-timelines/pause-animation.html	A pause-pending animation maintains the current time when applying a pending playback rate
 PASS	/scroll-animations/scroll-timelines/pause-animation.html	The animation's current time remains fixed after pausing
 PASS	/scroll-animations/scroll-timelines/pause-animation.html	Pausing a canceled animation sets the current time
-FAIL	/scroll-animations/scroll-timelines/pause-animation.html	Pause pending task doesn't run when the timeline is inactive.
+PASS	/scroll-animations/scroll-timelines/pause-animation.html	Pause pending task doesn't run when the timeline is inactive.
 PASS	/scroll-animations/scroll-timelines/pause-animation.html	Animation start and current times are correct if scroll timeline is activated after animation.pause call.
 FAIL	/scroll-animations/scroll-timelines/play-animation.html	Playing an animations aligns the start time with the start of the active range
 PASS	/scroll-animations/scroll-timelines/play-animation.html	Playing an animations with a negative playback rate aligns the start time with the end of the active range
@@ -712,7 +712,7 @@ FAIL	/scroll-animations/scroll-timelines/play-animation.html	Playing a running a
 PASS	/scroll-animations/scroll-timelines/play-animation.html	Playing a finished animation restarts the animation aligned at the start
 FAIL	/scroll-animations/scroll-timelines/play-animation.html	Playing a finished and reversed animation restarts the animation aligned at the end
 PASS	/scroll-animations/scroll-timelines/play-animation.html	Playing a pause-pending but previously finished animation realigns with the scroll position
-FAIL	/scroll-animations/scroll-timelines/play-animation.html	Playing a finished animation clears the start time
+PASS	/scroll-animations/scroll-timelines/play-animation.html	Playing a finished animation clears the start time
 PASS	/scroll-animations/scroll-timelines/play-animation.html	The ready promise should be replaced if the animation is not already pending
 PASS	/scroll-animations/scroll-timelines/play-animation.html	A pending ready promise should be resolved and not replaced when the animation enters the running state
 FAIL	/scroll-animations/scroll-timelines/play-animation.html	Resuming an animation from paused realigns with scroll position.
@@ -787,7 +787,7 @@ PASS	/scroll-animations/scroll-timelines/scroll-animation-effect-phases.tentativ
 PASS	/scroll-animations/scroll-timelines/scroll-animation-effect-phases.tentative.html	Make scroller inactive, then set current time to an in range time
 PASS	/scroll-animations/scroll-timelines/scroll-animation-effect-phases.tentative.html	Animation effect is still applied after pausing and making timeline inactive.
 PASS	/scroll-animations/scroll-timelines/scroll-animation-effect-phases.tentative.html	Make timeline inactive, force style update then pause the animation. No crashing indicates test success.
-FAIL	/scroll-animations/scroll-timelines/scroll-animation-inactive-timeline.html	Play pending task doesn't run when the timeline is inactive.
+PASS	/scroll-animations/scroll-timelines/scroll-animation-inactive-timeline.html	Play pending task doesn't run when the timeline is inactive.
 PASS	/scroll-animations/scroll-timelines/scroll-animation-inactive-timeline.html	Animation start and current times are correct if scroll timeline is activated after animation.play call.
 FAIL	/scroll-animations/scroll-timelines/scroll-animation-inactive-timeline.html	Animation start and current times are correct if scroll timeline is activated after setting start time.
 FAIL	/scroll-animations/scroll-timelines/scroll-animation-inactive-timeline.html	Animation current time is correct when the timeline becomes newly inactive and then active again.
@@ -849,7 +849,7 @@ FAIL	/scroll-animations/scroll-timelines/setting-start-time.html	Setting the sta
 PASS	/scroll-animations/scroll-timelines/setting-timeline.tentative.html	Setting a scroll timeline on a play-pending animation synchronizes currentTime of the animation with the scroll position.
 PASS	/scroll-animations/scroll-timelines/setting-timeline.tentative.html	Setting a scroll timeline on a pause-pending animation fixes the currentTime of the animation based on the scroll position once resumed
 PASS	/scroll-animations/scroll-timelines/setting-timeline.tentative.html	Setting a scroll timeline on a reversed play-pending animation synchronizes the currentTime of the animation with the scroll position.
-FAIL	/scroll-animations/scroll-timelines/setting-timeline.tentative.html	Setting a scroll timeline on a running animation synchronizes the currentTime of the animation with the scroll position.
+PASS	/scroll-animations/scroll-timelines/setting-timeline.tentative.html	Setting a scroll timeline on a running animation synchronizes the currentTime of the animation with the scroll position.
 PASS	/scroll-animations/scroll-timelines/setting-timeline.tentative.html	Setting a scroll timeline on a paused animation fixes the currentTime of the animation based on the scroll position when resumed
 PASS	/scroll-animations/scroll-timelines/setting-timeline.tentative.html	Setting a scroll timeline on a reversed paused animation fixes the currentTime of the animation based on the scroll position when resumed
 PASS	/scroll-animations/scroll-timelines/setting-timeline.tentative.html	Transitioning from a scroll timeline to a document timeline on a running animation preserves currentTime
@@ -939,14 +939,14 @@ FAIL	/scroll-animations/view-timelines/view-timeline-inset.html	view timeline wi
 FAIL	/scroll-animations/view-timelines/view-timeline-inset.html	view timeline with font relative inset.
 FAIL	/scroll-animations/view-timelines/view-timeline-inset.html	view timeline with viewport relative insets.
 FAIL	/scroll-animations/view-timelines/view-timeline-inset.html	view timeline inset as string
-FAIL	/scroll-animations/view-timelines/view-timeline-inset.html	view timeline with invalid inset
+PASS	/scroll-animations/view-timelines/view-timeline-inset.html	view timeline with invalid inset
 PASS	/scroll-animations/view-timelines/view-timeline-missing-subject.html	ViewTimeline with missing subject
 PASS	/scroll-animations/view-timelines/view-timeline-on-display-none-element.html	element with display: none should have inactive viewtimeline
-FAIL	/scroll-animations/view-timelines/view-timeline-range-large-subject.html	View timeline with range set via delays.
+PASS	/scroll-animations/view-timelines/view-timeline-range-large-subject.html	View timeline with range set via delays.
 FAIL	/scroll-animations/view-timelines/view-timeline-range.html	View timeline with range as <name> <percent> pair.
-FAIL	/scroll-animations/view-timelines/view-timeline-range.html	View timeline with range and inferred name or offset.
-FAIL	/scroll-animations/view-timelines/view-timeline-range.html	View timeline with range as <name> <px> pair.
-FAIL	/scroll-animations/view-timelines/view-timeline-range.html	View timeline with range as <name> <percent+px> pair.
+PASS	/scroll-animations/view-timelines/view-timeline-range.html	View timeline with range and inferred name or offset.
+PASS	/scroll-animations/view-timelines/view-timeline-range.html	View timeline with range as <name> <px> pair.
+PASS	/scroll-animations/view-timelines/view-timeline-range.html	View timeline with range as <name> <percent+px> pair.
 FAIL	/scroll-animations/view-timelines/view-timeline-range.html	View timeline with range as strings.
 PASS	/scroll-animations/view-timelines/view-timeline-root-source.html	Test view-timeline with document scrolling element.
 PASS	/scroll-animations/view-timelines/view-timeline-snapport.html	Default ViewTimeline is not affected by scroll-padding
@@ -957,4 +957,4 @@ FAIL	/scroll-animations/view-timelines/view-timeline-sticky-block.html	View time
 FAIL	/scroll-animations/view-timelines/view-timeline-sticky-inline.html	View timeline with sticky target, block axis.
 FAIL	/scroll-animations/view-timelines/view-timeline-subject-size-changes.html	View timeline with subject size change after the creation of the animation
 FAIL	/scroll-animations/view-timelines/zero-intrinsic-iteration-duration.tentative.html	Intrinsic iteration duration is non-negative
-Passed 356 of 959 tests.
+Passed 392 of 959 tests.

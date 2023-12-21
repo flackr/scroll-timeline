@@ -1,7 +1,7 @@
 import { StyleParser } from "./scroll-timeline-css-parser";
 import { ProxyAnimation } from "./proxy-animation"
 import { ScrollTimeline, ViewTimeline, getScrollParent, calculateRange,
-  calculateRelativePosition } from "./scroll-timeline-base";
+  calculateRelativePosition, measureSubject, measureSource } from "./scroll-timeline-base";
 
 const parser = new StyleParser();
 
@@ -52,8 +52,10 @@ function initMutationObserver() {
 }
 
 function relativePosition(phase, container, target, axis, optionsInset, percent) {
-  const phaseRange = calculateRange(phase, container, target, axis, optionsInset);
-  const coverRange = calculateRange('cover', container, target, axis, optionsInset);
+  const sourceMeasurements = measureSource(container)
+  const subjectMeasurements = measureSubject(container, target)
+  const phaseRange = calculateRange(phase, sourceMeasurements, subjectMeasurements, axis, optionsInset);
+  const coverRange = calculateRange('cover', sourceMeasurements, subjectMeasurements, axis, optionsInset);
   return calculateRelativePosition(phaseRange, percent, coverRange);
 }
 
