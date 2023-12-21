@@ -769,15 +769,20 @@ function calculateInset(value, sizes) {
 export function relativePosition(timeline, phase, offset) {
   const phaseRange = range(timeline, phase);
   const coverRange = range(timeline, 'cover');
-  return calculateRelativePosition(phaseRange, offset, coverRange);
+  return calculateRelativePosition(phaseRange, offset, coverRange, timeline.subject);
 }
 
 
-export function calculateRelativePosition(phaseRange, offset, coverRange) {
+
+export function calculateRelativePosition(phaseRange, offset, coverRange, subject) {
   if (!phaseRange || !coverRange)
     return 0;
 
-  const info = {percentageReference: new CSSUnitValue(phaseRange.end - phaseRange.start, "px")};
+  let style = getComputedStyle(subject)
+  const info = {
+    percentageReference: CSS.px(phaseRange.end - phaseRange.start),
+    fontSize: CSS.px(parseFloat(style.fontSize))
+  };
   const simplifiedRangeOffset = simplifyCalculation(offset, info);
   if (!(simplifiedRangeOffset instanceof CSSUnitValue) || simplifiedRangeOffset.unit !== 'px') {
     throw new Error(`Unsupported offset '${simplifiedRangeOffset.toString()}'`)

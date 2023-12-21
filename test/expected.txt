@@ -924,6 +924,7 @@ FAIL	/scroll-animations/view-timelines/sticky/view-timeline-sticky-offscreen-6.h
 FAIL	/scroll-animations/view-timelines/sticky/view-timeline-sticky-offscreen-7.html	View timeline target > viewport, bottom-sticky and top-sticky during contain.
 FAIL	/scroll-animations/view-timelines/svg-graphics-element-001.html	View timeline attached to SVG graphics element
 FAIL	/scroll-animations/view-timelines/svg-graphics-element-002.html	View timeline attached to SVG graphics element
+FAIL	/scroll-animations/view-timelines/svg-graphics-element-003.html	View timeline attached to SVG graphics element
 FAIL	/scroll-animations/view-timelines/timeline-offset-in-keyframe.html	Timeline offsets in programmatic keyframes
 FAIL	/scroll-animations/view-timelines/timeline-offset-in-keyframe.html	String offsets in programmatic keyframes
 PASS	/scroll-animations/view-timelines/timeline-offset-in-keyframe.html	Invalid timeline offset in programmatic keyframe throws
@@ -946,7 +947,7 @@ PASS	/scroll-animations/view-timelines/view-timeline-range.html	View timeline wi
 PASS	/scroll-animations/view-timelines/view-timeline-range.html	View timeline with range and inferred name or offset.
 PASS	/scroll-animations/view-timelines/view-timeline-range.html	View timeline with range as <name> <px> pair.
 PASS	/scroll-animations/view-timelines/view-timeline-range.html	View timeline with range as <name> <percent+px> pair.
-FAIL	/scroll-animations/view-timelines/view-timeline-range.html	View timeline with range as strings.
+PASS	/scroll-animations/view-timelines/view-timeline-range.html	View timeline with range as strings.
 PASS	/scroll-animations/view-timelines/view-timeline-root-source.html	Test view-timeline with document scrolling element.
 PASS	/scroll-animations/view-timelines/view-timeline-snapport.html	Default ViewTimeline is not affected by scroll-padding
 PASS	/scroll-animations/view-timelines/view-timeline-source.tentative.html	Default source for a View timeline is the nearest scroll ancestor to the subject
@@ -956,4 +957,4 @@ FAIL	/scroll-animations/view-timelines/view-timeline-sticky-block.html	View time
 FAIL	/scroll-animations/view-timelines/view-timeline-sticky-inline.html	View timeline with sticky target, block axis.
 FAIL	/scroll-animations/view-timelines/view-timeline-subject-size-changes.html	View timeline with subject size change after the creation of the animation
 FAIL	/scroll-animations/view-timelines/zero-intrinsic-iteration-duration.tentative.html	Intrinsic iteration duration is non-negative
-Passed 431 of 958 tests.
+Passed 432 of 959 tests.
