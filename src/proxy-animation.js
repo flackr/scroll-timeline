@@ -633,6 +633,8 @@ function playInternal(details, autoRewind) {
 
 function tickAnimation(timelineTime) {
   const details = proxyAnimations.get(this);
+  if (!details) return;
+
   if (timelineTime == null) {
     // While the timeline is inactive, it's effect should not be applied.
     // To polyfill this behavior, we cancel the underlying animation.
