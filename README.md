@@ -39,7 +39,7 @@ Also works with CSS Animations that use a `view-timeline` or `scroll-timeline`
 }
 ```
 
-For more details on and use-cases of scroll-driven animations, please refer to [https://developer.chrome.com/articles/scroll-driven-animations/](https://developer.chrome.com/articles/scroll-driven-animations/) and [https://scroll-animations.style/](https://scroll-animations.style/)
+For more details on and use-cases of scroll-driven animations, please refer to [https://developer.chrome.com/articles/scroll-driven-animations/](https://developer.chrome.com/articles/scroll-driven-animations/) and [https://scroll-driven-animations.style/](https://scroll-driven-animations.style/)
 
 # Contributing
  
