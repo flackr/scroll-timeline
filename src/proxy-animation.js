@@ -11,6 +11,7 @@ const nativeElementAnimate = window.Element.prototype.animate;
 const nativeAnimation = window.Animation;
 
 export const ANIMATION_RANGE_NAMES = ['entry', 'exit', 'cover', 'contain', 'entry-crossing', 'exit-crossing'];
+const rangeNameRegExp = new RegExp(`(${ANIMATION_RANGE_NAMES.join('|')})(?!-)`);
 
 class PromiseWrapper {
   constructor() {
@@ -1775,7 +1776,7 @@ function parseTimelineRangeOffset(value, position) {
   }
   // Author passed in something like `"cover 100%"`
   else {
-    const parts = value.split(new RegExp(`(${ANIMATION_RANGE_NAMES.join('|')})`)).map(part => part.trim()).filter(Boolean);
+    const parts = value.split(rangeNameRegExp).map(part => part.trim()).filter(Boolean);
 
     if (parts.length === 1) {
       if (ANIMATION_RANGE_NAMES.includes(parts[0])) {
