@@ -1799,13 +1799,16 @@ function parseTimelineRangeOffset(value, position) {
 
 // Parses a given animation-range value (string)
 function parseAnimationRange(value) {
-  const animationRange = {
-    start: 'normal',
-    end: 'normal'
-  };
-
   if (!value)
-    return animationRange;
+    return {
+      start: 'normal',
+      end: 'normal'
+    };
+  
+  const animationRange = {
+    start: { rangeName: 'cover', offset: CSS.percent(0) },
+    end: { rangeName: 'cover', offset: CSS.percent(100) },
+  };
 
   // Format:
   // <start-name> <start-offset> <end-name> <end-offset>
