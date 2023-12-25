@@ -14,6 +14,7 @@
 
 import {installCSSOM} from "./proxy-cssom.js";
 import {simplifyCalculation} from "./simplify-calculation";
+import {normalizeAxis} from './utils.js';
 
 installCSSOM();
 
@@ -58,11 +59,8 @@ function directionAwareScrollOffset(source, axis) {
   // TODO: sideways-lr should flow bottom to top, but is currently unsupported
   // in Chrome.
   // http://drafts.csswg.org/css-writing-modes-4/#block-flow
-  const horizontalWritingMode = style.writingMode == 'horizontal-tb';
   let currentScrollOffset = sourceMeasurements.scrollTop;
-  if (axis == 'x' ||
-     (axis == 'inline' && horizontalWritingMode) ||
-     (axis == 'block' && !horizontalWritingMode)) {
+  if (normalizeAxis(axis, style) === 'x') {
     // Negative values are reported for scrollLeft when the inline text
     // direction is right to left or for vertical text with a right to left
     // block flow. This is a consequence of shifting the scroll origin due to
@@ -617,16 +615,13 @@ export function calculateRange(phase, sourceMeasurements, subjectMeasurements, a
   // Determine the view and container size based on the scroll direction.
   // The view position is the scroll position of the logical starting edge
   // of the view.
-  const horizontalWritingMode = sourceMeasurements.writingMode == 'horizontal-tb';
   const rtl = sourceMeasurements.direction == 'rtl' || sourceMeasurements.writingMode == 'vertical-rl';
   let viewSize = undefined;
   let viewPos = undefined;
   let sizes = {
     fontSize: subjectMeasurements.fontSize
   };
-  if (axis == 'x' ||
-      (axis == 'inline' && horizontalWritingMode) ||
-      (axis == 'block' && !horizontalWritingMode)) {
+  if (normalizeAxis(axis, sourceMeasurements) === 'x') {
     viewSize = subjectMeasurements.offsetWidth;
     viewPos = subjectMeasurements.left;
     sizes.scrollPadding = [sourceMeasurements.scrollPaddingLeft, sourceMeasurements.scrollPaddingRight];
