@@ -1,5 +1,4 @@
-import { ANIMATION_RANGE_NAMES } from './proxy-animation';
-import { getAnonymousSourceElement } from './scroll-timeline-base';
+import { ANIMATION_RANGE_NAMES, getAnonymousSourceElement } from './scroll-timeline-base';
 
 // This is also used in scroll-timeline-css.js
 export const RegexMatcher = {
