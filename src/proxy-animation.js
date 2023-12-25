@@ -1338,9 +1338,9 @@ export class ProxyAnimation {
       return details.animation.rangeStart = value;
     }
 
-    if (details.timeline instanceof ViewTimeline) {
+    if (details.timeline instanceof ScrollTimeline) {
       const animationRange = details.animationRange;
-      animationRange.start = parseTimelineRangeOffset(value, 'start');
+      animationRange.start = details.timeline.constructor.parseTimelineRangePart(value, 'start');
 
       // Additional polyfill step to ensure that the native animation has the
       // correct value for current time.
@@ -1359,9 +1359,9 @@ export class ProxyAnimation {
       return details.animation.rangeEnd = value;
     }
 
-    if (details.timeline instanceof ViewTimeline) {
+    if (details.timeline instanceof ScrollTimeline) {
       const animationRange = details.animationRange;
-      animationRange.end = parseTimelineRangeOffset(value, 'end');
+      animationRange.end = details.timeline.constructor.parseTimelineRangePart(value, 'end');
 
       // Additional polyfill step to ensure that the native animation has the
       // correct value for current time.
@@ -1759,14 +1759,13 @@ export function animate(keyframes, options) {
 
   if (timeline instanceof ScrollTimeline) {
     animation.pause();
-    if (timeline instanceof ViewTimeline) {
-      const details = proxyAnimations.get(proxyAnimation);
 
-      details.animationRange = {
-        start: parseTimelineRangeOffset(options.rangeStart, 'start'),
-        end: parseTimelineRangeOffset(options.rangeEnd, 'end'),
-      };
-    }
+    const details = proxyAnimations.get(proxyAnimation);
+    details.animationRange = {
+      start: timeline.constructor.parseTimelineRangePart(options.rangeStart, 'start'),
+      end: timeline.constructor.parseTimelineRangePart(options.rangeEnd, 'end'),
+    };
+
     proxyAnimation.play();
   }
 
