@@ -948,7 +948,7 @@ export class ProxyAnimation {
       effect: null,
       // Range when using a view-timeline. The default range is cover 0% to
       // 100%.
-      animationRange: timeline.constructor.parseAnimationRange(animOptions['animation-range']),
+      animationRange: isScrollAnimation ? timeline.constructor.parseAnimationRange(animOptions['animation-range']) : null,
       proxy: this
     });
   }
