@@ -16,12 +16,30 @@
     to { width: 120px; }
   }
 
+@keyframes outlineChange {
+  from { outline: 0px solid lime; }
+  to { outline: 10px solid lime; }
+}
+
   #box_one {
     width: 100px;
     height: 100px;
     background-color: green;
-    animation: linear colorChange both, linear widthChange both, move linear;
-    animation-timeline: scroll(root), auto, scroll(nearest y);
+    overflow-y: scroll;
+    animation:
+      linear colorChange both,
+      linear widthChange both,
+      move linear,
+      linear outlineChange both;
+    animation-timeline:
+      scroll(root),
+      auto,
+      scroll(nearest y),
+      scroll(self y);
+  }
+
+  .content {
+    height: 400px;
   }
 
   .spacer {
@@ -44,7 +62,9 @@
 <body>
 
   <div id="container">
-    <div id="box_one"></div>
+    <div id="box_one">
+      <div class="content"></div>
+    </div>
     <div class="spacer"></div>
   </div>
 
