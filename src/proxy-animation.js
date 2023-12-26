@@ -1331,7 +1331,7 @@ export class ProxyAnimation {
   }
 
   get rangeStart() {
-    return proxyAnimations.get(this).animationRange.start ?? 'normal';
+    return proxyAnimations.get(this).animationRange?.start ?? 'normal';
   }
 
   set rangeStart(value) {
@@ -1352,7 +1352,7 @@ export class ProxyAnimation {
   }
 
   get rangeEnd() {
-    return proxyAnimations.get(this).animationRange.end ?? 'normal';
+    return proxyAnimations.get(this).animationRange?.end ?? 'normal';
   }
 
   set rangeEnd(value) {
