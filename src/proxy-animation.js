@@ -818,6 +818,7 @@ function createProxyEffect(details) {
 
 // Computes the start delay as a fraction of the active cover range.
 function fractionalStartDelay(details) {
+  if (!details.animationRange) return 0;
   if (details.animationRange.start === 'normal') {
     details.animationRange.start = details.timeline.constructor.getNormalStartRange();
   }
@@ -826,6 +827,7 @@ function fractionalStartDelay(details) {
 
 // Computes the ends delay as a fraction of the active cover range.
 function fractionalEndDelay(details) {
+  if (!details.animationRange) return 0;
   if (details.animationRange.end === 'normal') {
     details.animationRange.end = details.timeline.constructor.getNormalEndRange();
   }
