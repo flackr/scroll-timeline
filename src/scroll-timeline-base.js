@@ -233,9 +233,8 @@ function updateMeasurements(source) {
   if (details.updateScheduled)
     return;
 
-  requestAnimationFrame(() => {
-    // Defer ticking timeline to animation frame to prevent
-    // "ResizeObserver loop completed with undelivered notifications"
+  setTimeout(() => {
+    // Schedule a task to update timelines after all measurements are completed
     for (const ref of details.timelineRefs) {
       const timeline = ref.deref();
       if (timeline) {
