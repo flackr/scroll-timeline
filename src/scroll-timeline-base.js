@@ -487,11 +487,10 @@ export class ScrollTimeline {
   // Calculate the fractional offset of a range value relative to the full range.
   relativePosition(value, details) {
     const { axis, source } = details.timeline;
+    const { sourceMeasurements } = sourceDetails.get(source);
 
-    // @TODO: Make use of sourceMeasurements here, yet these don’t seem to be stored
-    const style = getComputedStyle(source);
     let sourceScrollDistance = undefined;
-    if (normalizeAxis(axis, style) === 'x') {
+    if (normalizeAxis(axis, sourceMeasurements) === 'x') {
       sourceScrollDistance = source.scrollWidth;
     } else {
       sourceScrollDistance = source.scrollHeight;
