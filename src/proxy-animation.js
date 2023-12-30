@@ -42,7 +42,8 @@ function createReadyPromise(details) {
     if (timelineTime === null) {
       return
     }
-
+    // Run auto align start time procedure, in case measurements are ready
+    autoAlignStartTime(details);
     if (details.pendingTask === 'play' && (details.startTime !== null || details.holdTime !== null)) {
       commitPendingPlay(details);
     } else if (details.pendingTask === 'pause') {
