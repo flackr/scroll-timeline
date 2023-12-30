@@ -780,6 +780,9 @@ function createProxyEffect(details) {
   };
   const updateTimingHandler = {
     apply: function(target, thisArg, argumentsList) {
+      if (!argumentsList || !argumentsList.length)
+        return;
+
       // Additional validation that is specific to scroll timelines.
       if (details.timeline) {
         const options = argumentsList[0];
