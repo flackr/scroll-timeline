@@ -784,7 +784,7 @@ function createProxyEffect(details) {
         return;
 
       // Additional validation that is specific to scroll timelines.
-      if (details.timeline) {
+      if (details.timeline && argumentsList[0]) {
         const options = argumentsList[0];
         const duration = options.duration;
         if (duration === Infinity) {
