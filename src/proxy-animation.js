@@ -888,7 +888,11 @@ function autoAlignStartTime(details) {
   // 5. Let start offset be the resolved timeline time corresponding to the start of the animation attachment range.
   //    In the case of view timelines, it requires a calculation based on the proportion of the cover range.
   try {
-    startOffset = CSS.percent(fractionalStartDelay(details) * 100);
+    const startDelayFraction = fractionalStartDelay(details);
+    if (startDelayFraction === null)
+      return;
+
+    startOffset = CSS.percent(startDelayFraction * 100);
   } catch {
     // TODO: Validate supported values for range start, to avoid exceptions when resolving the values.
 
@@ -901,7 +905,11 @@ function autoAlignStartTime(details) {
   // 6. Let end offset be the resolved timeline time corresponding to the end of the animation attachment range.
   //    In the case of view timelines, it requires a calculation based on the proportion of the cover range.
   try {
-    endOffset = CSS.percent((1 - fractionalEndDelay(details)) * 100);
+    const endDelayFraction = fractionalEndDelay(details);
+    if (endDelayFraction === null)
+      return;
+
+    endOffset = CSS.percent((1 - endDelayFraction) * 100);
   } catch {
     // TODO: Validate supported values for range end, to avoid exceptions when resolving the values.
 

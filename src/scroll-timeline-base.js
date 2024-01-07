@@ -611,6 +611,9 @@ export function range(timeline, phase) {
   if (!(timeline instanceof ViewTimeline))
     return unresolved;
 
+  if (!sourceMeasurements || !subjectMeasurements)
+    return unresolved;
+
   return calculateRange(phase, sourceMeasurements, subjectMeasurements, details.axis, details.inset);
 }
 
@@ -810,7 +813,7 @@ export function fractionalOffset(timeline, value) {
 
 export function calculateRelativePosition(phaseRange, offset, coverRange, subject) {
   if (!phaseRange || !coverRange)
-    return 0;
+    return null;
 
   let style = getComputedStyle(subject)
   const info = {
