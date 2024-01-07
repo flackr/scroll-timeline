@@ -295,8 +295,14 @@ export function simplifyCalculation(root, info) {
       }
     }
 
-    // Return root.
-    return new CSSMathProduct(...children);
+    if (children.length === 1) {
+      // Handle case where root is a product node with only one child,
+      // and that child can not be expressed in the canonical unit.
+      return children[0];
+    } else {
+      // Return root.
+      return new CSSMathProduct(...children);
+    }
   }
   // Return root.
   return root;
