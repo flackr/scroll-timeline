@@ -97,7 +97,7 @@ export function installCSSOM() {
    */
   function parseCSSMultiplication(str) {
     let values = [];
-    const tokens = str.split(/(?<!\([^\)]*)([*])(?![^\(]*\))/);
+    const tokens = str.split(new RegExp('(?<!\\([^\\)]*)([*])(?![^\\(]*\\))'));
     values.push(parseCSSDivision(tokens.shift()));
     while (tokens.length) {
       tokens.shift(); // Consume operator '*'
@@ -113,7 +113,7 @@ export function installCSSOM() {
    */
   function parseCSSDivision(str) {
     let values = [];
-    const tokens = str.split(/(?<!\([^\)]*)([/])(?![^\(]*\))/);
+    const tokens = str.split(new RegExp('(?<!\\([^\\)]*)([/])(?![^\\(]*\\))'));
     values.push(parseCSSNumericValue(tokens.shift()));
     while (tokens.length) {
       tokens.shift(); // Consume operator '/'
@@ -129,7 +129,7 @@ export function installCSSOM() {
    */
   function parseCSSMathSum(str) {
     let values = [];
-    const tokens = str.split(/(?<!\([^\)]*)(\s[+-]\s)(?![^\(]*\))/);
+    const tokens = str.split(new RegExp('(?<!\\([^\\)]*)(\\s[+-]\\s)(?![^\\(]*\\))'));
     values.push(parseCSSMultiplication(tokens.shift()));
     while (tokens.length) {
       let op = tokens.shift();

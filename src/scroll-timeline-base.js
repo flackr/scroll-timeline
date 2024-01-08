@@ -705,7 +705,7 @@ function parseInset(value) {
   // Parse string parts to
   if (typeof value === 'string') {
     // Split value into separate parts
-    const stringParts = value.split(/(?<!\([^\)]*)\s(?![^\(]*\))/);
+    const stringParts = value.split(new RegExp('(?<!\\([^\\)]*)\\s(?![^\\(]*\\))'));
     parts = stringParts.map(str => {
       if (str.trim() === 'auto') {
         return 'auto';
