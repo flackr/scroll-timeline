@@ -1052,7 +1052,7 @@ FAIL	/scroll-animations/view-timelines/timeline-offset-in-keyframe.html	String o
 PASS	/scroll-animations/view-timelines/timeline-offset-in-keyframe.html	Invalid timeline offset in programmatic keyframe throws
 FAIL	/scroll-animations/view-timelines/timeline-offset-in-keyframe.html	Timeline offsets in programmatic keyframes adjust for change in timeline
 FAIL	/scroll-animations/view-timelines/timeline-offset-in-keyframe.html	Timeline offsets in programmatic keyframes resolved when updating the animation effect
-FAIL	/scroll-animations/view-timelines/unattached-subject-inset.html	Creating a view timeline with a subject that is not attached to the document works as expected
+PASS	/scroll-animations/view-timelines/unattached-subject-inset.html	Creating a view timeline with a subject that is not attached to the document works as expected
 FAIL	/scroll-animations/view-timelines/view-timeline-get-current-time-range-name.html	View timeline current time for named range
 FAIL	/scroll-animations/view-timelines/view-timeline-get-set-range.html	Getting and setting the animation range
 PASS	/scroll-animations/view-timelines/view-timeline-inset.html	View timeline with px based inset.

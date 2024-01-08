@@ -570,7 +570,7 @@ function getContainingBlock(element) {
 }
 
 export function getScrollParent(node) {
-  if (!node)
+  if (!node || !node.isConnected)
     return undefined;
 
   while (node = getContainingBlock(node)) {
@@ -718,7 +718,7 @@ function parseInset(value) {
 
   if (!value) return inset;
 
-  let parts = value;
+  let parts;
   // Parse string parts to
   if (typeof value === 'string') {
     parts = splitIntoComponentValues(value).map(str => {
@@ -731,6 +731,10 @@ function parseInset(value) {
         throw TypeError(`Could not parse inset "${value}"`);
       }
     });
+  } else if (Array.isArray(value)) {
+    parts = value;
+  } else {
+    parts = [value];
   }
   if (parts.length === 0 || parts.length > 2) {
     throw TypeError('Invalid inset');

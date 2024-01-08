@@ -166,6 +166,10 @@ export function installCSSOM() {
       get value() {
         return  privateDetails.get(this).values[0];
       }
+
+      type() {
+        return this.value.type();
+      }
     },
 
     'CSSMathInvert': class extends CSSMathValue {
