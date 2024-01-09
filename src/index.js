@@ -73,6 +73,14 @@ function initPolyfill() {
       "Error installing ScrollTimeline polyfill: could not attach WAAPI's getAnimations to document"
     );
   }
+
+  const oldSupports = CSS.supports;
+  CSS.supports = (ident) => {
+    if (ident.startsWith('animation-timeline:')) {
+      return true;
+    }
+    return oldSupports(ident);
+  };
 }
 
 initPolyfill();
