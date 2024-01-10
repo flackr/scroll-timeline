@@ -74,12 +74,12 @@ function initPolyfill() {
     );
   }
 
-  const oldSupports = CSS.supports;
+  const origSupports = CSS.supports;
   CSS.supports = (ident) => {
-    if (ident.startsWith('animation-timeline:')) {
-      return true;
+    if (ident.includes('animation-timeline:')) {
+      ident = ident.replaceAll('animation-timeline', '--animation-timeline');
     }
-    return oldSupports(ident);
+    return origSupports(ident);
   };
 }
 
