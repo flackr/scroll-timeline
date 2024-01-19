@@ -35,7 +35,7 @@ const ANIMATION_KEYWORDS = [
 ];
 
 const TIMELINE_AXIS_TYPES = ['block', 'inline', 'x', 'y'];
-const ANONYMOUS_TIMELINE_SOURCE_TYPES = ['nearest', 'root'];
+const ANONYMOUS_TIMELINE_SOURCE_TYPES = ['nearest', 'root', 'self'];
 
 // Parse a styleSheet to extract the relevant elements needed for
 // scroll-driven animations.

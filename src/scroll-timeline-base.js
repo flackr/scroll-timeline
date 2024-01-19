@@ -491,7 +491,16 @@ function findClosestAncestor(element, matcher) {
 }
 
 export function getAnonymousSourceElement(sourceType, node) {
-  return sourceType == 'root' ? document.scrollingElement : getScrollParent(node);
+  switch (sourceType) {
+    case 'root':
+      return document.scrollingElement;
+    case 'nearest':
+      return getScrollParent(node);
+    case 'self':
+      return node;
+    default:
+      throw new TypeError('Invalid ScrollTimeline Source Type.');
+  }
 }
 
 function isBlockContainer(element) {
