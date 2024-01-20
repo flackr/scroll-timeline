@@ -923,13 +923,13 @@ PASS	/scroll-animations/scroll-timelines/scroll-timeline-range.html	Scroll timel
 FAIL	/scroll-animations/scroll-timelines/scroll-timeline-range.html	Scroll timeline with px range [JavaScript API]
 FAIL	/scroll-animations/scroll-timelines/scroll-timeline-range.html	Scroll timeline with calculated range [JavaScript API]
 FAIL	/scroll-animations/scroll-timelines/scroll-timeline-range.html	Scroll timeline with EM range [JavaScript API]
-TIMEOUT	/scroll-animations/scroll-timelines/scroll-timeline-range.html	Scroll timeline with percentage range [CSS]
-NOTRUN	/scroll-animations/scroll-timelines/scroll-timeline-range.html	Scroll timeline with px range [CSS]
-NOTRUN	/scroll-animations/scroll-timelines/scroll-timeline-range.html	Scroll timeline with calculated range [CSS]
-NOTRUN	/scroll-animations/scroll-timelines/scroll-timeline-range.html	Scroll timeline with EM range [CSS]
+FAIL	/scroll-animations/scroll-timelines/scroll-timeline-range.html	Scroll timeline with percentage range [CSS]
+FAIL	/scroll-animations/scroll-timelines/scroll-timeline-range.html	Scroll timeline with px range [CSS]
+FAIL	/scroll-animations/scroll-timelines/scroll-timeline-range.html	Scroll timeline with calculated range [CSS]
+FAIL	/scroll-animations/scroll-timelines/scroll-timeline-range.html	Scroll timeline with EM range [CSS]
 PASS	/scroll-animations/scroll-timelines/scroll-timeline-snapshotting.html	ScrollTimeline current time is updated after programmatic animated scroll.
 PASS	/scroll-animations/scroll-timelines/setting-current-time.html	Setting animation current time to null throws TypeError.
-FAIL	/scroll-animations/scroll-timelines/setting-current-time.html	Setting the current time to an absolute time value throws exception
+PASS	/scroll-animations/scroll-timelines/setting-current-time.html	Setting the current time to an absolute time value throws exception
 PASS	/scroll-animations/scroll-timelines/setting-current-time.html	Set animation current time to a valid value without playing.
 PASS	/scroll-animations/scroll-timelines/setting-current-time.html	Set animation current time to a valid value while playing.
 PASS	/scroll-animations/scroll-timelines/setting-current-time.html	Set animation current time to a value beyond effect end.
@@ -953,7 +953,7 @@ PASS	/scroll-animations/scroll-timelines/setting-playback-rate.html	Reversing th
 PASS	/scroll-animations/scroll-timelines/setting-playback-rate.html	Zero initial playback rate should correctly modify initial current time.
 FAIL	/scroll-animations/scroll-timelines/setting-playback-rate.html	Setting a zero playback rate while running preserves the start time
 FAIL	/scroll-animations/scroll-timelines/setting-playback-rate.html	Reversing an animation with non-boundary aligned start time symmetrically adjusts the start time
-FAIL	/scroll-animations/scroll-timelines/setting-start-time.html	Setting the start time to an absolute time value throws exception
+PASS	/scroll-animations/scroll-timelines/setting-start-time.html	Setting the start time to an absolute time value throws exception
 PASS	/scroll-animations/scroll-timelines/setting-start-time.html	Setting the start time clears the hold time
 PASS	/scroll-animations/scroll-timelines/setting-start-time.html	Setting the start time clears the hold time when the timeline is inactive
 PASS	/scroll-animations/scroll-timelines/setting-start-time.html	Setting an unresolved start time sets the hold time

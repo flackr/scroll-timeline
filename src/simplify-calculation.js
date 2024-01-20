@@ -54,7 +54,7 @@ function partition(items, callbackFn) {
  * @param {Info} info information used to resolve
  * @return {CSSNumericValue}
  */
-export function simplifyCalculation(root, info) {
+export function simplifyCalculation(root, info = {}) {
   function simplifyNumericArray(values) {
     return Array.from(values).map((value) => simplifyCalculation(value, info));
   }
@@ -84,7 +84,15 @@ export function simplifyCalculation(root, info) {
     if (root instanceof CSSUnitValue && root.unit === 'em' && info.fontSize) {
       root = new CSSUnitValue(root.value * info.fontSize.value, info.fontSize.unit);
     }
-    // 3. If root is a <calc-constant>, return its numeric value.
+    // 3. If root is a <calc-keyword> that can be resolved, return what it resolves to, simplified.
+    if (root instanceof CSSKeywordValue) {
+      //https://www.w3.org/TR/css-values-4/#calc-constants
+      if (root.value === 'e') {
+        return new CSSUnitValue(Math.E, 'number');
+      } else if (root.value === 'pi') {
+        return new CSSUnitValue(Math.PI, 'number');
+      }
+    }
     // 4. Otherwise, return root.
     return root;
   }
@@ -169,8 +177,14 @@ export function simplifyCalculation(root, info) {
       }
     }
 
-    //    2. Return root.
-    return root;
+    //    2. If root has only one child, return the child.
+    //
+    //       Otherwise, return root.
+    if (children.length === 1) {
+      return children[0];
+    } else {
+      return root;
+    }
   }
 
   // If root is a Negate node:
