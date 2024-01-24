@@ -120,7 +120,7 @@ export class StyleParser {
       return {
         anonymousSource: options.source,
         anonymousTarget: target,
-        source: getAnonymousSourceElement(options.source, target),
+        source: getAnonymousSourceElement(options.source ?? 'nearest', target),
         axis: (options.axis ? options.axis : 'block'),
       };
     }
