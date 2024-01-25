@@ -230,6 +230,9 @@ function updateMeasurements(source) {
     }
   }
 
+  if (details.updateScheduled)
+    return;
+
   requestAnimationFrame(() => {
     // Defer ticking timeline to animation frame to prevent
     // "ResizeObserver loop completed with undelivered notifications"
@@ -239,7 +242,10 @@ function updateMeasurements(source) {
         updateInternal(timeline);
       }
     }
+
+    details.updateScheduled = false;
   });
+  details.updateScheduled = true;
 }
 
 function updateSource(timeline, source) {
