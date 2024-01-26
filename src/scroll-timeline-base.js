@@ -669,6 +669,7 @@ export function calculateRange(phase, sourceMeasurements, subjectMeasurements, a
 
   let startOffset = undefined;
   let endOffset = undefined;
+  // Take inset into account when determining the scrollport size
   const adjustedScrollportSize = sizes.containerSize - inset.start - inset.end;
   const subjectIsLargerThanScrollport = viewSize > adjustedScrollportSize;
 
