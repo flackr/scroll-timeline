@@ -1093,8 +1093,8 @@ export class ProxyAnimation {
       // Effect proxy that performs the necessary time conversions when using a
       // progress-based timelines.
       effect: null,
-      // Range when using a view-timeline. The default range is cover 0% to
-      // 100%.
+      // The animation attachment range, restricting the animation’s
+      // active interval to that range of a timeline
       animationRange: isScrollAnimation ? parseAnimationRange(timeline, animOptions['animation-range']) : null,
       proxy: this
     });
