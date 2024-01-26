@@ -13,7 +13,7 @@ PASS	/scroll-animations/css/animation-shorthand.html	e.style['animation'] = "1s 
 PASS	/scroll-animations/css/animation-shorthand.html	e.style['animation'] = "1s linear 1s 2 reverse forwards paused anim scroll()" should not set the property value
 PASS	/scroll-animations/css/animation-shorthand.html	e.style['animation'] = "1s linear 1s 2 reverse forwards paused anim view()" should not set the property value
 PASS	/scroll-animations/css/animation-shorthand.html	e.style['animation'] = "1s linear 1s 2 reverse forwards paused anim timeline" should not set the property value
-PASS	/scroll-animations/css/animation-shorthand.html	Property animation value '1s linear 1s 2 reverse forwards paused anim'
+FAIL	/scroll-animations/css/animation-shorthand.html	Property animation value '1s linear 1s 2 reverse forwards paused anim'
 PASS	/scroll-animations/css/animation-shorthand.html	e.style['animation'] = "1s linear 1s 2 reverse forwards paused anim1,\n   1s linear 1s 2 reverse forwards paused anim2,\n   1s linear 1s 2 reverse forwards paused anim3" should set animation-delay
 PASS	/scroll-animations/css/animation-shorthand.html	e.style['animation'] = "1s linear 1s 2 reverse forwards paused anim1,\n   1s linear 1s 2 reverse forwards paused anim2,\n   1s linear 1s 2 reverse forwards paused anim3" should set animation-direction
 PASS	/scroll-animations/css/animation-shorthand.html	e.style['animation'] = "1s linear 1s 2 reverse forwards paused anim1,\n   1s linear 1s 2 reverse forwards paused anim2,\n   1s linear 1s 2 reverse forwards paused anim3" should set animation-duration
@@ -25,7 +25,7 @@ FAIL	/scroll-animations/css/animation-shorthand.html	e.style['animation'] = "1s 
 FAIL	/scroll-animations/css/animation-shorthand.html	e.style['animation'] = "1s linear 1s 2 reverse forwards paused anim1,\n   1s linear 1s 2 reverse forwards paused anim2,\n   1s linear 1s 2 reverse forwards paused anim3" should set animation-range-start
 FAIL	/scroll-animations/css/animation-shorthand.html	e.style['animation'] = "1s linear 1s 2 reverse forwards paused anim1,\n   1s linear 1s 2 reverse forwards paused anim2,\n   1s linear 1s 2 reverse forwards paused anim3" should set animation-timeline
 PASS	/scroll-animations/css/animation-shorthand.html	e.style['animation'] = "1s linear 1s 2 reverse forwards paused anim1,\n   1s linear 1s 2 reverse forwards paused anim2,\n   1s linear 1s 2 reverse forwards paused anim3" should set animation-timing-function
-PASS	/scroll-animations/css/animation-shorthand.html	e.style['animation'] = "1s linear 1s 2 reverse forwards paused anim1,\n   1s linear 1s 2 reverse forwards paused anim2,\n   1s linear 1s 2 reverse forwards paused anim3" should not set unrelated longhands
+FAIL	/scroll-animations/css/animation-shorthand.html	e.style['animation'] = "1s linear 1s 2 reverse forwards paused anim1,\n   1s linear 1s 2 reverse forwards paused anim2,\n   1s linear 1s 2 reverse forwards paused anim3" should not set unrelated longhands
 FAIL	/scroll-animations/css/animation-shorthand.html	Animation shorthand can not represent non-initial timelines (specified)
 FAIL	/scroll-animations/css/animation-shorthand.html	Animation shorthand can not represent non-initial timelines (computed)
 FAIL	/scroll-animations/css/animation-shorthand.html	Animation shorthand can not represent non-initial animation-delay-end (specified)
@@ -85,6 +85,19 @@ FAIL	/scroll-animations/css/animation-timeline-ignored.tentative.html	animation-
 FAIL	/scroll-animations/css/animation-timeline-ignored.tentative.html	animation-timeline ignored after setting timeline with JS (null)
 FAIL	/scroll-animations/css/animation-timeline-in-keyframe.html	The animation-timeline property may not be used in keyframes
 PASS	/scroll-animations/css/animation-timeline-multiple.html	animation-timeline works with multiple timelines
+FAIL	/scroll-animations/css/animation-timeline-named-scroll-progress-timeline.tentative.html	scroll-timeline-name is referenceable in animation-timeline on the declaring element itself
+FAIL	/scroll-animations/css/animation-timeline-named-scroll-progress-timeline.tentative.html	scroll-timeline-name is referenceable in animation-timeline on that element's descendants
+FAIL	/scroll-animations/css/animation-timeline-named-scroll-progress-timeline.tentative.html	scroll-timeline-name is not referenceable in animation-timeline on that element's siblings
+FAIL	/scroll-animations/css/animation-timeline-named-scroll-progress-timeline.tentative.html	scroll-timeline-name on an element which is not a scroll-container
+FAIL	/scroll-animations/css/animation-timeline-named-scroll-progress-timeline.tentative.html	Change in scroll-timeline-name to match animation timeline updates animation.
+FAIL	/scroll-animations/css/animation-timeline-named-scroll-progress-timeline.tentative.html	Change in scroll-timeline-name to no longer match animation timeline updates animation.
+FAIL	/scroll-animations/css/animation-timeline-named-scroll-progress-timeline.tentative.html	Timeline lookup updates candidate when closer match available.
+FAIL	/scroll-animations/css/animation-timeline-named-scroll-progress-timeline.tentative.html	Timeline lookup updates candidate when match becomes available.
+FAIL	/scroll-animations/css/animation-timeline-named-scroll-progress-timeline.tentative.html	scroll-timeline-axis is block
+FAIL	/scroll-animations/css/animation-timeline-named-scroll-progress-timeline.tentative.html	scroll-timeline-axis is inline
+FAIL	/scroll-animations/css/animation-timeline-named-scroll-progress-timeline.tentative.html	scroll-timeline-axis is x
+FAIL	/scroll-animations/css/animation-timeline-named-scroll-progress-timeline.tentative.html	scroll-timeline-axis is y
+FAIL	/scroll-animations/css/animation-timeline-named-scroll-progress-timeline.tentative.html	scroll-timeline-axis is mutated
 FAIL	/scroll-animations/css/animation-timeline-none.html	Animation with animation-timeline:none holds current time at zero
 FAIL	/scroll-animations/css/animation-timeline-none.html	Animation with unknown timeline name holds current time at zero
 FAIL	/scroll-animations/css/animation-timeline-parsing.html	e.style['animation-timeline'] = "initial" should set the property value
@@ -155,8 +168,47 @@ PASS	/scroll-animations/css/animation-timeline-parsing.html	e.style['animation-t
 PASS	/scroll-animations/css/animation-timeline-parsing.html	e.style['animation-timeline'] = "view(abc)" should not set the property value
 PASS	/scroll-animations/css/animation-timeline-parsing.html	e.style['animation-timeline'] = "view(y abc)" should not set the property value
 PASS	/scroll-animations/css/animation-timeline-parsing.html	e.style['animation-timeline'] = "view(\"string\")" should not set the property value
+FAIL	/scroll-animations/css/animation-timeline-scroll-functional-notation.tentative.html	animation-timeline: scroll(nearest)
+FAIL	/scroll-animations/css/animation-timeline-scroll-functional-notation.tentative.html	animation-timeline: scroll(root)
+FAIL	/scroll-animations/css/animation-timeline-scroll-functional-notation.tentative.html	animation-timeline: scroll(self)
+FAIL	/scroll-animations/css/animation-timeline-scroll-functional-notation.tentative.html	animation-timeline: scroll(self), on non-scroller
+FAIL	/scroll-animations/css/animation-timeline-scroll-functional-notation.tentative.html	animation-timeline: scroll(inline)
+FAIL	/scroll-animations/css/animation-timeline-scroll-functional-notation.tentative.html	animation-timeline: scroll(x)
+FAIL	/scroll-animations/css/animation-timeline-scroll-functional-notation.tentative.html	animation-timeline: scroll(y)
+FAIL	/scroll-animations/css/animation-timeline-view-functional-notation.tentative.html	animation-timeline: view() without timeline range name
+FAIL	/scroll-animations/css/animation-timeline-view-functional-notation.tentative.html	animation-timeline: view(50px) without timeline range name
+FAIL	/scroll-animations/css/animation-timeline-view-functional-notation.tentative.html	animation-timeline: view(auto 50px) without timeline range name
+FAIL	/scroll-animations/css/animation-timeline-view-functional-notation.tentative.html	animation-timeline: view(inline) without timeline range name
+FAIL	/scroll-animations/css/animation-timeline-view-functional-notation.tentative.html	animation-timeline: view(x) without timeline range name
+FAIL	/scroll-animations/css/animation-timeline-view-functional-notation.tentative.html	animation-timeline: view(y) without timeline range name
+FAIL	/scroll-animations/css/animation-timeline-view-functional-notation.tentative.html	animation-timeline: view(x 50px) without timeline range name
+FAIL	/scroll-animations/css/animation-timeline-view-functional-notation.tentative.html	animation-timeline: view(50px), view(inline 50px) without timeline range name
+FAIL	/scroll-animations/css/animation-timeline-view-functional-notation.tentative.html	animation-timeline: view(inline) changes to view(inline 50px), withouttimeline range name
+FAIL	/scroll-animations/css/animation-timeline-view-functional-notation.tentative.html	animation-timeline: view()
+FAIL	/scroll-animations/css/animation-timeline-view-functional-notation.tentative.html	animation-timeline: view(50px)
+FAIL	/scroll-animations/css/animation-timeline-view-functional-notation.tentative.html	animation-timeline: view(auto 50px)
+FAIL	/scroll-animations/css/animation-timeline-view-functional-notation.tentative.html	animation-timeline: view(inline)
+FAIL	/scroll-animations/css/animation-timeline-view-functional-notation.tentative.html	animation-timeline: view(x)
+FAIL	/scroll-animations/css/animation-timeline-view-functional-notation.tentative.html	animation-timeline: view(y)
+FAIL	/scroll-animations/css/animation-timeline-view-functional-notation.tentative.html	animation-timeline: view(x 50px)
+FAIL	/scroll-animations/css/animation-timeline-view-functional-notation.tentative.html	animation-timeline: view(), view(inline)
+FAIL	/scroll-animations/css/animation-timeline-view-functional-notation.tentative.html	animation-timeline: view(inline) changes to view(inline 50px)
+FAIL	/scroll-animations/css/get-animations-inactive-timeline.html	getAnimations includes inactive scroll-linked animations that have not been canceled
 FAIL	/scroll-animations/css/merge-timeline-offset-keyframes.html	Keyframes with same easing and timeline offset are merged.
 FAIL	/scroll-animations/css/merge-timeline-offset-keyframes.html	Keyframes with same timeline offset but different easing function are not merged.
+FAIL	/scroll-animations/css/named-range-keyframes-with-document-timeline.tentative.html	Named range keyframe offset when you have a document timeline
+FAIL	/scroll-animations/css/progress-based-animation-animation-longhand-properties.tentative.html	animation-duration
+PASS	/scroll-animations/css/progress-based-animation-animation-longhand-properties.tentative.html	animation-duration: 0s
+FAIL	/scroll-animations/css/progress-based-animation-animation-longhand-properties.tentative.html	animation-iteration-count
+PASS	/scroll-animations/css/progress-based-animation-animation-longhand-properties.tentative.html	animation-iteration-count: 0
+FAIL	/scroll-animations/css/progress-based-animation-animation-longhand-properties.tentative.html	animation-iteration-count: infinite
+FAIL	/scroll-animations/css/progress-based-animation-animation-longhand-properties.tentative.html	animation-direction: normal
+FAIL	/scroll-animations/css/progress-based-animation-animation-longhand-properties.tentative.html	animation-direction: reverse
+FAIL	/scroll-animations/css/progress-based-animation-animation-longhand-properties.tentative.html	animation-direction: alternate
+FAIL	/scroll-animations/css/progress-based-animation-animation-longhand-properties.tentative.html	animation-direction: alternate-reverse
+FAIL	/scroll-animations/css/progress-based-animation-animation-longhand-properties.tentative.html	animation-delay with a positive value
+FAIL	/scroll-animations/css/progress-based-animation-animation-longhand-properties.tentative.html	animation-delay with a negative value
+PASS	/scroll-animations/css/progress-based-animation-animation-longhand-properties.tentative.html	animation-fill-mode
 PASS	/scroll-animations/css/progress-based-animation-timeline.html	progress based animation timeline works
 PASS	/scroll-animations/css/pseudo-on-scroller.html	scroll nearest on pseudo-element attaches to parent scroll container
 FAIL	/scroll-animations/css/scroll-timeline-axis-computed.html	Property scroll-timeline-axis value 'initial'
@@ -198,6 +250,7 @@ PASS	/scroll-animations/css/scroll-timeline-axis-writing-mode.html	Block axis in
 PASS	/scroll-animations/css/scroll-timeline-axis-writing-mode.html	Inline axis in horizontal writing-mode
 PASS	/scroll-animations/css/scroll-timeline-axis-writing-mode.html	Block axis in vertical writing-mode
 PASS	/scroll-animations/css/scroll-timeline-axis-writing-mode.html	Inline axis in vertical writing-mode
+PASS	/scroll-animations/css/scroll-timeline-document-scroller-quirks.html	Tests the document scroller in quirks mode
 FAIL	/scroll-animations/css/scroll-timeline-dynamic.tentative.html	Switching between document and scroll timelines [immediate]
 FAIL	/scroll-animations/css/scroll-timeline-dynamic.tentative.html	Switching between document and scroll timelines [scroll]
 FAIL	/scroll-animations/css/scroll-timeline-dynamic.tentative.html	Switching pending animation from document to scroll timelines [immediate]
@@ -212,8 +265,10 @@ FAIL	/scroll-animations/css/scroll-timeline-dynamic.tentative.html	Change to tim
 FAIL	/scroll-animations/css/scroll-timeline-dynamic.tentative.html	Change to timeline attachment while paused [scroll]
 FAIL	/scroll-animations/css/scroll-timeline-dynamic.tentative.html	Switching timelines and pausing at the same time [immediate]
 FAIL	/scroll-animations/css/scroll-timeline-dynamic.tentative.html	Switching timelines and pausing at the same time [scroll]
+FAIL	/scroll-animations/css/scroll-timeline-in-container-query.html	Timeline appearing via container queries
 FAIL	/scroll-animations/css/scroll-timeline-inactive.html	Animation does not apply when the timeline is inactive because there is not scroll range
 FAIL	/scroll-animations/css/scroll-timeline-inactive.html	Animation does not apply when timeline is initially inactive
+FAIL	/scroll-animations/css/scroll-timeline-multi-pass.tentative.html	Multiple style/layout passes occur when necessary
 FAIL	/scroll-animations/css/scroll-timeline-name-computed.html	Property scroll-timeline-name value 'initial'
 FAIL	/scroll-animations/css/scroll-timeline-name-computed.html	Property scroll-timeline-name value 'inherit'
 FAIL	/scroll-animations/css/scroll-timeline-name-computed.html	Property scroll-timeline-name value 'unset'
@@ -251,6 +306,20 @@ FAIL	/scroll-animations/css/scroll-timeline-name-shadow.html	Outer animation can
 FAIL	/scroll-animations/css/scroll-timeline-name-shadow.html	Outer animation can see scroll timeline defined by ::slotted
 FAIL	/scroll-animations/css/scroll-timeline-name-shadow.html	Inner animation can see scroll timeline defined by ::part
 FAIL	/scroll-animations/css/scroll-timeline-name-shadow.html	Slotted element can see scroll timeline within the shadow
+PASS	/scroll-animations/css/scroll-timeline-nearest-dirty.html	Unrelated style mutation does not affect anonymous timeline
+FAIL	/scroll-animations/css/scroll-timeline-nearest-with-absolute-positioned-element.html	Resolving scroll(nearest) for an absolutely positioned element
+FAIL	/scroll-animations/css/scroll-timeline-paused-animations.html	Test that the scroll animation is paused
+FAIL	/scroll-animations/css/scroll-timeline-paused-animations.html	Test that the scroll animation is paused by updating animation-play-state
+FAIL	/scroll-animations/css/scroll-timeline-range-animation.html	Animation with ranges [initial, initial]
+FAIL	/scroll-animations/css/scroll-timeline-range-animation.html	Animation with ranges [0%, 100%]
+FAIL	/scroll-animations/css/scroll-timeline-range-animation.html	Animation with ranges [10%, 100%]
+FAIL	/scroll-animations/css/scroll-timeline-range-animation.html	Animation with ranges [0%, 50%]
+FAIL	/scroll-animations/css/scroll-timeline-range-animation.html	Animation with ranges [10%, 50%]
+FAIL	/scroll-animations/css/scroll-timeline-range-animation.html	Animation with ranges [150px, 75em]
+FAIL	/scroll-animations/css/scroll-timeline-range-animation.html	Animation with ranges [calc(1% + 135px), calc(70em + 50px)]
+FAIL	/scroll-animations/css/scroll-timeline-range-animation.html	Animation with ranges [calc(1% + 135px), calc(70em + 50px)] (scoped)
+FAIL	/scroll-animations/css/scroll-timeline-responsiveness-from-endpoint.html	Test that the scroll animation is still responsive after moving from 100%
+PASS	/scroll-animations/css/scroll-timeline-root-dirty.html	Unrelated style mutation does not affect anonymous timeline (root)
 PASS	/scroll-animations/css/scroll-timeline-sampling.html	Scroll position is sampled once per frame
 FAIL	/scroll-animations/css/scroll-timeline-shorthand.html	e.style['scroll-timeline'] = "none block" should set the property value
 FAIL	/scroll-animations/css/scroll-timeline-shorthand.html	e.style['scroll-timeline'] = "none inline" should set the property value
@@ -306,6 +375,7 @@ FAIL	/scroll-animations/css/scroll-timeline-with-percent-delay.tentative.html	Sc
 FAIL	/scroll-animations/css/timeline-offset-in-keyframe-change-timeline.tentative.html	getKeyframes with timeline-offsets
 FAIL	/scroll-animations/css/timeline-offset-keyframes-hidden-subject.html	Keyframes with timeline-offsets ignored when timeline is inactive
 FAIL	/scroll-animations/css/timeline-offset-keyframes-with-document-timeline.html	Keyframes with timeline-offsets reported but not reachable when using a document timeline
+FAIL	/scroll-animations/css/timeline-range-name-offset-in-keyframes.tentative.html	Timeline offset in Animation Keyframes
 FAIL	/scroll-animations/css/timeline-scope-computed.tentative.html	Property timeline-scope value 'initial'
 FAIL	/scroll-animations/css/timeline-scope-computed.tentative.html	Property timeline-scope value 'inherit'
 FAIL	/scroll-animations/css/timeline-scope-computed.tentative.html	Property timeline-scope value 'unset'
@@ -344,6 +414,10 @@ FAIL	/scroll-animations/css/timeline-scope.html	Removing/inserting element with 
 FAIL	/scroll-animations/css/timeline-scope.html	Ancestor attached element becoming display:none/block
 FAIL	/scroll-animations/css/timeline-scope.html	A deferred timeline appearing dynamically in the ancestor chain
 FAIL	/scroll-animations/css/timeline-scope.html	Animations prefer non-deferred timelines
+FAIL	/scroll-animations/css/view-timeline-animation-range-update.tentative.html	Ensure that animation is updated on a style change
+FAIL	/scroll-animations/css/view-timeline-animation.html	Default view-timeline
+FAIL	/scroll-animations/css/view-timeline-animation.html	Horizontal view-timeline
+FAIL	/scroll-animations/css/view-timeline-animation.html	Multiple view-timelines on the same element
 FAIL	/scroll-animations/css/view-timeline-axis-computed.html	Property view-timeline-axis value 'initial'
 FAIL	/scroll-animations/css/view-timeline-axis-computed.html	Property view-timeline-axis value 'inherit'
 FAIL	/scroll-animations/css/view-timeline-axis-computed.html	Property view-timeline-axis value 'unset'
@@ -376,6 +450,35 @@ PASS	/scroll-animations/css/view-timeline-axis-parsing.html	e.style['view-timeli
 PASS	/scroll-animations/css/view-timeline-axis-parsing.html	e.style['view-timeline-axis'] = "none" should not set the property value
 PASS	/scroll-animations/css/view-timeline-axis-parsing.html	e.style['view-timeline-axis'] = "block inline" should not set the property value
 PASS	/scroll-animations/css/view-timeline-axis-parsing.html	e.style['view-timeline-axis'] = "block / inline" should not set the property value
+FAIL	/scroll-animations/css/view-timeline-dynamic.html	Dynamically changing view-timeline attachment
+FAIL	/scroll-animations/css/view-timeline-dynamic.html	Dynamically changing view-timeline-axis
+FAIL	/scroll-animations/css/view-timeline-dynamic.html	Dynamically changing view-timeline-inset
+PASS	/scroll-animations/css/view-timeline-dynamic.html	Element with scoped view-timeline becoming display:none
+FAIL	/scroll-animations/css/view-timeline-inset-animation.html	view-timeline-inset with one value
+PASS	/scroll-animations/css/view-timeline-inset-animation.html	view-timeline-inset with two values
+PASS	/scroll-animations/css/view-timeline-inset-animation.html	view-timeline-inset with em values
+FAIL	/scroll-animations/css/view-timeline-inset-animation.html	view-timeline-inset with percentage values
+PASS	/scroll-animations/css/view-timeline-inset-animation.html	view-timeline-inset with negative values
+FAIL	/scroll-animations/css/view-timeline-inset-animation.html	view-timeline-inset with horizontal scroller
+PASS	/scroll-animations/css/view-timeline-inset-animation.html	view-timeline-inset with block scroller
+FAIL	/scroll-animations/css/view-timeline-inset-animation.html	view-timeline-inset with inline scroller
+PASS	/scroll-animations/css/view-timeline-inset-animation.html	view-timeline-inset:auto, block
+PASS	/scroll-animations/css/view-timeline-inset-animation.html	view-timeline-inset:auto, block, vertical-lr
+PASS	/scroll-animations/css/view-timeline-inset-animation.html	view-timeline-inset:auto, block, vertical-rl
+FAIL	/scroll-animations/css/view-timeline-inset-animation.html	view-timeline-inset:auto, inline
+FAIL	/scroll-animations/css/view-timeline-inset-animation.html	view-timeline-inset:auto, inline, vertical-rl
+FAIL	/scroll-animations/css/view-timeline-inset-animation.html	view-timeline-inset:auto, inline, vertical-lr
+FAIL	/scroll-animations/css/view-timeline-inset-animation.html	view-timeline-inset:auto, inline, rtl
+FAIL	/scroll-animations/css/view-timeline-inset-animation.html	view-timeline-inset:auto, inline, vertical-rl, rtl
+FAIL	/scroll-animations/css/view-timeline-inset-animation.html	view-timeline-inset:auto, inline, vertical-lr, rtl
+PASS	/scroll-animations/css/view-timeline-inset-animation.html	view-timeline-inset:auto, y
+FAIL	/scroll-animations/css/view-timeline-inset-animation.html	view-timeline-inset:auto, y, vertical-rl
+FAIL	/scroll-animations/css/view-timeline-inset-animation.html	view-timeline-inset:auto, y, vertical-rl, rtl
+FAIL	/scroll-animations/css/view-timeline-inset-animation.html	view-timeline-inset:auto, x
+FAIL	/scroll-animations/css/view-timeline-inset-animation.html	view-timeline-inset:auto, x, rtl
+PASS	/scroll-animations/css/view-timeline-inset-animation.html	view-timeline-inset:auto, x, vertical-lr
+PASS	/scroll-animations/css/view-timeline-inset-animation.html	view-timeline-inset:auto, x, vertical-rl
+FAIL	/scroll-animations/css/view-timeline-inset-animation.html	view-timeline-inset:auto, mix
 FAIL	/scroll-animations/css/view-timeline-inset-computed.html	Property view-timeline-inset value 'initial'
 FAIL	/scroll-animations/css/view-timeline-inset-computed.html	Property view-timeline-inset value 'inherit'
 FAIL	/scroll-animations/css/view-timeline-inset-computed.html	Property view-timeline-inset value 'unset'
@@ -461,6 +564,22 @@ FAIL	/scroll-animations/css/view-timeline-name-shadow.html	Outer animation can s
 FAIL	/scroll-animations/css/view-timeline-name-shadow.html	Outer animation can see view timeline defined by ::slotted
 FAIL	/scroll-animations/css/view-timeline-name-shadow.html	Inner animation can see view timeline defined by ::part
 FAIL	/scroll-animations/css/view-timeline-name-shadow.html	Slotted element can see view timeline within the shadow
+FAIL	/scroll-animations/css/view-timeline-range-animation.html	Animation with ranges [initial, initial]
+FAIL	/scroll-animations/css/view-timeline-range-animation.html	Animation with ranges [cover 0%, cover 100%]
+FAIL	/scroll-animations/css/view-timeline-range-animation.html	Animation with ranges [contain 0%, contain 100%]
+FAIL	/scroll-animations/css/view-timeline-range-animation.html	Animation with ranges [entry 0%, entry 100%]
+FAIL	/scroll-animations/css/view-timeline-range-animation.html	Animation with ranges [exit 0%, exit 100%]
+FAIL	/scroll-animations/css/view-timeline-range-animation.html	Animation with ranges [contain -50%, entry 200%]
+FAIL	/scroll-animations/css/view-timeline-range-animation.html	Animation with ranges [entry 0%, exit 100%]
+FAIL	/scroll-animations/css/view-timeline-range-animation.html	Animation with ranges [cover 20px, cover 100px]
+FAIL	/scroll-animations/css/view-timeline-range-animation.html	Animation with ranges [contain 20px, contain 100px]
+FAIL	/scroll-animations/css/view-timeline-range-animation.html	Animation with ranges [entry 20px, entry 100px]
+FAIL	/scroll-animations/css/view-timeline-range-animation.html	Animation with ranges [entry-crossing 20px, entry-crossing 100px]
+FAIL	/scroll-animations/css/view-timeline-range-animation.html	Animation with ranges [exit 20px, exit 80px]
+FAIL	/scroll-animations/css/view-timeline-range-animation.html	Animation with ranges [exit-crossing 20px, exit-crossing 80px]
+FAIL	/scroll-animations/css/view-timeline-range-animation.html	Animation with ranges [contain 20px, contain calc(100px - 10%)]
+FAIL	/scroll-animations/css/view-timeline-range-animation.html	Animation with ranges [exit 2em, exit 8em]
+FAIL	/scroll-animations/css/view-timeline-range-animation.html	Animation with ranges [exit 2em, exit 8em] (scoped)
 FAIL	/scroll-animations/css/view-timeline-shorthand.html	e.style['view-timeline'] = "--abcd" should set the property value
 FAIL	/scroll-animations/css/view-timeline-shorthand.html	e.style['view-timeline'] = "none block" should set the property value
 FAIL	/scroll-animations/css/view-timeline-shorthand.html	e.style['view-timeline'] = "none inline" should set the property value
@@ -544,6 +663,8 @@ FAIL	/scroll-animations/css/view-timeline-shorthand.html	Shorthand contraction o
 FAIL	/scroll-animations/css/view-timeline-shorthand.html	Shorthand contraction of view-timeline-name:--a, --b, --c:undefined;view-timeline-axis:inline, inline:undefined;view-timeline-inset:auto, auto:undefined
 FAIL	/scroll-animations/css/view-timeline-shorthand.html	Shorthand contraction of view-timeline-name:--a, --b:undefined;view-timeline-axis:inline, inline, inline:undefined;view-timeline-inset:auto, auto, auto:undefined
 FAIL	/scroll-animations/css/view-timeline-shorthand.html	Shorthand contraction of view-timeline-name:--a, --b:undefined;view-timeline-axis:inline, inline:undefined;view-timeline-inset:auto, auto, auto:undefined
+FAIL	/scroll-animations/css/view-timeline-used-values.html	Use the last value from view-timeline-axis if omitted
+FAIL	/scroll-animations/css/view-timeline-used-values.html	Use the last value from view-timeline-inset if omitted
 FAIL	/scroll-animations/css/view-timeline-with-delay-and-range.tentative.html	ViewTimeline with animation delays and range
 FAIL	/scroll-animations/css/view-timeline-with-transform-on-subject.html	ViewTimeline use untransformed box for range calculations
 PASS	/scroll-animations/scroll-timelines/cancel-animation.html	Canceling an animation should cause its start time and hold time to be unresolved
@@ -958,4 +1079,4 @@ FAIL	/scroll-animations/view-timelines/view-timeline-sticky-block.html	View time
 FAIL	/scroll-animations/view-timelines/view-timeline-sticky-inline.html	View timeline with sticky target, block axis.
 FAIL	/scroll-animations/view-timelines/view-timeline-subject-size-changes.html	View timeline with subject size change after the creation of the animation
 FAIL	/scroll-animations/view-timelines/zero-intrinsic-iteration-duration.tentative.html	Intrinsic iteration duration is non-negative
-Passed 433 of 960 tests.
+Passed 448 of 1081 tests.
