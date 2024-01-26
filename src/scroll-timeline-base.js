@@ -675,7 +675,9 @@ export function calculateRange(phase, sourceMeasurements, subjectMeasurements, a
 
   let startOffset = undefined;
   let endOffset = undefined;
-  const targetIsTallerThanContainer = viewSize > sizes.containerSize ? true : false;
+  // Take inset into account when determining the scrollport size
+  const adjustedScrollportSize = sizes.containerSize - inset.start - inset.end;
+  const subjectIsLargerThanScrollport = viewSize > adjustedScrollportSize;
 
   switch(phase) {
     case 'cover':
@@ -700,11 +702,11 @@ export function calculateRange(phase, sourceMeasurements, subjectMeasurements, a
 
     case 'entry-crossing':
       startOffset = coverStartOffset;
-      endOffset = targetIsTallerThanContainer ? containEndOffset : containStartOffset;
+      endOffset = subjectIsLargerThanScrollport ? containEndOffset : containStartOffset;
       break;
 
     case 'exit-crossing':
-      startOffset = targetIsTallerThanContainer ? containStartOffset : containEndOffset;
+      startOffset = subjectIsLargerThanScrollport ? containStartOffset : containEndOffset;
       endOffset = coverEndOffset;
       break;
   }
