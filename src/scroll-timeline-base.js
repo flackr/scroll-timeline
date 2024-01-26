@@ -24,7 +24,6 @@ let scrollTimelineOptions = new WeakMap();
 let sourceDetails = new WeakMap();
 
 export const ANIMATION_RANGE_NAMES = ['entry', 'exit', 'cover', 'contain', 'entry-crossing', 'exit-crossing'];
-const rangeNameRegExp = new RegExp(`(${ANIMATION_RANGE_NAMES.join('|')})(?!-)`);
 
 function scrollEventSource(source) {
   if (source === document.scrollingElement) return document;
@@ -158,6 +157,10 @@ function validateAnonymousSource(timeline) {
 
   const source = getAnonymousSourceElement(details.anonymousSource, details.anonymousTarget);
   updateSource(timeline, source);
+}
+
+function isValidAxis(axis) {
+  return ["block", "inline", "x", "y"].includes(axis);
 }
 
 /**
@@ -395,7 +398,7 @@ export class ScrollTimeline {
 
     if ((options && options.axis !== undefined) &&
         (options.axis != DEFAULT_TIMELINE_AXIS)) {
-      if (!ScrollTimeline.isValidAxis(options.axis)) {
+      if (!isValidAxis(options.axis)) {
         throw TypeError("Invalid axis");
       }
 
@@ -415,7 +418,7 @@ export class ScrollTimeline {
   }
 
   set axis(axis) {
-    if (!ScrollTimeline.isValidAxis(axis)) {
+    if (!isValidAxis(axis)) {
       throw TypeError("Invalid axis");
     }
 
@@ -478,65 +481,6 @@ export class ScrollTimeline {
 
   get __polyfill() {
     return true;
-  }
-
-  static isValidAxis(axis) {
-    return ["block", "inline", "x", "y"].includes(axis);
-  }
-
-  // Calculate the fractional offset of a range value relative to the full range.
-  relativePosition(value, details) {
-    const { axis, source } = details.timeline;
-    const { sourceMeasurements } = sourceDetails.get(source);
-
-    let sourceScrollDistance = undefined;
-    if (normalizeAxis(axis, sourceMeasurements) === 'x') {
-      sourceScrollDistance = source.scrollWidth;
-    } else {
-      sourceScrollDistance = source.scrollHeight;
-    }
-
-    const position = resolvePx(value, sourceScrollDistance);
-    const relativePosition = position / sourceScrollDistance;
-
-    return relativePosition;
-  }
-
-  static getNormalStartRange() {
-    return CSS.percent(0);
-  }
-
-  static getNormalEndRange() {
-    return CSS.percent(100);
-  }
-
-  static parseAnimationRange(value) {
-    const animationRange = {
-      start: this.getNormalStartRange(),
-      end: this.getNormalEndRange(),
-    };
-
-    if (!value)
-      return animationRange;
-
-    // @TODO: Play nice with only 1 offset being set
-    // @TODO: Play nice with expressions such as `calc(50% + 10px) 100%`
-    const parts = value.split(' ');
-    if (parts.length != 2) {
-      throw TypeError("Invalid time range or unsupported time range format.");
-    }
-
-    animationRange.start = CSSNumericValue.parse(parts[0]);
-    animationRange.end = CSSNumericValue.parse(parts[1]);
-
-    return animationRange;
-  }
-
-  static parseTimelineRangePart(value, position) {
-    if(!value || value === 'normal') return 'normal';
-  
-    // The value is a standalone offset, so simply parse it.
-    return CSSNumericValue.parse(value);
   }
 }
 
@@ -652,7 +596,7 @@ export function getScrollParent(node) {
 // specific phase on a view timeline.
 // TODO: Track changes to determine when associated animations require their
 // timing to be renormalized.
-function range(timeline, phase) {
+export function range(timeline, phase) {
   const details = scrollTimelineOptions.get(timeline);
   const subjectMeasurements = details.subjectMeasurements
   const sourceMeasurements = sourceDetails.get(details.source).sourceMeasurements
@@ -833,6 +777,37 @@ function calculateInset(value, sizes) {
   return { start, end };
 }
 
+// Calculate the fractional offset of a range value relative to the normal range.
+export function fractionalOffset(timeline, value) {
+  if (timeline instanceof ViewTimeline) {
+    const { rangeName, offset } = value;
+  
+    const phaseRange = range(timeline, rangeName);
+    const coverRange = range(timeline, 'cover');
+
+    return calculateRelativePosition(phaseRange, offset, coverRange, timeline.subject);
+  }
+
+  if (timeline instanceof ScrollTimeline) {
+    const { axis, source } = timeline;
+    const { sourceMeasurements } = sourceDetails.get(source);
+  
+    let sourceScrollDistance = undefined;
+    if (normalizeAxis(axis, sourceMeasurements) === 'x') {
+      sourceScrollDistance = source.scrollWidth;
+    } else {
+      sourceScrollDistance = source.scrollHeight;
+    }
+  
+    const position = resolvePx(value, sourceScrollDistance);
+    const fractionalOffset = position / sourceScrollDistance;
+  
+    return fractionalOffset;
+  }
+
+  unsupportedTimeline(timeline);
+}
+
 export function calculateRelativePosition(phaseRange, offset, coverRange, subject) {
   if (!phaseRange || !coverRange)
     return 0;
@@ -920,114 +895,6 @@ export class ViewTimeline extends ScrollTimeline {
 
   get endOffset() {
     return CSS.px(range(this,'cover').end);
-  }
-
-  // Calculate the fractional offset of a (phase, percent) pair relative to the
-  // full cover range.
-  relativePosition(value, details) {
-    const { rangeName, offset } = value;
-    
-    // @TODO: Precalc and store these
-    const phaseRange = range(this, rangeName);
-    const coverRange = range(this, 'cover');
-
-    return calculateRelativePosition(phaseRange, offset, coverRange, details.timeline.subject);
-  }
-
-  static getNormalStartRange() {
-    return { rangeName: 'cover', offset: CSS.percent(0) };
-  }
-
-  static getNormalEndRange() {
-    return { rangeName: 'cover', offset: CSS.percent(100) };
-  }
-
-  static parseAnimationRange(value) {
-    const animationRange = {
-      start: this.getNormalStartRange(),
-      end: this.getNormalEndRange(),
-    };
-    
-    if (!value)
-      return animationRange;
-  
-    // Format:
-    // <start-name> <start-offset> <end-name> <end-offset>
-    // <name> --> <name> 0% <name> 100%
-    // <name> <start-offset> <end-offset> --> <name> <start-offset>
-    //                                        <name> <end-offset>
-    // <start-offset> <end-offset> --> cover <start-offset> cover <end-offset>
-    // TODO: Support all formatting options once ratified in the spec.
-    const parts = value.split(' ');
-    const rangeNames = [];
-    const offsets = [];
-  
-    parts.forEach(part => {
-      if (part.endsWith('%'))
-        offsets.push(parseFloat(part));
-      else
-        rangeNames.push(part);
-    });
-  
-    if (rangeNames.length > 2 || offsets.length > 2 || offsets.length == 1) {
-      throw TypeError("Invalid time range or unsupported time range format.");
-    }
-  
-    if (rangeNames.length) {
-      animationRange.start.rangeName = rangeNames[0];
-      animationRange.end.rangeName = rangeNames.length > 1 ? rangeNames[1] : rangeNames[0];
-    }
-  
-    // TODO: allow calc() in the offsets
-    if (offsets.length > 1) {
-      animationRange.start.offset = CSS.percent(offsets[0]);
-      animationRange.end.offset = CSS.percent(offsets[1]);
-    }
-  
-    return animationRange;
-  }
-
-  // Parses an individual part of a TimelineRange
-  // TODO: Support all formatting options
-  static parseTimelineRangePart(value, position) {
-    if(!value || value === 'normal') return 'normal';
-
-    // Extract parts from the passed in value.
-    let rangeName = 'cover'
-    let offset = position === 'start' ? CSS.percent(0) : CSS.percent(100)
-
-    // Author passed in something like `{ rangeName: 'cover', offset: CSS.percent(100) }`
-    if (value instanceof Object) {
-      if (value.rangeName !== undefined) {
-        rangeName = value.rangeName;
-      }
-
-      if (value.offset !== undefined) {
-        offset = value.offset;
-      }
-    }
-    // Author passed in something like `"cover 100%"`
-    else {
-      const parts = value.split(rangeNameRegExp).map(part => part.trim()).filter(Boolean);
-
-      if (parts.length === 1) {
-        if (ANIMATION_RANGE_NAMES.includes(parts[0])) {
-          rangeName = parts[0];
-        } else {
-          offset = CSSNumericValue.parse(parts[0]);
-        }
-      } else if (parts.length === 2) {
-        rangeName = parts[0];
-        offset = CSSNumericValue.parse(parts[1]);
-      }
-    }
-
-    // Validate rangeName
-    if (!ANIMATION_RANGE_NAMES.includes(rangeName)) {
-      throw TypeError("Invalid range name");
-    }
-
-    return { rangeName, offset };
   }
 
 }

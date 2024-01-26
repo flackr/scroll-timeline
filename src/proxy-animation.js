@@ -1,13 +1,17 @@
 import {
+  ANIMATION_RANGE_NAMES,
   ScrollTimeline,
   addAnimation,
   removeAnimation,
+  fractionalOffset,
 } from "./scroll-timeline-base";
 
 const nativeDocumentGetAnimations = document.getAnimations;
 const nativeElementGetAnimations = window.Element.prototype.getAnimations;
 const nativeElementAnimate = window.Element.prototype.animate;
 const nativeAnimation = window.Animation;
+
+const rangeNameRegExp = new RegExp(`(${ANIMATION_RANGE_NAMES.join('|')})(?!-)`);
 
 class PromiseWrapper {
   constructor() {
@@ -820,18 +824,18 @@ function createProxyEffect(details) {
 function fractionalStartDelay(details) {
   if (!details.animationRange) return 0;
   if (details.animationRange.start === 'normal') {
-    details.animationRange.start = details.timeline.constructor.getNormalStartRange();
+    details.animationRange.start = getNormalStartRange(details.timeline);
   }
-  return details.timeline.relativePosition(details.animationRange.start, details);
+  return fractionalOffset(details.timeline, details.animationRange.start);
 }
 
 // Computes the ends delay as a fraction of the active cover range.
 function fractionalEndDelay(details) {
   if (!details.animationRange) return 0;
   if (details.animationRange.end === 'normal') {
-    details.animationRange.end = details.timeline.constructor.getNormalEndRange();
+    details.animationRange.end = getNormalEndRange(details.timeline);
   }
-  return 1 - details.timeline.relativePosition(details.animationRange.end, details);
+  return 1 - fractionalOffset(details.timeline, details.animationRange.end);
 }
 
 // Map from an instance of ProxyAnimation to internal details about that animation.
@@ -902,6 +906,147 @@ function autoAlignStartTime(details) {
   }
 }
 
+function unsupportedTimeline(timeline) {
+  throw new Error('Unsupported timeline class');
+}
+
+function getNormalStartRange(timeline) {
+  if (timeline instanceof ViewTimeline) {
+    return { rangeName: 'cover', offset: CSS.percent(0) };
+  }
+
+  if (timeline instanceof ScrollTimeline) {
+    return CSS.percent(0);
+  }
+
+  unsupportedTimeline(timeline);
+}
+
+function getNormalEndRange(timeline) {
+  if (timeline instanceof ViewTimeline) {
+    return { rangeName: 'cover', offset: CSS.percent(100) };
+  }
+  
+  if (timeline instanceof ScrollTimeline) {
+    return CSS.percent(100);
+  }
+
+  unsupportedTimeline(timeline);
+}
+
+function parseAnimationRange(timeline, value) {
+  const animationRange = {
+    start: getNormalStartRange(timeline),
+    end: getNormalEndRange(timeline),
+  };
+
+  if (!value)
+    return animationRange;
+
+  if (timeline instanceof ViewTimeline) {
+    // Format:
+    // <start-name> <start-offset> <end-name> <end-offset>
+    // <name> --> <name> 0% <name> 100%
+    // <name> <start-offset> <end-offset> --> <name> <start-offset>
+    //                                        <name> <end-offset>
+    // <start-offset> <end-offset> --> cover <start-offset> cover <end-offset>
+    // TODO: Support all formatting options once ratified in the spec.
+    const parts = value.split(' ');
+    const rangeNames = [];
+    const offsets = [];
+  
+    parts.forEach(part => {
+      if (part.endsWith('%'))
+        offsets.push(parseFloat(part));
+      else
+        rangeNames.push(part);
+    });
+  
+    if (rangeNames.length > 2 || offsets.length > 2 || offsets.length == 1) {
+      throw TypeError("Invalid time range or unsupported time range format.");
+    }
+  
+    if (rangeNames.length) {
+      animationRange.start.rangeName = rangeNames[0];
+      animationRange.end.rangeName = rangeNames.length > 1 ? rangeNames[1] : rangeNames[0];
+    }
+  
+    // TODO: allow calc() in the offsets
+    if (offsets.length > 1) {
+      animationRange.start.offset = CSS.percent(offsets[0]);
+      animationRange.end.offset = CSS.percent(offsets[1]);
+    }
+  
+    return animationRange;
+  }
+
+  if (timeline instanceof ScrollTimeline) {
+    // @TODO: Play nice with only 1 offset being set
+    // @TODO: Play nice with expressions such as `calc(50% + 10px) 100%`
+    const parts = value.split(' ');
+    if (parts.length != 2) {
+      throw TypeError("Invalid time range or unsupported time range format.");
+    }
+
+    animationRange.start = CSSNumericValue.parse(parts[0]);
+    animationRange.end = CSSNumericValue.parse(parts[1]);
+
+    return animationRange;
+  }
+
+  unsupportedTimeline(timeline);
+}
+
+function parseTimelineRangePart(timeline, value, position) {
+  if (!value || value === 'normal') return 'normal';
+
+  if (timeline instanceof ViewTimeline) {
+    // Extract parts from the passed in value.
+    let rangeName = 'cover'
+    let offset = position === 'start' ? CSS.percent(0) : CSS.percent(100)
+
+    // Author passed in something like `{ rangeName: 'cover', offset: CSS.percent(100) }`
+    if (value instanceof Object) {
+      if (value.rangeName !== undefined) {
+        rangeName = value.rangeName;
+      }
+
+      if (value.offset !== undefined) {
+        offset = value.offset;
+      }
+    }
+    // Author passed in something like `"cover 100%"`
+    else {
+      const parts = value.split(rangeNameRegExp).map(part => part.trim()).filter(Boolean);
+
+      if (parts.length === 1) {
+        if (ANIMATION_RANGE_NAMES.includes(parts[0])) {
+          rangeName = parts[0];
+        } else {
+          offset = CSSNumericValue.parse(parts[0]);
+        }
+      } else if (parts.length === 2) {
+        rangeName = parts[0];
+        offset = CSSNumericValue.parse(parts[1]);
+      }
+    }
+
+    // Validate rangeName
+    if (!ANIMATION_RANGE_NAMES.includes(rangeName)) {
+      throw TypeError("Invalid range name");
+    }
+
+    return { rangeName, offset };
+  }
+
+  if (timeline instanceof ScrollTimeline) {
+    // The value is a standalone offset, so simply parse it.
+    return CSSNumericValue.parse(value);
+  }
+
+  unsupportedTimeline(timeline);
+}
+
 // Create an alternate Animation class which proxies API requests.
 // TODO: Create a full-fledged proxy so missing methods are automatically
 // fetched from Animation.
@@ -950,7 +1095,7 @@ export class ProxyAnimation {
       effect: null,
       // Range when using a view-timeline. The default range is cover 0% to
       // 100%.
-      animationRange: isScrollAnimation ? timeline.constructor.parseAnimationRange(animOptions['animation-range']) : null,
+      animationRange: isScrollAnimation ? parseAnimationRange(timeline, animOptions['animation-range']) : null,
       proxy: this
     });
   }
@@ -1342,7 +1487,7 @@ export class ProxyAnimation {
 
     if (details.timeline instanceof ScrollTimeline) {
       const animationRange = details.animationRange;
-      animationRange.start = details.timeline.constructor.parseTimelineRangePart(value, 'start');
+      animationRange.start = parseTimelineRangePart(details.timeline, value, 'start');
 
       // Additional polyfill step to ensure that the native animation has the
       // correct value for current time.
@@ -1363,7 +1508,7 @@ export class ProxyAnimation {
 
     if (details.timeline instanceof ScrollTimeline) {
       const animationRange = details.animationRange;
-      animationRange.end = details.timeline.constructor.parseTimelineRangePart(value, 'end');
+      animationRange.end = parseTimelineRangePart(details.timeline, value, 'end');
 
       // Additional polyfill step to ensure that the native animation has the
       // correct value for current time.
@@ -1764,8 +1909,8 @@ export function animate(keyframes, options) {
 
     const details = proxyAnimations.get(proxyAnimation);
     details.animationRange = {
-      start: timeline.constructor.parseTimelineRangePart(options.rangeStart, 'start'),
-      end: timeline.constructor.parseTimelineRangePart(options.rangeEnd, 'end'),
+      start: parseTimelineRangePart(timeline, options.rangeStart, 'start'),
+      end: parseTimelineRangePart(timeline, options.rangeEnd, 'end'),
     };
 
     proxyAnimation.play();
