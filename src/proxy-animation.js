@@ -560,7 +560,7 @@ function playInternal(details, autoRewind) {
   if (playbackRate == 0 && previousCurrentTime == null) {
     details.holdTime = 0;
   }
-  // 12. If has finite timeline and previous current time is unresolved:
+  // 7. If has finite timeline and previous current time is unresolved:
   //     Set the flag auto align start time to true.
   //     NOTE: If play is called for a CSS animation during style update, the animation’s start time cannot be reliably
   //     calculated until post layout since the start time is to align with the start or end of the animation range
@@ -581,21 +581,21 @@ function playInternal(details, autoRewind) {
     details.autoAlignStartTime = true;
   }
 
-  // 13. If animation's hold time is resolved, let its start time be
+  // 8. If animation's hold time is resolved, let its start time be
   //     unresolved.
   if (details.holdTime) {
     details.startTime = null;
   }
 
-  // 14. If animation has a pending play task or a pending pause task,
-  //   8.1 Cancel that task.
-  //   8.2 Set has pending ready promise to true.
+  // 9. If animation has a pending play task or a pending pause task,
+  //   9.1 Cancel that task.
+  //   9.2 Set has pending ready promise to true.
   if (details.pendingTask) {
     details.pendingTask = null;
     hasPendingReadyPromise = true;
   }
 
-  // 15. If the following three conditions are all satisfied:
+  // 10. If the following three conditions are all satisfied:
   //      animation’s hold time is unresolved, and
   //      aborted pause is false, and
   //      animation does not have a pending playback rate,
@@ -607,7 +607,7 @@ function playInternal(details, autoRewind) {
       !abortedPause && details.pendingPlaybackRate === null)
     return;
 
-  // 16. If has pending ready promise is false, let animation’s current ready
+  // 11. If has pending ready promise is false, let animation’s current ready
   //    promise be a new promise in the relevant Realm of animation.
   if (details.readyPromise && !hasPendingReadyPromise)
     details.readyPromise = null;
@@ -616,7 +616,7 @@ function playInternal(details, autoRewind) {
   // correct value for current time.
   syncCurrentTime(details);
 
-  // 17. Schedule a task to run as soon as animation is ready.
+  // 12. Schedule a task to run as soon as animation is ready.
   if (!details.readyPromise)
     createReadyPromise(details);
   details.pendingTask = 'play';
@@ -627,7 +627,7 @@ function playInternal(details, autoRewind) {
   addAnimation(details.timeline, details.animation,
                tickAnimation.bind(details.proxy));
 
-  // 18. Run the procedure to update an animation’s finished state for animation
+  // 13. Run the procedure to update an animation’s finished state for animation
   //     with the did seek flag set to false, and the synchronously notify flag
   //     set to false.
   updateFinishedState(details, /* seek */ false, /* synchronous */ false);
