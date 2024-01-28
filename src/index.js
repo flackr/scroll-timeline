@@ -25,17 +25,10 @@ import {
 
 import { initCSSPolyfill } from "./scroll-timeline-css"
 
-function initPolyfill() {
-  // initCSSPolyfill returns true iff the host browser supports SDA
-  if (initCSSPolyfill()) {
-    return;
-  }
-
-  if ([...document.styleSheets].filter((s) => s.href !== null).length) {
-    console.warn(
-      'Non-Inline StyleSheets detected: ScrollTimeline polyfill currently only' +
-        ' supports inline styles within style tags'
-    );
+function initJSPolyfill() {
+  // Don’t load if the browser already has support
+  if ((typeof window.ScrollTimeline) !== 'undefined') {
+    return false;
   }
 
   if (
@@ -72,6 +65,26 @@ function initPolyfill() {
     throw Error(
       "Error installing ScrollTimeline polyfill: could not attach WAAPI's getAnimations to document"
     );
+  }
+
+  return true;
+}
+
+function initPolyfill() {
+  const jsPolyfillLoaded = initJSPolyfill();
+  const cssPolyfillLoaded = initCSSPolyfill();
+
+  if (jsPolyfillLoaded || jsPolyfillLoaded) {
+    console.log('ScrollTimeline Polyfill loaded');
+  }
+
+  if (cssPolyfillLoaded) {
+    if ([...document.styleSheets].filter((s) => s.href !== null).length) {
+      console.warn(
+        'Non-Inline StyleSheets detected: ScrollTimeline polyfill currently only' +
+          ' supports inline styles within style tags'
+      );
+    }
   }
 }
 

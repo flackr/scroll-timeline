@@ -5,7 +5,7 @@ import { ScrollTimeline, ViewTimeline, getScrollParent, calculateRange,
 
 const parser = new StyleParser();
 
-function initMutationObserver() {
+function monitorAndParseStyleSheets() {
   const sheetObserver = new MutationObserver((entries) => {
     for (const entry of entries) {
       for (const addedNode of entry.addedNodes) {
@@ -59,7 +59,7 @@ function relativePosition(phase, container, target, axis, optionsInset, percent)
   return calculateRelativePosition(phaseRange, percent, coverRange);
 }
 
-function createScrollTimeline(anim, animationName, target) {
+export function createScrollTimeline(anim, animationName, target) {
   const animOptions = parser.getAnimationTimelineOptions(animationName, target);
 
   if(!animOptions)
@@ -135,10 +135,11 @@ function updateKeyframesIfNecessary(anim, options) {
 export function initCSSPolyfill() {
   // Don't load if browser claims support
   if (CSS.supports("animation-timeline: --works")) {
-    return true;
+    return false;
   }
 
-  initMutationObserver();
+  // Monitor and parse the Style Sheets
+  monitorAndParseStyleSheets();
 
   // Override CSS.supports() to claim support for the CSS properties from now on
   const oldSupports = CSS.supports;
@@ -163,7 +164,11 @@ export function initCSSPolyfill() {
           // invoke the set the timeline procedure on the existing animation.
           anim.timeline = result.timeline;
         }
+      } else {
+        console.info('Not a ScrollTimeline dinges');
       }
     });
   });
+
+  return true;
 }
