@@ -44,6 +44,8 @@ jobs:
         uses: actions/configure-pages@v3
       - name: Install Node.js dependencies
         run: "[[ -f package-lock.json || -f npm-shrinkwrap.json ]] && npm ci || true"
+      - name: Build with microbundle
+        run: "npm run build"
       - name: Checkout WPT
         run: "npm run test-setup"
       - name: WPT hosts
