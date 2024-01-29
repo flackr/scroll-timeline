@@ -22,7 +22,7 @@ if (existsSync(checkoutDir)) {
   exit(0);
 }
 
-execSync(`git clone ${repoUrl}`, {...execEnv, cwd: path.resolve(`${__dirname}/..`)});
+execSync(`git clone --depth 1 --branch master --single-branch ${repoUrl}`, {...execEnv, cwd: path.resolve(`${__dirname}/..`)});
 console.warn('Ensure that you setup wpt for local test runs per published instructions: https://web-platform-tests.org/running-tests/from-local-system.html');
 console.log(`Checked out ${checkoutDir}`);
 
