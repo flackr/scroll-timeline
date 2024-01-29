@@ -140,6 +140,13 @@ export function initCSSPolyfill() {
 
   initMutationObserver();
 
+  // Override CSS.supports() to claim support for the CSS properties from now on
+  const oldSupports = CSS.supports;
+  CSS.supports = (ident) => {
+    ident = ident.replaceAll(/(animation-timeline|scroll-timeline(-(name|axis))?|view-timeline(-(name|axis|inset))?|timeline-scope)\s*:/g, '--supported-property:');
+    return oldSupports(ident);
+  };
+
   // We are not wrapping capturing 'animationstart' by a 'load' event,
   // because we may lose some of the 'animationstart' events by the time 'load' is completed.
   window.addEventListener('animationstart', (evt) => {
