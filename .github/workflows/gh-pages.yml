@@ -54,7 +54,7 @@ jobs:
         run: "npm run test:wpt"
       - name: Expected results
         run: "npm run test:compare"
-      - name: Adding summary
+      - name: Test results summary
         run: echo "Passed $(grep -c '^PASS' ./test/report/summary.txt) of $(grep -c '^'  ./test/report/summary.txt) tests" >> $GITHUB_STEP_SUMMARY
       - name: Clean build files
         run: "rm -rf node_modules test/wpt"
