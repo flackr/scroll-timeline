@@ -40,6 +40,7 @@ jobs:
         with:
           submodules: recursive
       - name: Setup Pages
+        if: ${{ !env.ACT }}
         id: pages
         uses: actions/configure-pages@v3
       - name: Install Node.js dependencies
@@ -54,10 +55,13 @@ jobs:
         run: "npm run test:wpt"
       - name: Expected results
         run: "npm run test:compare"
+      - name: Test results summary
+        run: echo "Passed $(grep -c '^PASS' ./test/report/summary.txt) of $(grep -c '^'  ./test/report/summary.txt) tests" >> $GITHUB_STEP_SUMMARY
       - name: Clean build files
         run: "rm -rf node_modules test/wpt"
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v2
+        if: ${{ !env.ACT }}
         with:
           path: .
 

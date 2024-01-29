@@ -17,4 +17,3 @@ for (let result of results) {
     }
   }
 }
-console.log(`Passed ${passes} of ${fails + passes} tests.`);
