@@ -603,6 +603,7 @@ function playInternal(details, autoRewind) {
   // Additonal check for polyfill: Does not have the auto align start time flag set.
   // If we return when this flag is set, a play task will not be scheduled, leaving the animation in the
   // idle state. If the animation is in the idle state, the auto align procedure will bail.
+  // TODO: update with results of https://github.com/w3c/csswg-drafts/issues/9871
   if (details.holdTime === null && !details.autoAlignStartTime &&
       !abortedPause && details.pendingPlaybackRate === null)
     return;
