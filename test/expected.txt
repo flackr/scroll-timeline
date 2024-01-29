@@ -1079,4 +1079,3 @@ FAIL	/scroll-animations/view-timelines/view-timeline-sticky-block.html	View time
 FAIL	/scroll-animations/view-timelines/view-timeline-sticky-inline.html	View timeline with sticky target, block axis.
 FAIL	/scroll-animations/view-timelines/view-timeline-subject-size-changes.html	View timeline with subject size change after the creation of the animation
 FAIL	/scroll-animations/view-timelines/zero-intrinsic-iteration-duration.tentative.html	Intrinsic iteration duration is non-negative
-Passed 448 of 1081 tests.
