@@ -676,7 +676,7 @@ PASS	/scroll-animations/scroll-timelines/cancel-animation.html	The finished prom
 PASS	/scroll-animations/scroll-timelines/cancel-animation.html	The cancel event should NOT be fired if the animation is already idle
 PASS	/scroll-animations/scroll-timelines/cancel-animation.html	Canceling an animation should fire cancel event on orphaned element
 PASS	/scroll-animations/scroll-timelines/cancel-animation.html	Canceling an animation with inactive timeline should cause its start time and hold time to be unresolved
-FAIL	/scroll-animations/scroll-timelines/cancel-animation.html	oncancel event is fired when the timeline is inactive.
+TIMEOUT	/scroll-animations/scroll-timelines/cancel-animation.html	oncancel event is fired when the timeline is inactive.
 PASS	/scroll-animations/scroll-timelines/constructor-no-document.html	The source can be null if the document.scrollingElement does not exist
 PASS	/scroll-animations/scroll-timelines/constructor.html	A ScrollTimeline can be created with a source
 PASS	/scroll-animations/scroll-timelines/constructor.html	A ScrollTimeline can be created with a non-scrolling source
@@ -911,12 +911,12 @@ PASS	/scroll-animations/scroll-timelines/scroll-animation-effect-phases.tentativ
 PASS	/scroll-animations/scroll-timelines/scroll-animation-inactive-timeline.html	Play pending task doesn't run when the timeline is inactive.
 PASS	/scroll-animations/scroll-timelines/scroll-animation-inactive-timeline.html	Animation start and current times are correct if scroll timeline is activated after animation.play call.
 PASS	/scroll-animations/scroll-timelines/scroll-animation-inactive-timeline.html	Animation start and current times are correct if scroll timeline is activated after setting start time.
-FAIL	/scroll-animations/scroll-timelines/scroll-animation-inactive-timeline.html	Animation current time is correct when the timeline becomes newly inactive and then active again.
+PASS	/scroll-animations/scroll-timelines/scroll-animation-inactive-timeline.html	Animation current time is correct when the timeline becomes newly inactive and then active again.
 FAIL	/scroll-animations/scroll-timelines/scroll-animation.html	Animation start and current times are correct for each animation state.
 FAIL	/scroll-animations/scroll-timelines/scroll-animation.html	Animation start and current times are correct for each animation state when the animation starts playing with advanced scroller.
 PASS	/scroll-animations/scroll-timelines/scroll-animation.html	Finished animation plays on reverse scrolling.
 FAIL	/scroll-animations/scroll-timelines/scroll-animation.html	Sending animation finished events by finished animation on reverse scrolling.
-FAIL	/scroll-animations/scroll-timelines/scroll-timeline-invalidation.html	Animation current time and effect local time are updated after scroller content size changes.
+PASS	/scroll-animations/scroll-timelines/scroll-timeline-invalidation.html	Animation current time and effect local time are updated after scroller content size changes.
 PASS	/scroll-animations/scroll-timelines/scroll-timeline-invalidation.html	Animation current time and effect local time are updated after scroller size changes.
 FAIL	/scroll-animations/scroll-timelines/scroll-timeline-invalidation.html	If scroll animation resizes its scroll timeline scroller, layout reruns once per frame.
 FAIL	/scroll-animations/scroll-timelines/scroll-timeline-range.html	Scroll timeline with percentage range [JavaScript API]
@@ -1077,5 +1077,5 @@ PASS	/scroll-animations/view-timelines/view-timeline-source.tentative.html	View 
 PASS	/scroll-animations/view-timelines/view-timeline-source.tentative.html	View timeline source is null when display:none
 FAIL	/scroll-animations/view-timelines/view-timeline-sticky-block.html	View timeline with sticky target, block axis.
 FAIL	/scroll-animations/view-timelines/view-timeline-sticky-inline.html	View timeline with sticky target, block axis.
-FAIL	/scroll-animations/view-timelines/view-timeline-subject-size-changes.html	View timeline with subject size change after the creation of the animation
+PASS	/scroll-animations/view-timelines/view-timeline-subject-size-changes.html	View timeline with subject size change after the creation of the animation
 FAIL	/scroll-animations/view-timelines/zero-intrinsic-iteration-duration.tentative.html	Intrinsic iteration duration is non-negative

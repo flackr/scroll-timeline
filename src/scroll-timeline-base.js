@@ -233,9 +233,8 @@ function updateMeasurements(source) {
   if (details.updateScheduled)
     return;
 
-  requestAnimationFrame(() => {
-    // Defer ticking timeline to animation frame to prevent
-    // "ResizeObserver loop completed with undelivered notifications"
+  setTimeout(() => {
+    // Schedule a task to update timelines after all measurements are completed
     for (const ref of details.timelineRefs) {
       const timeline = ref.deref();
       if (timeline) {
@@ -249,7 +248,8 @@ function updateMeasurements(source) {
 }
 
 function updateSource(timeline, source) {
-  const oldSource = scrollTimelineOptions.get(timeline).source;
+  const timelineDetails = scrollTimelineOptions.get(timeline);
+  const oldSource = timelineDetails.source;
   if (oldSource == source)
     return;
 
@@ -273,7 +273,7 @@ function updateSource(timeline, source) {
       }
     }
   }
-  scrollTimelineOptions.get(timeline).source = source;
+  timelineDetails.source = source;
   if (source) {
     let details = sourceDetails.get(source);
     if (!details) {
@@ -288,10 +288,13 @@ function updateSource(timeline, source) {
       // Use resize observer to detect changes to source size
       const resizeObserver = new ResizeObserver((entries) => {
         for (const entry of entries) {
-          updateMeasurements(entry.target)
+          updateMeasurements(timelineDetails.source)
         }
       });
       resizeObserver.observe(source);
+      for (const child of source.children) {
+        resizeObserver.observe(child)
+      }
 
       // Use mutation observer to detect updated style attributes on source element
       const mutationObserver = new MutationObserver((records) => {
