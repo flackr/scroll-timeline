@@ -40,6 +40,7 @@ jobs:
         with:
           submodules: recursive
       - name: Setup Pages
+        if: ${{ !env.ACT }}
         id: pages
         uses: actions/configure-pages@v3
       - name: Install Node.js dependencies
@@ -60,6 +61,7 @@ jobs:
         run: "rm -rf node_modules test/wpt"
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v2
+        if: ${{ !env.ACT }}
         with:
           path: .
 
