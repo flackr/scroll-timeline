@@ -951,7 +951,7 @@ function parseAnimationRange(timeline, value) {
     //                                        <name> <end-offset>
     // <start-offset> <end-offset> --> cover <start-offset> cover <end-offset>
     // TODO: Support all formatting options once ratified in the spec.
-    const parts = value.split(' ');
+    const parts = value.split(/\s+/);
     const rangeNames = [];
     const offsets = [];
   
