@@ -14,6 +14,7 @@
 
 import {installCSSOM} from "./proxy-cssom.js";
 import {simplifyCalculation} from "./simplify-calculation";
+import {normalizeAxis} from './utils.js';
 
 installCSSOM();
 
@@ -21,6 +22,8 @@ const DEFAULT_TIMELINE_AXIS = 'block';
 
 let scrollTimelineOptions = new WeakMap();
 let sourceDetails = new WeakMap();
+
+export const ANIMATION_RANGE_NAMES = ['entry', 'exit', 'cover', 'contain', 'entry-crossing', 'exit-crossing'];
 
 function scrollEventSource(source) {
   if (source === document.scrollingElement) return document;
@@ -58,11 +61,8 @@ function directionAwareScrollOffset(source, axis) {
   // TODO: sideways-lr should flow bottom to top, but is currently unsupported
   // in Chrome.
   // http://drafts.csswg.org/css-writing-modes-4/#block-flow
-  const horizontalWritingMode = style.writingMode == 'horizontal-tb';
   let currentScrollOffset = sourceMeasurements.scrollTop;
-  if (axis == 'x' ||
-     (axis == 'inline' && horizontalWritingMode) ||
-     (axis == 'block' && !horizontalWritingMode)) {
+  if (normalizeAxis(axis, style) === 'x') {
     // Negative values are reported for scrollLeft when the inline text
     // direction is right to left or for vertical text with a right to left
     // block flow. This is a consequence of shifting the scroll origin due to
@@ -157,6 +157,10 @@ function validateAnonymousSource(timeline) {
 
   const source = getAnonymousSourceElement(details.anonymousSource, details.anonymousTarget);
   updateSource(timeline, source);
+}
+
+function isValidAxis(axis) {
+  return ["block", "inline", "x", "y"].includes(axis);
 }
 
 /**
@@ -397,7 +401,7 @@ export class ScrollTimeline {
 
     if ((options && options.axis !== undefined) &&
         (options.axis != DEFAULT_TIMELINE_AXIS)) {
-      if (!ScrollTimeline.isValidAxis(options.axis)) {
+      if (!isValidAxis(options.axis)) {
         throw TypeError("Invalid axis");
       }
 
@@ -417,7 +421,7 @@ export class ScrollTimeline {
   }
 
   set axis(axis) {
-    if (!ScrollTimeline.isValidAxis(axis)) {
+    if (!isValidAxis(axis)) {
       throw TypeError("Invalid axis");
     }
 
@@ -480,10 +484,6 @@ export class ScrollTimeline {
 
   get __polyfill() {
     return true;
-  }
-
-  static isValidAxis(axis) {
-    return ["block", "inline", "x", "y"].includes(axis);
   }
 }
 
@@ -599,7 +599,7 @@ export function getScrollParent(node) {
 // specific phase on a view timeline.
 // TODO: Track changes to determine when associated animations require their
 // timing to be renormalized.
-function range(timeline, phase) {
+export function range(timeline, phase) {
   const details = scrollTimelineOptions.get(timeline);
   const subjectMeasurements = details.subjectMeasurements
   const sourceMeasurements = sourceDetails.get(details.source).sourceMeasurements
@@ -620,16 +620,13 @@ export function calculateRange(phase, sourceMeasurements, subjectMeasurements, a
   // Determine the view and container size based on the scroll direction.
   // The view position is the scroll position of the logical starting edge
   // of the view.
-  const horizontalWritingMode = sourceMeasurements.writingMode == 'horizontal-tb';
   const rtl = sourceMeasurements.direction == 'rtl' || sourceMeasurements.writingMode == 'vertical-rl';
   let viewSize = undefined;
   let viewPos = undefined;
   let sizes = {
     fontSize: subjectMeasurements.fontSize
   };
-  if (axis == 'x' ||
-      (axis == 'inline' && horizontalWritingMode) ||
-      (axis == 'block' && !horizontalWritingMode)) {
+  if (normalizeAxis(axis, sourceMeasurements) === 'x') {
     viewSize = subjectMeasurements.offsetWidth;
     viewPos = subjectMeasurements.left;
     sizes.scrollPadding = [sourceMeasurements.scrollPaddingLeft, sourceMeasurements.scrollPaddingRight];
@@ -783,16 +780,36 @@ function calculateInset(value, sizes) {
   return { start, end };
 }
 
+// Calculate the fractional offset of a range value relative to the normal range.
+export function fractionalOffset(timeline, value) {
+  if (timeline instanceof ViewTimeline) {
+    const { rangeName, offset } = value;
+  
+    const phaseRange = range(timeline, rangeName);
+    const coverRange = range(timeline, 'cover');
 
-// Calculate the fractional offset of a (phase, percent) pair relative to the
-// full cover range.
-export function relativePosition(timeline, phase, offset) {
-  const phaseRange = range(timeline, phase);
-  const coverRange = range(timeline, 'cover');
-  return calculateRelativePosition(phaseRange, offset, coverRange, timeline.subject);
+    return calculateRelativePosition(phaseRange, offset, coverRange, timeline.subject);
+  }
+
+  if (timeline instanceof ScrollTimeline) {
+    const { axis, source } = timeline;
+    const { sourceMeasurements } = sourceDetails.get(source);
+  
+    let sourceScrollDistance = undefined;
+    if (normalizeAxis(axis, sourceMeasurements) === 'x') {
+      sourceScrollDistance = source.scrollWidth;
+    } else {
+      sourceScrollDistance = source.scrollHeight;
+    }
+  
+    const position = resolvePx(value, sourceScrollDistance);
+    const fractionalOffset = position / sourceScrollDistance;
+  
+    return fractionalOffset;
+  }
+
+  unsupportedTimeline(timeline);
 }
-
-
 
 export function calculateRelativePosition(phaseRange, offset, coverRange, subject) {
   if (!phaseRange || !coverRange)

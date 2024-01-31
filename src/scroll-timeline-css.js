@@ -56,7 +56,7 @@ function relativePosition(phase, container, target, axis, optionsInset, percent)
   const subjectMeasurements = measureSubject(container, target)
   const phaseRange = calculateRange(phase, sourceMeasurements, subjectMeasurements, axis, optionsInset);
   const coverRange = calculateRange('cover', sourceMeasurements, subjectMeasurements, axis, optionsInset);
-  return calculateRelativePosition(phaseRange, percent, coverRange);
+  return calculateRelativePosition(phaseRange, percent, coverRange, target);
 }
 
 function createScrollTimeline(anim, animationName, target) {
