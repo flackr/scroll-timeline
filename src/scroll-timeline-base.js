@@ -14,7 +14,7 @@
 
 import {installCSSOM} from "./proxy-cssom.js";
 import {simplifyCalculation} from "./simplify-calculation";
-import {normalizeAxis} from './utils.js';
+import {normalizeAxis, splitIntoComponentValues} from './utils.js';
 
 installCSSOM();
 
@@ -721,17 +721,14 @@ function parseInset(value) {
   let parts = value;
   // Parse string parts to
   if (typeof value === 'string') {
-    // Split value into separate parts
-    const stringParts = value.split(/(?<!\([^\)]*)\s(?![^\(]*\))/);
-    parts = stringParts.map(str => {
-      if (str.trim() === 'auto') {
+    parts = splitIntoComponentValues(value).map(str => {
+      if (str === 'auto') {
         return 'auto';
-      } else {
-        try {
-          return CSSNumericValue.parse(str);
-        } catch (e) {
-          throw TypeError('Invalid inset');
-        }
+      }
+      try {
+        return CSSNumericValue.parse(str);
+      } catch (e) {
+        throw TypeError(`Could not parse inset "${value}"`);
       }
     });
   }
@@ -784,7 +781,7 @@ function calculateInset(value, sizes) {
 export function fractionalOffset(timeline, value) {
   if (timeline instanceof ViewTimeline) {
     const { rangeName, offset } = value;
-  
+
     const phaseRange = range(timeline, rangeName);
     const coverRange = range(timeline, 'cover');
 
@@ -794,17 +791,17 @@ export function fractionalOffset(timeline, value) {
   if (timeline instanceof ScrollTimeline) {
     const { axis, source } = timeline;
     const { sourceMeasurements } = sourceDetails.get(source);
-  
+
     let sourceScrollDistance = undefined;
     if (normalizeAxis(axis, sourceMeasurements) === 'x') {
       sourceScrollDistance = source.scrollWidth;
     } else {
       sourceScrollDistance = source.scrollHeight;
     }
-  
+
     const position = resolvePx(value, sourceScrollDistance);
     const fractionalOffset = position / sourceScrollDistance;
-  
+
     return fractionalOffset;
   }
 

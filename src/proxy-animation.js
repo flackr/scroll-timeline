@@ -5,13 +5,12 @@ import {
   removeAnimation,
   fractionalOffset,
 } from "./scroll-timeline-base";
+import {splitIntoComponentValues} from './utils';
 
 const nativeDocumentGetAnimations = document.getAnimations;
 const nativeElementGetAnimations = window.Element.prototype.getAnimations;
 const nativeElementAnimate = window.Element.prototype.animate;
 const nativeAnimation = window.Animation;
-
-const rangeNameRegExp = new RegExp(`(${ANIMATION_RANGE_NAMES.join('|')})(?!-)`);
 
 class PromiseWrapper {
   constructor() {
@@ -926,7 +925,7 @@ function getNormalEndRange(timeline) {
   if (timeline instanceof ViewTimeline) {
     return { rangeName: 'cover', offset: CSS.percent(100) };
   }
-  
+
   if (timeline instanceof ScrollTimeline) {
     return CSS.percent(100);
   }
@@ -951,32 +950,36 @@ function parseAnimationRange(timeline, value) {
     //                                        <name> <end-offset>
     // <start-offset> <end-offset> --> cover <start-offset> cover <end-offset>
     // TODO: Support all formatting options once ratified in the spec.
-    const parts = value.split(/\s+/);
+    const parts = splitIntoComponentValues(value);
     const rangeNames = [];
     const offsets = [];
-  
+
     parts.forEach(part => {
-      if (part.endsWith('%'))
-        offsets.push(parseFloat(part));
-      else
+      if (ANIMATION_RANGE_NAMES.includes(part)) {
         rangeNames.push(part);
+      } else {
+        try {
+          offsets.push(CSSNumericValue.parse(part));
+        } catch (e) {
+          throw TypeError(`Could not parse range "${value}"`);
+        }
+      }
     });
-  
+
     if (rangeNames.length > 2 || offsets.length > 2 || offsets.length == 1) {
       throw TypeError("Invalid time range or unsupported time range format.");
     }
-  
+
     if (rangeNames.length) {
       animationRange.start.rangeName = rangeNames[0];
       animationRange.end.rangeName = rangeNames.length > 1 ? rangeNames[1] : rangeNames[0];
     }
-  
-    // TODO: allow calc() in the offsets
+
     if (offsets.length > 1) {
-      animationRange.start.offset = CSS.percent(offsets[0]);
-      animationRange.end.offset = CSS.percent(offsets[1]);
+      animationRange.start.offset = offsets[0];
+      animationRange.end.offset = offsets[1];
     }
-  
+
     return animationRange;
   }
 
@@ -1017,7 +1020,7 @@ function parseTimelineRangePart(timeline, value, position) {
     }
     // Author passed in something like `"cover 100%"`
     else {
-      const parts = value.split(rangeNameRegExp).map(part => part.trim()).filter(Boolean);
+      const parts = splitIntoComponentValues(value);
 
       if (parts.length === 1) {
         if (ANIMATION_RANGE_NAMES.includes(parts[0])) {
