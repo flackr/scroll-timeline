@@ -72,6 +72,8 @@ export function installCSSOM() {
 
   class CSSNumericValue {
     static parse(value) {
+      if (value instanceof CSSNumericValue) return value;
+
       return simplifyCalculation(parseCSSNumericValue(value), {});
     }
 
