@@ -46,7 +46,7 @@ export function installCSSOM() {
     return result;
   }
 
-  class MathOperation {
+  class CSSMathValue {
     constructor(values, operator, opt_name, opt_delimiter) {
       privateDetails.set(this, {
         values: toCssNumericArray(values),
@@ -70,14 +70,19 @@ export function installCSSOM() {
     }
   }
 
+  class CSSNumericValue {
+    static parse(value) {
+      return simplifyCalculation(parseCSSNumericValue(value), {});
+    }
+
+    // TODO: Add other methods: add, sub, mul, div, …
+    // Spec: https://drafts.css-houdini.org/css-typed-om/#numeric-value
+  }
+
   const cssOMTypes = {
-    'CSSNumericValue': class {
-      static parse(value) {
-        return parseCSSNumericValue(value);
-      }
-    },
-    'CSSUnitValue': class {
+    'CSSUnitValue': class extends CSSNumericValue {
       constructor(value, unit) {
+        super();
         privateDetails.set(this, {
           value: value,
           unit: unit
@@ -126,13 +131,13 @@ export function installCSSOM() {
       }
     },
 
-    'CSSMathSum': class extends MathOperation  {
+    'CSSMathSum': class extends CSSMathValue  {
       constructor(values) {
         super(arguments, 'sum', 'calc', ' + ');
       }
     },
 
-    'CSSMathProduct': class extends MathOperation  {
+    'CSSMathProduct': class extends CSSMathValue  {
       constructor(values) {
         super(arguments, 'product', 'calc', ' * ');
       }
@@ -148,7 +153,7 @@ export function installCSSOM() {
       }
     },
 
-    'CSSMathNegate': class extends MathOperation {
+    'CSSMathNegate': class extends CSSMathValue {
       constructor(values) {
         super([arguments[0]], 'negate', '-');
       }
@@ -158,7 +163,7 @@ export function installCSSOM() {
       }
     },
 
-    'CSSMathInvert': class extends MathOperation {
+    'CSSMathInvert': class extends CSSMathValue {
       constructor(values) {
         super([1, arguments[0]], 'invert', 'calc', ' / ');
       }
@@ -174,13 +179,13 @@ export function installCSSOM() {
       }
     },
 
-    'CSSMathMax': class extends MathOperation {
+    'CSSMathMax': class extends CSSMathValue {
       constructor() {
         super(arguments, 'max');
       }
     },
 
-    'CSSMathMin': class extends MathOperation  {
+    'CSSMathMin': class extends CSSMathValue  {
       constructor() {
         super(arguments, 'min');
       }
@@ -237,10 +242,10 @@ export function installCSSOM() {
     });
   }
 
-  for (let type in cssOMTypes) {
+  for (let [type, value] of Object.entries({'CSSMathValue': CSSMathValue, 'CSSNumericValue': CSSNumericValue, ...cssOMTypes})) {
     if (type in window)
       continue;
-    if (!Reflect.defineProperty(window, type, { value: cssOMTypes[type] }))
+    if (!Reflect.defineProperty(window, type, { value }))
       throw Error(`Error installing CSSOM support for ${type}`);
   }
 }
