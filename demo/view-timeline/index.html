@@ -32,6 +32,29 @@
     overflow-y: hidden;
   }
 
+  #containerwrapper {
+    position: relative;
+    width: max-content;
+  }
+
+  #containerwrapper.inset::before,
+  #containerwrapper.inset::after {
+    content: '';
+    width: 100%;
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: red;
+  }
+
+  #containerwrapper.inset::before {
+    top: 100px;
+  }
+  #containerwrapper.inset::after {
+    bottom: 200px;
+  }
+
   #overlay {
     position: absolute;
     top:  10px;
@@ -103,10 +126,12 @@
 
 </style>
 <body>
-  <div id="container">
-    <div class="spacer"></div>
-    <div id="target"></div>
-    <div class="spacer"></div>
+  <div id="containerwrapper">
+    <div id="container">
+      <div class="spacer"></div>
+      <div id="target"></div>
+      <div class="spacer"></div>
+    </div>
   </div>
   <div id="overlay">
     <div class="progress-bar" style="top: 20px;"><span>cover</span></div>
@@ -141,18 +166,22 @@
   <label for="taller-than-scrollport-subject">Taller than scrollport subject</label>
   <input type="checkbox" name="subject-borders" id="subject-has-borders">
   <label for="subject-has-borders">Subject has borders</label>
+  <input type="checkbox" name="timeline-insets" id="timeline-insets">
+  <label for="timeline-insets">Use inset 100px 200px</label>
 </body>
 <script src="../../dist/scroll-timeline.js"></script>
 <script type="text/javascript">
   "use strict";
 
   let layout = 'vertical-tb';
+  let inset = 'auto';
   const progressBars = document.querySelectorAll('.progress-bar-progress');
-  const createProgressAnimation = (bar, rangeStart, rangeEnd, axis) => {
+  const createProgressAnimation = (bar, rangeStart, rangeEnd, axis, inset) => {
     const target = document.getElementById('target');
     const viewTimeline = new ViewTimeline({
       'subject': target,
-      'axis': axis
+      'axis': axis,
+      'inset': inset
     });
     bar.animate( { width: ['0px', '200px' ] }, {
       timeline: viewTimeline,
@@ -166,15 +195,18 @@
     document.getAnimations().forEach(anim => {
       anim.cancel();
     });
-    createProgressAnimation(progressBars[0], 'cover', 'cover', axis);
-    createProgressAnimation(progressBars[1], 'contain', 'contain', axis);
-    createProgressAnimation(progressBars[2], 'entry', 'entry', axis);
-    createProgressAnimation(progressBars[3], 'exit', 'exit', axis);
-    createProgressAnimation(progressBars[4], 'contain 25%', 'contain 75%', axis);
+    createProgressAnimation(progressBars[0], 'cover', 'cover', axis, inset);
+    createProgressAnimation(progressBars[1], 'contain', 'contain', axis, inset);
+    createProgressAnimation(progressBars[2], 'entry', 'entry', axis, inset);
+    createProgressAnimation(progressBars[3], 'exit', 'exit', axis, inset);
+    createProgressAnimation(progressBars[4], 'contain 25%', 'contain 75%',
+                            axis, inset);
     createProgressAnimation(progressBars[5], 'entry 150%', 'exit -50%',
-                            axis);
-    createProgressAnimation(progressBars[6], 'entry-crossing', 'entry-crossing', axis);
-    createProgressAnimation(progressBars[7], 'exit-crossing', 'exit-crossing', axis);
+                            axis, inset);
+    createProgressAnimation(progressBars[6], 'entry-crossing', 'entry-crossing',
+                            axis, inset);
+    createProgressAnimation(progressBars[7], 'exit-crossing', 'exit-crossing',
+                            axis, inset);
   };
 
   document.querySelectorAll('input').forEach(input => {
@@ -219,6 +251,15 @@
             target.classList.add('borders');
           } else {
             target.classList.remove('borders');
+          }
+          break;
+        case 'timeline-insets':
+          if(event.target.checked) {
+            inset = '100px 200px';
+            containerwrapper.classList.add('inset');
+          } else {
+            inset = 'auto';
+            containerwrapper.classList.remove('inset');
           }
           break;
       }
