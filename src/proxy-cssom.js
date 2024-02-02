@@ -247,7 +247,7 @@ export function installCSSOM() {
     });
   }
 
-  for (let [type, value] of Object.entries({cssOMTypes})) {
+  for (let [type, value] of Object.entries(cssOMTypes)) {
     if (type in window)
       continue;
     if (!Reflect.defineProperty(window, type, { value }))
