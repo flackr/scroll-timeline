@@ -83,6 +83,8 @@ export function installCSSOM() {
   }
 
   const cssOMTypes = {
+    'CSSNumericValue': CSSNumericValue,
+    'CSSMathValue': CSSMathValue,
     'CSSUnitValue': class extends CSSNumericValue {
       constructor(value, unit) {
         super();
@@ -245,7 +247,7 @@ export function installCSSOM() {
     });
   }
 
-  for (let [type, value] of Object.entries({'CSSMathValue': CSSMathValue, 'CSSNumericValue': CSSNumericValue, ...cssOMTypes})) {
+  for (let [type, value] of Object.entries({cssOMTypes})) {
     if (type in window)
       continue;
     if (!Reflect.defineProperty(window, type, { value }))
