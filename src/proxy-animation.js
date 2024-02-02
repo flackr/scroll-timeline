@@ -879,29 +879,50 @@ function autoAlignStartTime(details) {
     return;
   }
 
-  const previousRangeDuration = details.rangeDuration
+  const previousRangeDuration = details.rangeDuration;
+
+  let startOffset, endOffset;
+
 
   // 5. Let start offset be the resolved timeline time corresponding to the start of the animation attachment range.
   //    In the case of view timelines, it requires a calculation based on the proportion of the cover range.
-  const startOffset = CSS.percent(fractionalStartDelay(details) * 100)
+  try {
+    startOffset = CSS.percent(fractionalStartDelay(details) * 100);
+  } catch {
+    // TODO: Validate supported values for range start, to avoid exceptions when resolving the values.
+
+    // Range start is invalid, falling back to default value
+    startOffset = CSS.percent(0);
+    details.animationRange.start = 'normal';
+    console.warn("Exception when calculating start offset", e);
+  }
 
   // 6. Let end offset be the resolved timeline time corresponding to the end of the animation attachment range.
   //    In the case of view timelines, it requires a calculation based on the proportion of the cover range.
-  const endOffset = CSS.percent((1 - fractionalEndDelay(details)) * 100)
+  try {
+    endOffset = CSS.percent((1 - fractionalEndDelay(details)) * 100);
+  } catch {
+    // TODO: Validate supported values for range end, to avoid exceptions when resolving the values.
+
+    // Range start is invalid, falling back to default value
+    endOffset = CSS.percent(100);
+    details.animationRange.end = 'normal';
+    console.warn("Exception when calculating end offset", e);
+  }
 
   // Store the range duration, until we can find a spec aligned method to calculate iteration duration
   // TODO: Clarify how range duration should be resolved
-  details.rangeDuration = endOffset.value - startOffset.value
+  details.rangeDuration = endOffset.value - startOffset.value;
   // 7. Set start time to start offset if effective playback rate ≥ 0, and end offset otherwise.
   const playbackRate = effectivePlaybackRate(details);
-  details.startTime = fromCssNumberish(details,playbackRate >= 0 ? startOffset : endOffset)
+  details.startTime = fromCssNumberish(details,playbackRate >= 0 ? startOffset : endOffset);
 
   // 8. Clear hold time.
-  details.holdTime = null
+  details.holdTime = null;
 
   // Additional polyfill step needed to renormalize timing when range has changed
   if (details.rangeDuration !== previousRangeDuration) {
-    renormalizeTiming(details)
+    renormalizeTiming(details);
   }
 }
 
