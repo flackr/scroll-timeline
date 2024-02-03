@@ -2,11 +2,10 @@
   "name": "scroll-timeline-polyfill",
   "version": "1.0.0",
   "description": "A polyfill for scroll-driven animations on the web via ScrollTimeline",
-  "source": "src/index.js",
-  "main": "dist/scroll-timeline.js",
+  "type": "module",
   "scripts": {
-    "build": "microbundle -f iife",
-    "dev": "run-all \"serve\" \" microbundle watch -f iife \"",
+    "build": "vite build",
+    "dev": "vite",
     "deploy": "npm run build",
     "test-setup": "node test/setup/checkout-wpt.mjs",
     "test:wpt": "npm run test-setup && cd test && cd wpt && (python wpt run --headless -y --log-wptreport ../report/data.json --log-wptscreenshot=../report/screenshots.txt --log-html=../report/index.html --inject-script ../../dist/scroll-timeline.js firefox scroll-animations || true)",
@@ -36,13 +35,6 @@
   },
   "homepage": "https://github.com/flackr/scroll-timeline#readme",
   "devDependencies": {
-    "dotenv": "^8.2.0",
-    "kleur": "^3.0.3",
-    "microbundle": "^0.13.1",
-    "run-all": "^1.0.1",
-    "saucelabs": "^7.2.0",
-    "selenium-webdriver": "^4.0.0-alpha.7",
-    "serve": "^13.0.2",
-    "tiny-glob": "^0.2.6"
+    "vite": "^5.0.12"
   }
 }

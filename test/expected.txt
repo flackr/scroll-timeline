@@ -807,7 +807,7 @@ FAIL	/scroll-animations/scroll-timelines/idlharness.window.html	ViewTimeline int
 FAIL	/scroll-animations/scroll-timelines/idlharness.window.html	ViewTimeline interface object length
 FAIL	/scroll-animations/scroll-timelines/idlharness.window.html	ViewTimeline interface object name
 PASS	/scroll-animations/scroll-timelines/idlharness.window.html	ViewTimeline interface: existence and properties of interface prototype object
-FAIL	/scroll-animations/scroll-timelines/idlharness.window.html	ViewTimeline interface: existence and properties of interface prototype object's "constructor" property
+PASS	/scroll-animations/scroll-timelines/idlharness.window.html	ViewTimeline interface: existence and properties of interface prototype object's "constructor" property
 PASS	/scroll-animations/scroll-timelines/idlharness.window.html	ViewTimeline interface: existence and properties of interface prototype object's @@unscopables property
 FAIL	/scroll-animations/scroll-timelines/idlharness.window.html	ViewTimeline interface: attribute subject
 FAIL	/scroll-animations/scroll-timelines/idlharness.window.html	ViewTimeline interface: attribute startOffset
