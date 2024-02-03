@@ -10,7 +10,13 @@ export default defineConfig({
       name: 'ScrollTimeline',
       // the proper extensions will be added
       fileName: (format, entryAlias) => `scroll-timeline${format=='iife'?'':'-' + format}.js`,
-      formats: ['iife']
+      formats: ['iife'],
+    },
+    minify: 'terser',
+    terserOptions: {
+      mangle: {
+        keep_classnames: /(Scroll|View)Timeline/
+      }
     },
     rollupOptions: {
       output: {
@@ -19,6 +25,6 @@ export default defineConfig({
         globals: {
         },
       },
-    },
+    }
   },
 })
