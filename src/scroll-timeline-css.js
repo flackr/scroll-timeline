@@ -4,6 +4,7 @@ import { ScrollTimeline, ViewTimeline, getScrollParent, calculateRange,
   calculateRelativePosition, measureSubject, measureSource } from "./scroll-timeline-base";
 
 const parser = new StyleParser();
+let currentStyleId = 0
 
 function initMutationObserver() {
   const sheetObserver = new MutationObserver((entries) => {
@@ -14,6 +15,11 @@ function initMutationObserver() {
         }
         if (addedNode instanceof HTMLLinkElement) {
           handleLinkedStylesheet(addedNode);
+        }
+      }
+      for (const removedNode of entry.removedNodes) {
+        if (removedNode instanceof HTMLStyleElement) {
+          parser.deleteMappingForStyle(removedNode.dataset.stpStyleId)
         }
       }
     }
@@ -37,10 +43,12 @@ function initMutationObserver() {
     if (el.innerHTML.trim().length === 0 || 'aphrodite' in el.dataset) {
       return;
     }
+    el.dataset.stpStyleId = `${currentStyleId}`
     // TODO: Do with one pass for better performance
-    let newSrc = parser.transpileStyleSheet(el.innerHTML, true);
-    newSrc = parser.transpileStyleSheet(newSrc, false);
+    let newSrc = parser.transpileStyleSheet(el.innerHTML, true, undefined, `${currentStyleId}`);
+    newSrc = parser.transpileStyleSheet(newSrc, false, undefined, `${currentStyleId}`);
     el.innerHTML = newSrc;
+    currentStyleId++
   }
 
   function handleLinkedStylesheet(linkElement) {
@@ -87,10 +95,10 @@ function createScrollTimeline(anim, animationName, target) {
 
   const timelineName = animOptions['animation-timeline'];
   if(!timelineName) return null;
-
-  let options = parser.getScrollTimelineOptions(timelineName, target) ||
-    parser.getViewTimelineOptions(timelineName, target);
-  if (!options) return null;
+  let options = parser.getTimelineOptions(timelineName, target);
+  if (!options) {
+    return { timeline: null };
+  }
 
   // If this is a ViewTimeline
   if(options.subject)

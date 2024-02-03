@@ -75,7 +75,7 @@ FAIL	/scroll-animations/css/animation-timeline-computed.html	Property animation-
 FAIL	/scroll-animations/css/animation-timeline-computed.html	Property animation-timeline value 'view(1px y)'
 FAIL	/scroll-animations/css/animation-timeline-computed.html	Property animation-timeline value 'view(y auto)'
 FAIL	/scroll-animations/css/animation-timeline-computed.html	Property animation-timeline value 'view(y auto auto)'
-FAIL	/scroll-animations/css/animation-timeline-deferred.html	Animation.timeline returns attached timeline
+PASS	/scroll-animations/css/animation-timeline-deferred.html	Animation.timeline returns attached timeline
 FAIL	/scroll-animations/css/animation-timeline-deferred.html	Animation.timeline returns null for inactive deferred timeline
 FAIL	/scroll-animations/css/animation-timeline-deferred.html	Animation.timeline returns null for inactive (overattached) deferred timeline
 FAIL	/scroll-animations/css/animation-timeline-ignored.tentative.html	Changing animation-timeline changes the timeline (sanity check)
@@ -307,7 +307,7 @@ FAIL	/scroll-animations/css/scroll-timeline-name-shadow.html	Outer animation can
 FAIL	/scroll-animations/css/scroll-timeline-name-shadow.html	Inner animation can see scroll timeline defined by ::part
 FAIL	/scroll-animations/css/scroll-timeline-name-shadow.html	Slotted element can see scroll timeline within the shadow
 PASS	/scroll-animations/css/scroll-timeline-nearest-dirty.html	Unrelated style mutation does not affect anonymous timeline
-FAIL	/scroll-animations/css/scroll-timeline-nearest-with-absolute-positioned-element.html	Resolving scroll(nearest) for an absolutely positioned element
+PASS	/scroll-animations/css/scroll-timeline-nearest-with-absolute-positioned-element.html	Resolving scroll(nearest) for an absolutely positioned element
 FAIL	/scroll-animations/css/scroll-timeline-paused-animations.html	Test that the scroll animation is paused
 FAIL	/scroll-animations/css/scroll-timeline-paused-animations.html	Test that the scroll animation is paused by updating animation-play-state
 FAIL	/scroll-animations/css/scroll-timeline-range-animation.html	Animation with ranges [initial, initial]
@@ -404,16 +404,16 @@ PASS	/scroll-animations/css/timeline-scope-parsing.tentative.html	e.style['timel
 PASS	/scroll-animations/css/timeline-scope-parsing.tentative.html	e.style['timeline-scope'] = "\"foo\" \"bar\"" should not set the property value
 PASS	/scroll-animations/css/timeline-scope-parsing.tentative.html	e.style['timeline-scope'] = "rgb(1, 2, 3)" should not set the property value
 PASS	/scroll-animations/css/timeline-scope-parsing.tentative.html	e.style['timeline-scope'] = "#fefefe" should not set the property value
-FAIL	/scroll-animations/css/timeline-scope.html	Descendant can attach to deferred timeline
+PASS	/scroll-animations/css/timeline-scope.html	Descendant can attach to deferred timeline
 PASS	/scroll-animations/css/timeline-scope.html	Deferred timeline with no attachments
-FAIL	/scroll-animations/css/timeline-scope.html	Inner timeline does not interfere with outer timeline
+PASS	/scroll-animations/css/timeline-scope.html	Inner timeline does not interfere with outer timeline
 PASS	/scroll-animations/css/timeline-scope.html	Deferred timeline with two attachments
 FAIL	/scroll-animations/css/timeline-scope.html	Dynamically re-attaching
 FAIL	/scroll-animations/css/timeline-scope.html	Dynamically detaching
-FAIL	/scroll-animations/css/timeline-scope.html	Removing/inserting element with attaching timeline
-FAIL	/scroll-animations/css/timeline-scope.html	Ancestor attached element becoming display:none/block
+PASS	/scroll-animations/css/timeline-scope.html	Removing/inserting element with attaching timeline
+PASS	/scroll-animations/css/timeline-scope.html	Ancestor attached element becoming display:none/block
 FAIL	/scroll-animations/css/timeline-scope.html	A deferred timeline appearing dynamically in the ancestor chain
-FAIL	/scroll-animations/css/timeline-scope.html	Animations prefer non-deferred timelines
+PASS	/scroll-animations/css/timeline-scope.html	Animations prefer non-deferred timelines
 FAIL	/scroll-animations/css/view-timeline-animation-range-update.tentative.html	Ensure that animation is updated on a style change
 FAIL	/scroll-animations/css/view-timeline-animation.html	Default view-timeline
 FAIL	/scroll-animations/css/view-timeline-animation.html	Horizontal view-timeline
@@ -524,8 +524,8 @@ PASS	/scroll-animations/css/view-timeline-lookup.html	view-timeline on self
 PASS	/scroll-animations/css/view-timeline-lookup.html	timeline-scope on preceding sibling
 PASS	/scroll-animations/css/view-timeline-lookup.html	view-timeline on ancestor
 PASS	/scroll-animations/css/view-timeline-lookup.html	timeline-scope on ancestor sibling
-FAIL	/scroll-animations/css/view-timeline-lookup.html	timeline-scope on ancestor sibling, conflict remains unresolved
-FAIL	/scroll-animations/css/view-timeline-lookup.html	timeline-scope on ancestor sibling, closer timeline wins
+PASS	/scroll-animations/css/view-timeline-lookup.html	timeline-scope on ancestor sibling, conflict remains unresolved
+PASS	/scroll-animations/css/view-timeline-lookup.html	timeline-scope on ancestor sibling, closer timeline wins
 PASS	/scroll-animations/css/view-timeline-lookup.html	view-timeline on ancestor sibling, scroll-timeline wins on same element
 FAIL	/scroll-animations/css/view-timeline-name-computed.html	Property view-timeline-name value 'initial'
 FAIL	/scroll-animations/css/view-timeline-name-computed.html	Property view-timeline-name value 'inherit'
@@ -696,6 +696,7 @@ PASS	/scroll-animations/scroll-timelines/current-time-root-scroller.html	current
 PASS	/scroll-animations/scroll-timelines/current-time-writing-modes.html	currentTime handles direction: rtl correctly
 PASS	/scroll-animations/scroll-timelines/current-time-writing-modes.html	currentTime handles writing-mode: vertical-rl correctly
 PASS	/scroll-animations/scroll-timelines/current-time-writing-modes.html	currentTime handles writing-mode: vertical-lr correctly
+PASS	/scroll-animations/scroll-timelines/duration.html	The duration of a scroll timeline is 100%
 PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the delay to a positive number
 PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the delay to a negative number
 PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the delay of an animation in progress: positive delay that causes the animation to be no longer in-effect
@@ -1026,6 +1027,7 @@ PASS	/scroll-animations/view-timelines/block-view-timeline-current-time.tentativ
 FAIL	/scroll-animations/view-timelines/block-view-timeline-nested-subject.tentative.html	View timeline with subject that is not a direct descendant of the scroll container
 FAIL	/scroll-animations/view-timelines/change-animation-range-updates-play-state.html	Changing the animation range updates the play state
 FAIL	/scroll-animations/view-timelines/contain-alignment.html	Stability of animated elements aligned to the bounds of a contain region
+PASS	/scroll-animations/view-timelines/duration.html	The duration of a view timeline is 100%
 PASS	/scroll-animations/view-timelines/fieldset-source.html	Fieldset is a valid source for a view timeline
 FAIL	/scroll-animations/view-timelines/get-keyframes-with-timeline-offset.html	Report specified timeline offsets
 FAIL	/scroll-animations/view-timelines/get-keyframes-with-timeline-offset.html	Computed offsets can be outside [0,1] for keyframes with timeline offsets
