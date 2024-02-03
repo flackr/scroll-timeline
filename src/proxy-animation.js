@@ -1077,11 +1077,11 @@ function parseTimelineRangePart(timeline, value, position) {
 // fetched from Animation.
 export class ProxyAnimation {
   constructor(effect, timeline, animOptions={}) {
+    const isScrollAnimation = timeline instanceof ScrollTimeline;
+    const animationTimeline = isScrollAnimation ? undefined : timeline;
     const animation =
         (effect instanceof nativeAnimation) ?
            effect : new nativeAnimation(effect, animationTimeline);
-    const isScrollAnimation = timeline instanceof ScrollTimeline;
-    const animationTimeline = isScrollAnimation ? undefined : timeline;
     proxiedAnimations.set(animation, this);
     proxyAnimations.set(this, {
       animation: animation,
