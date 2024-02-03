@@ -45,8 +45,8 @@ jobs:
         uses: actions/configure-pages@v3
       - name: Install Node.js dependencies
         run: "[[ -f package-lock.json || -f npm-shrinkwrap.json ]] && npm ci || true"
-      - name: Build
-        run: "npm run build"
+      - name: Test build
+        run: "npm run build -- --mode test"
       - name: Checkout WPT
         run: "npm run test-setup"
       - name: WPT hosts
@@ -57,6 +57,8 @@ jobs:
         run: "npm run test:compare"
       - name: Test results summary
         run: echo "Passed $(grep -c '^PASS' ./test/report/summary.txt) of $(grep -c '^'  ./test/report/summary.txt) tests" >> $GITHUB_STEP_SUMMARY
+      - name: Build
+        run: "npm run build"
       - name: Clean build files
         run: "rm -rf node_modules test/wpt"
       - name: Upload artifact

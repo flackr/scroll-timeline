@@ -188,7 +188,7 @@ export function measureSource (source) {
 
 /**
  * Measure subject element relative to source
- * @param {HTMLElement} source
+ * @param {HTMLElement|SVGElement} source
  * @param {HTMLElement|undefined} subject
  * @param subject
  */
@@ -201,18 +201,70 @@ export function measureSubject(source, subject) {
   let node = subject;
   const ancestor = source.offsetParent;
   while (node && node != ancestor) {
-    left += node.offsetLeft;
-    top += node.offsetTop;
-    node = node.offsetParent;
+    if (node instanceof SVGElement) {
+      let rootSvgElement = node.ownerSVGElement;
+      while (rootSvgElement.ownerSVGElement)
+        rootSvgElement = rootSvgElement.ownerSVGElement;
+
+      const matrix = node.getCTM();
+      const bbox = node.getBBox();
+      let point = rootSvgElement.createSVGPoint();
+      point.x = bbox.x;
+      point.y = bbox.y;
+
+      // Position relative to svg-element
+      const nodePosition = point.matrixTransform(matrix);
+      const svgParent = rootSvgElement.parentElement;
+      const svgLeft = rootSvgElement.getBoundingClientRect().left - svgParent.getBoundingClientRect().left;
+      const svgTop = rootSvgElement.getBoundingClientRect().top - svgParent.getBoundingClientRect().top;
+      left += svgLeft + nodePosition.x;
+      top += svgTop + nodePosition.y;
+      node = svgParent;
+    } else {
+      left += node.offsetLeft;
+      top += node.offsetTop;
+      if (!node.offsetParent) {
+        // The top level element (body) does not have an offsetParent, and no offsetTop/Left
+        // If the body has margins, they need to be added
+        const style = getComputedStyle(node);
+        top += parseInt(style.marginTop);
+        left += parseInt(style.marginLeft);
+      }
+      node = node.offsetParent;
+    }
   }
   left -= source.offsetLeft + source.clientLeft;
   top -= source.offsetTop + source.clientTop;
+
+  let offsetWidth, offsetHeight
+  if (subject instanceof SVGElement) {
+    let rootSvgElement = subject.ownerSVGElement;
+    while (rootSvgElement.ownerSVGElement)
+      rootSvgElement = rootSvgElement.ownerSVGElement;
+
+    const matrix = subject.getCTM();
+    const bbox = subject.getBBox();
+    let topLeftPoint = rootSvgElement.createSVGPoint();
+    topLeftPoint.x = bbox.x;
+    topLeftPoint.y = bbox.y;
+    let bottomRightPoint = rootSvgElement.createSVGPoint();
+    bottomRightPoint.x = bbox.x + bbox.width;
+    bottomRightPoint.y = bbox.y + bbox.height;
+
+    const tlPosition = topLeftPoint.matrixTransform(matrix);
+    const brPosition = bottomRightPoint.matrixTransform(matrix);
+    offsetWidth = Math.abs(brPosition.x - tlPosition.x);
+    offsetHeight = Math.abs(brPosition.y - tlPosition.y);
+  } else {
+    offsetWidth = subject.offsetWidth;
+    offsetHeight = subject.offsetHeight;
+  }
   const style = getComputedStyle(subject);
   return {
     top,
     left,
-    offsetWidth: subject.offsetWidth,
-    offsetHeight: subject.offsetHeight,
+    offsetWidth,
+    offsetHeight,
     fontSize: style.fontSize,
   };
 }
