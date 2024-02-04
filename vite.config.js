@@ -14,9 +14,7 @@ export default defineConfig({
     },
     minify: 'terser',
     terserOptions: {
-      mangle: {
-        keep_classnames: /(Scroll|View)Timeline/
-      }
+      keep_classnames: true
     },
     rollupOptions: {
       output: {
