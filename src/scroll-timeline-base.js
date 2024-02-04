@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {installCSSOM} from "./proxy-cssom.js";
+import {installCSSOM} from "./css-typed-om/proxy-cssom.js";
 import {simplifyCalculation} from "./simplify-calculation";
 import {normalizeAxis, splitIntoComponentValues} from './utils.js';
 
