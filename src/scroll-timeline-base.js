@@ -370,7 +370,9 @@ export function addAnimation(scrollTimeline, animation, tickAnimation) {
     animation: animation,
     tickAnimation: tickAnimation
   });
-  updateInternal(scrollTimeline);
+  queueMicrotask(() => {
+    updateInternal(scrollTimeline);
+  });
 }
 
 // TODO: this is a private function used for unit testing add function
