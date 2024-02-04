@@ -46,8 +46,20 @@ export function installCSSOM() {
     return result;
   }
 
-  class CSSMathValue {
+  class CSSNumericValue {
+    static parse(value) {
+      if (value instanceof CSSNumericValue) return value;
+
+      return simplifyCalculation(parseCSSNumericValue(value), {});
+    }
+
+    // TODO: Add other methods: add, sub, mul, div, …
+    // Spec: https://drafts.css-houdini.org/css-typed-om/#numeric-value
+  }
+
+  class CSSMathValue extends CSSNumericValue {
     constructor(values, operator, opt_name, opt_delimiter) {
+      super();
       privateDetails.set(this, {
         values: toCssNumericArray(values),
         operator: operator,
@@ -68,17 +80,6 @@ export function installCSSOM() {
       const details = privateDetails.get(this);
       return `${details.name}(${details.values.join(details.delimiter)})`;
     }
-  }
-
-  class CSSNumericValue {
-    static parse(value) {
-      if (value instanceof CSSNumericValue) return value;
-
-      return simplifyCalculation(parseCSSNumericValue(value), {});
-    }
-
-    // TODO: Add other methods: add, sub, mul, div, …
-    // Spec: https://drafts.css-houdini.org/css-typed-om/#numeric-value
   }
 
   const cssOMTypes = {
