@@ -794,9 +794,9 @@ export function fractionalOffset(timeline, value) {
 
     let sourceScrollDistance = undefined;
     if (normalizeAxis(axis, sourceMeasurements) === 'x') {
-      sourceScrollDistance = source.scrollWidth;
+      sourceScrollDistance = sourceMeasurements.scrollWidth - sourceMeasurements.clientWidth;
     } else {
-      sourceScrollDistance = source.scrollHeight;
+      sourceScrollDistance = sourceMeasurements.scrollHeight - sourceMeasurements.clientHeight;
     }
 
     const position = resolvePx(value, sourceScrollDistance);
