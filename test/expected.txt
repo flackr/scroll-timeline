@@ -920,8 +920,8 @@ PASS	/scroll-animations/scroll-timelines/scroll-timeline-invalidation.html	Anima
 PASS	/scroll-animations/scroll-timelines/scroll-timeline-invalidation.html	Animation current time and effect local time are updated after scroller size changes.
 FAIL	/scroll-animations/scroll-timelines/scroll-timeline-invalidation.html	If scroll animation resizes its scroll timeline scroller, layout reruns once per frame.
 PASS	/scroll-animations/scroll-timelines/scroll-timeline-range.html	Scroll timeline with percentage range [JavaScript API]
-FAIL	/scroll-animations/scroll-timelines/scroll-timeline-range.html	Scroll timeline with px range [JavaScript API]
-FAIL	/scroll-animations/scroll-timelines/scroll-timeline-range.html	Scroll timeline with calculated range [JavaScript API]
+PASS	/scroll-animations/scroll-timelines/scroll-timeline-range.html	Scroll timeline with px range [JavaScript API]
+PASS	/scroll-animations/scroll-timelines/scroll-timeline-range.html	Scroll timeline with calculated range [JavaScript API]
 FAIL	/scroll-animations/scroll-timelines/scroll-timeline-range.html	Scroll timeline with EM range [JavaScript API]
 FAIL	/scroll-animations/scroll-timelines/scroll-timeline-range.html	Scroll timeline with percentage range [CSS]
 FAIL	/scroll-animations/scroll-timelines/scroll-timeline-range.html	Scroll timeline with px range [CSS]

@@ -785,9 +785,9 @@ export function fractionalOffset(timeline, value) {
 
     let sourceScrollDistance = undefined;
     if (normalizeAxis(axis, sourceMeasurements) === 'x') {
-      sourceScrollDistance = source.scrollWidth;
+      sourceScrollDistance = sourceMeasurements.scrollWidth - sourceMeasurements.clientWidth;
     } else {
-      sourceScrollDistance = source.scrollHeight;
+      sourceScrollDistance = sourceMeasurements.scrollHeight - sourceMeasurements.clientHeight;
     }
 
     // TODO: pass relative measurements (viewport, font-size, root font-size, etc. ) to resolvePx() to resolve relative units
