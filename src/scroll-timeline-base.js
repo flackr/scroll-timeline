@@ -845,6 +845,11 @@ export class ViewTimeline extends ScrollTimeline {
       details.inset = parseInset(options.inset);
     }
     if (details.subject) {
+      const resizeObserver = new ResizeObserver(() => {
+        updateMeasurements(details.source)
+      })
+      resizeObserver.observe(details.subject)
+
       const mutationObserver = new MutationObserver(() => {
         updateMeasurements(details.source);
       });
