@@ -105,25 +105,17 @@ export function calculateMaxScrollOffset(source, axis) {
     return sourceMeasurements.scrollWidth - sourceMeasurements.clientWidth;
 }
 
-function resolvePx(cssValue, resolvedLength) {
-  if (cssValue instanceof CSSUnitValue) {
-    // TODO: Add support for em, vh
-    if (cssValue.unit == "percent")
-      return cssValue.value * resolvedLength / 100;
-    else if (cssValue.unit == "px")
-      return cssValue.value;
-    else
-      throw TypeError("Unhandled unit type " + cssValue.unit);
-  } else if (cssValue instanceof CSSMathSum) {
-    let total = 0;
-    for (let value of cssValue.values) {
-      total += resolvePx(value, resolvedLength);
+function resolvePx(cssValue, info) {
+  const cssNumericValue = simplifyCalculation(cssValue, info);
+  if (cssNumericValue instanceof CSSUnitValue) {
+    if (cssNumericValue.unit === 'px') {
+      return cssNumericValue.value;
+    } else {
+      throw TypeError("Unhandled unit type " + cssNumericValue.unit);
     }
-    return total;
-  } else if (cssValue instanceof CSSMathNegate) {
-    return -resolvePx(cssValue.value, resolvedLength);
+  } else {
+    throw TypeError('Unsupported value type: ' + typeof (cssValue));
   }
-  throw TypeError("Unsupported value type: " + typeof(cssValue));
 }
 
 // Detects if the cached source is obsolete, and updates if required
@@ -767,15 +759,10 @@ function calculateInset(value, sizes) {
       return sizes.scrollPadding[i] === 'auto' ? 0 : parseFloat(sizes.scrollPadding[i]);
     }
 
-    const simplifiedUnit = simplifyCalculation(part, {
+    return resolvePx(part, {
       percentageReference: CSS.px(sizes.containerSize),
       fontSize: CSS.px(parseFloat(sizes.fontSize))
-    });
-    if (simplifiedUnit instanceof CSSUnitValue && simplifiedUnit.unit === 'px') {
-      return simplifiedUnit.value;
-    } else {
-      throw TypeError('Unsupported inset.');
-    }
+    })
   });
 
   return { start, end };
@@ -803,7 +790,8 @@ export function fractionalOffset(timeline, value) {
       sourceScrollDistance = source.scrollHeight;
     }
 
-    const position = resolvePx(value, sourceScrollDistance);
+    // TODO: pass relative measurements (viewport, font-size, root font-size, etc. ) to resolvePx() to resolve relative units
+    const position = resolvePx(value, {percentageReference: CSS.px(sourceScrollDistance)});
     const fractionalOffset = position / sourceScrollDistance;
 
     return fractionalOffset;
@@ -821,12 +809,8 @@ export function calculateRelativePosition(phaseRange, offset, coverRange, subjec
     percentageReference: CSS.px(phaseRange.end - phaseRange.start),
     fontSize: CSS.px(parseFloat(style.fontSize))
   };
-  const simplifiedRangeOffset = simplifyCalculation(offset, info);
-  if (!(simplifiedRangeOffset instanceof CSSUnitValue) || simplifiedRangeOffset.unit !== 'px') {
-    throw new Error(`Unsupported offset '${simplifiedRangeOffset.toString()}'`)
-  }
 
-  const offsetPX = simplifiedRangeOffset.value + phaseRange.start;
+  const offsetPX = resolvePx(offset, info) + phaseRange.start;
   return (offsetPX - coverRange.start) / (coverRange.end - coverRange.start);
 }
 
