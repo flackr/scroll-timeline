@@ -669,10 +669,6 @@ function tickAnimation(timelineTime) {
         (timelineTimeMs - fromCssNumberish(details, this.startTime)) *
             this.playbackRate);
 
-    // Conditionally reset the hold time so that the finished state can be
-    // properly recomputed.
-    if (playState == 'finished' && effectivePlaybackRate(details) != 0)
-      details.holdTime = null;
     updateFinishedState(details, false, false);
   }
 }
@@ -745,6 +741,12 @@ function createProxyEffect(details) {
       let timing = Object.assign({}, details.specifiedTiming);
 
       let totalDuration;
+
+      if (timing.duration === Infinity) {
+        throw TypeError(
+          "Effect duration cannot be Infinity when used with Scroll " +
+          "Timelines");
+      }
 
       // Duration 'auto' case.
       if (timing.duration === null || timing.duration === 'auto' || details.autoDurationEffect) {

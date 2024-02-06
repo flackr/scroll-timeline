@@ -912,8 +912,8 @@ PASS	/scroll-animations/scroll-timelines/scroll-animation-inactive-timeline.html
 PASS	/scroll-animations/scroll-timelines/scroll-animation-inactive-timeline.html	Animation start and current times are correct if scroll timeline is activated after animation.play call.
 PASS	/scroll-animations/scroll-timelines/scroll-animation-inactive-timeline.html	Animation start and current times are correct if scroll timeline is activated after setting start time.
 PASS	/scroll-animations/scroll-timelines/scroll-animation-inactive-timeline.html	Animation current time is correct when the timeline becomes newly inactive and then active again.
-FAIL	/scroll-animations/scroll-timelines/scroll-animation.html	Animation start and current times are correct for each animation state.
-FAIL	/scroll-animations/scroll-timelines/scroll-animation.html	Animation start and current times are correct for each animation state when the animation starts playing with advanced scroller.
+PASS	/scroll-animations/scroll-timelines/scroll-animation.html	Animation start and current times are correct for each animation state.
+PASS	/scroll-animations/scroll-timelines/scroll-animation.html	Animation start and current times are correct for each animation state when the animation starts playing with advanced scroller.
 PASS	/scroll-animations/scroll-timelines/scroll-animation.html	Finished animation plays on reverse scrolling.
 FAIL	/scroll-animations/scroll-timelines/scroll-animation.html	Sending animation finished events by finished animation on reverse scrolling.
 PASS	/scroll-animations/scroll-timelines/scroll-timeline-invalidation.html	Animation current time and effect local time are updated after scroller content size changes.
@@ -960,7 +960,7 @@ PASS	/scroll-animations/scroll-timelines/setting-start-time.html	Setting an unre
 PASS	/scroll-animations/scroll-timelines/setting-start-time.html	Setting an unresolved start time sets the hold time to unresolved when the timeline is inactive
 PASS	/scroll-animations/scroll-timelines/setting-start-time.html	Setting the start time resolves a pending ready promise
 PASS	/scroll-animations/scroll-timelines/setting-start-time.html	Setting the start time resolves a pending ready promise when the timelineis inactive
-FAIL	/scroll-animations/scroll-timelines/setting-start-time.html	Setting an unresolved start time on a play-pending animation makes it idle
+PASS	/scroll-animations/scroll-timelines/setting-start-time.html	Setting an unresolved start time on a play-pending animation makes it idle
 PASS	/scroll-animations/scroll-timelines/setting-start-time.html	Setting the start time updates the finished state
 PASS	/scroll-animations/scroll-timelines/setting-start-time.html	Setting the start time on a running animation updates the play state
 PASS	/scroll-animations/scroll-timelines/setting-start-time.html	Setting the start time on a reverse running animation updates the play state
