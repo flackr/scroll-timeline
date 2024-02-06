@@ -6,6 +6,7 @@ import {
   fractionalOffset,
 } from "./scroll-timeline-base";
 import {splitIntoComponentValues} from './utils';
+import {simplifyCalculation} from './simplify-calculation';
 
 const nativeDocumentGetAnimations = document.getAnimations;
 const nativeElementGetAnimations = window.Element.prototype.getAnimations;
@@ -825,19 +826,19 @@ function createProxyEffect(details) {
 // Computes the start delay as a fraction of the active cover range.
 function fractionalStartDelay(details) {
   if (!details.animationRange) return 0;
-  if (details.animationRange.start === 'normal') {
-    details.animationRange.start = getNormalStartRange(details.timeline);
-  }
-  return fractionalOffset(details.timeline, details.animationRange.start);
+  const rangeStart = details.animationRange.start === 'normal' ?
+    getNormalStartRange(details.timeline) :
+    details.animationRange.start;
+  return fractionalOffset(details.timeline, rangeStart);
 }
 
 // Computes the ends delay as a fraction of the active cover range.
 function fractionalEndDelay(details) {
   if (!details.animationRange) return 0;
-  if (details.animationRange.end === 'normal') {
-    details.animationRange.end = getNormalEndRange(details.timeline);
-  }
-  return 1 - fractionalOffset(details.timeline, details.animationRange.end);
+  const rangeEnd = details.animationRange.end === 'normal' ?
+    getNormalEndRange(details.timeline) :
+    details.animationRange.end;
+  return 1 - fractionalOffset(details.timeline, rangeEnd);
 }
 
 // Map from an instance of ProxyAnimation to internal details about that animation.
@@ -959,8 +960,8 @@ function getNormalEndRange(timeline) {
 
 function parseAnimationRange(timeline, value) {
   const animationRange = {
-    start: getNormalStartRange(timeline),
-    end: getNormalEndRange(timeline),
+    start: 'normal',
+    end: 'normal',
   };
 
   if (!value)
@@ -1050,11 +1051,11 @@ function parseTimelineRangePart(timeline, value, position) {
         if (ANIMATION_RANGE_NAMES.includes(parts[0])) {
           rangeName = parts[0];
         } else {
-          offset = CSSNumericValue.parse(parts[0]);
+          offset = simplifyCalculation(CSSNumericValue.parse(parts[0]), {});
         }
       } else if (parts.length === 2) {
         rangeName = parts[0];
-        offset = CSSNumericValue.parse(parts[1]);
+        offset = simplifyCalculation(CSSNumericValue.parse(parts[1]), {});
       }
     }
 
