@@ -889,7 +889,7 @@ function autoAlignStartTime(details) {
   //    In the case of view timelines, it requires a calculation based on the proportion of the cover range.
   try {
     startOffset = CSS.percent(fractionalStartDelay(details) * 100);
-  } catch {
+  } catch (e) {
     // TODO: Validate supported values for range start, to avoid exceptions when resolving the values.
 
     // Range start is invalid, falling back to default value
@@ -902,7 +902,7 @@ function autoAlignStartTime(details) {
   //    In the case of view timelines, it requires a calculation based on the proportion of the cover range.
   try {
     endOffset = CSS.percent((1 - fractionalEndDelay(details)) * 100);
-  } catch {
+  } catch (e) {
     // TODO: Validate supported values for range end, to avoid exceptions when resolving the values.
 
     // Range start is invalid, falling back to default value
