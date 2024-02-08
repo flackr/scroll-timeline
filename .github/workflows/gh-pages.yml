@@ -56,7 +56,9 @@ jobs:
       - name: Expected results
         run: "npm run test:compare"
       - name: Test results summary
-        run: echo "Passed $(grep -c '^PASS' ./test/report/summary.txt) of $(grep -c '^'  ./test/report/summary.txt) tests" >> $GITHUB_STEP_SUMMARY
+        run: |
+          echo "Passed $(grep '/css' ./test/report/summary.txt |  grep -c '^PASS' ) of $(grep '/css' ./test/report/summary.txt | grep -c '^') css tests" >> $GITHUB_STEP_SUMMARY
+          echo "Passed $(grep -v '/css' ./test/report/summary.txt |  grep -c '^PASS' ) of $(grep -v '/css' ./test/report/summary.txt | grep -c '^') waapi tests" >> $GITHUB_STEP_SUMMARY
       - name: Clean build files
         run: "rm -rf node_modules test/wpt"
       - name: Upload artifact
