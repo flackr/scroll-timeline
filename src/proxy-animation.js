@@ -572,10 +572,13 @@ function playInternal(details, autoRewind) {
   }
 
   // Not by spec, but required by tests in play-animation.html:
+  // – Playing a running animation resets a sticky start time
   // - Playing a finished animation restarts the animation aligned at the start
   // - Playing a pause-pending but previously finished animation realigns with the scroll position
   // - Playing a finished animation clears the start time
-  if (details.proxy.playState === 'finished' || abortedPause) {
+  // - Resuming an animation from paused realigns with scroll position.
+  // These tests suggest that the start time should always be auto aligned when auto-rewind and finite timeline is true
+  if (autoRewind) {
     details.holdTime = null
     details.startTime = null
     details.autoAlignStartTime = true;
