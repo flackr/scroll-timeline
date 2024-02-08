@@ -457,7 +457,7 @@ export class ScrollTimeline {
   get currentTime() {
     const unresolved = null;
     const container = this.source;
-    if (!container) return unresolved;
+    if (!container || !container.isConnected) return unresolved;
     if (this.phase == 'inactive')
       return unresolved;
     const scrollerStyle = getComputedStyle(container);
