@@ -690,7 +690,7 @@ PASS	/scroll-animations/scroll-timelines/constructor.html	'y' is a valid axis va
 PASS	/scroll-animations/scroll-timelines/constructor.html	Creating a ScrollTimeline with an invalid axis value should throw
 PASS	/scroll-animations/scroll-timelines/current-time-nan.html	currentTime should be null for a display: inline source
 PASS	/scroll-animations/scroll-timelines/current-time-nan.html	currentTime should be null for a display: none source
-FAIL	/scroll-animations/scroll-timelines/current-time-nan.html	currentTime should be null for an unattached source
+PASS	/scroll-animations/scroll-timelines/current-time-nan.html	currentTime should be null for an unattached source
 PASS	/scroll-animations/scroll-timelines/current-time-nan.html	currentTime should be null when the source is not a scroller
 PASS	/scroll-animations/scroll-timelines/current-time-root-scroller.html	currentTime calculates the correct time for a document.scrollingElement source
 PASS	/scroll-animations/scroll-timelines/current-time-writing-modes.html	currentTime handles direction: rtl correctly
