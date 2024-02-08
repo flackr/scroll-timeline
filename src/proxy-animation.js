@@ -959,13 +959,16 @@ function getNormalEndRange(timeline) {
 }
 
 function parseAnimationRange(timeline, value) {
-  const animationRange = {
-    start: 'normal',
-    end: 'normal',
-  };
-
   if (!value)
-    return animationRange;
+    return {
+      start: 'normal',
+      end: 'normal',
+    };
+
+  const animationRange = {
+    start: getNormalStartRange(timeline),
+    end: getNormalEndRange(timeline),
+  };
 
   if (timeline instanceof ViewTimeline) {
     // Format:
