@@ -838,12 +838,12 @@ PASS	/scroll-animations/scroll-timelines/play-animation.html	The ready promise s
 PASS	/scroll-animations/scroll-timelines/play-animation.html	A pending ready promise should be resolved and not replaced when the animation enters the running state
 PASS	/scroll-animations/scroll-timelines/play-animation.html	Resuming an animation from paused realigns with scroll position.
 PASS	/scroll-animations/scroll-timelines/play-animation.html	If a pause operation is interrupted, the ready promise is reused
-FAIL	/scroll-animations/scroll-timelines/play-animation.html	A pending playback rate is used when determining timeline range alignment
+PASS	/scroll-animations/scroll-timelines/play-animation.html	A pending playback rate is used when determining timeline range alignment
 PASS	/scroll-animations/scroll-timelines/play-animation.html	Playing a canceled animation sets the start time
 PASS	/scroll-animations/scroll-timelines/play-animation.html	Playing a canceled animation backwards sets the start time
 PASS	/scroll-animations/scroll-timelines/reverse-animation.html	Setting current time while reverse-pending preserves currentTime
 PASS	/scroll-animations/scroll-timelines/reverse-animation.html	Reversing an animation inverts the playback rate
-FAIL	/scroll-animations/scroll-timelines/reverse-animation.html	Reversing an animation resets a sticky start time.
+PASS	/scroll-animations/scroll-timelines/reverse-animation.html	Reversing an animation resets a sticky start time.
 PASS	/scroll-animations/scroll-timelines/reverse-animation.html	Reversing an animation does not cause it to leave the pending state
 PASS	/scroll-animations/scroll-timelines/reverse-animation.html	Reversing an animation does not cause it to resolve the ready promise
 PASS	/scroll-animations/scroll-timelines/reverse-animation.html	Reversing an animation with a negative playback rate should cause the animation to play in a forward direction

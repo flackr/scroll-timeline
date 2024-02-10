@@ -921,7 +921,9 @@ function autoAlignStartTime(details) {
   // TODO: Clarify how range duration should be resolved
   details.rangeDuration = endOffset.value - startOffset.value;
   // 7. Set start time to start offset if effective playback rate ≥ 0, and end offset otherwise.
-  const playbackRate = effectivePlaybackRate(details);
+  // Not by spec: Applying the pending playback rate. If not, the start time will be re-aligned in `commitPendingPlay()`
+  applyPendingPlaybackRate(details);
+  const playbackRate = details.animation.playbackRate;
   details.startTime = fromCssNumberish(details,playbackRate >= 0 ? startOffset : endOffset);
 
   // 8. Clear hold time.
