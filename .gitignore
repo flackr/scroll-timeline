@@ -6,6 +6,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+npm-shrinkwrap.json
+package-lock.json
+yarn.lock
+
 # Optional npm cache directory
 .npm
 
