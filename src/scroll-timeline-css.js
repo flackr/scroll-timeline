@@ -41,8 +41,26 @@ function initMutationObserver() {
     el.innerHTML = newSrc;
   }
 
-  function handleLinkedStylesheet(el) {
-    // TODO
+  function handleLinkedStylesheet(linkElement) {
+    // Filter only css links to external stylesheets.
+    if (linkElement.type != 'text/css' && linkElement.rel != 'stylesheet' || !linkElement.href) {
+      return;
+    }
+    const url = new URL(linkElement.href, document.baseURI);
+    if (url.origin != location.origin) {
+      // Most likely we won't be able to fetch resources from other origins.
+      return;
+    }
+    fetch(linkElement.getAttribute('href')).then(async (response) => {
+      const result = await response.text();
+      let newSrc = parser.transpileStyleSheet(result, true);
+      newSrc = parser.transpileStyleSheet(result, false);
+      if (newSrc != result) {
+        const blob = new Blob([newSrc], { type: 'text/css' });
+        const url = URL.createObjectURL(blob);
+        linkElement.setAttribute('href', url);
+      }
+    });
   }
 
   document.querySelectorAll("style").forEach((tag) => handleStyleTag(tag));
