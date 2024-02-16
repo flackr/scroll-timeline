@@ -32,7 +32,7 @@ function initMutationObserver() {
    */
   function handleStyleTag(el) {
     // Don’t touch empty style tags.
-    if (el.innerHTML.trim().length === 0) {
+    if (el.innerHTML.trim().length === 0 || el.dataset.aphrodite === 'true') {
       return;
     }
     // TODO: Do with one pass for better performance
