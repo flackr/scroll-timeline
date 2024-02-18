@@ -11,7 +11,16 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-import {createAType, invertType, multiplyTypes, parseCSSNumericValue, to, toSum} from './numeric-values';
+import {
+  addTypes,
+  createAType,
+  invertType,
+  multiplyTypes,
+  parseCSSNumericValue,
+  rectifyType,
+  to,
+  toSum
+} from './numeric-values';
 import {simplifyCalculation} from './simplify-calculation';
 import './tokenizer'
 
@@ -137,14 +146,29 @@ export function installCSSOM() {
     },
 
     'CSSMathSum': class extends CSSMathValue  {
-      constructor(values) {
-        super(arguments, 'sum', 'calc', ' + ');
+      constructor(...values) {
+        super(values, 'sum', 'calc', ' + ');
+        const type = values.map(v => v.type()).reduce(addTypes);
+        if (type === null) {
+          throw new TypeError();
+        }
+      }
+
+      type() {
+        const values = privateDetails.get(this).values;
+        // The type is the result of adding the types of each of the items in its values internal slot.
+        const type = values.map(v => v.type()).reduce(addTypes);
+        return rectifyType(type);
       }
     },
 
     'CSSMathProduct': class extends CSSMathValue  {
-      constructor(values) {
-        super(arguments, 'product', 'calc', ' * ');
+      constructor(...values) {
+        super(values, 'product', 'calc', ' * ');
+        const type = values.map(v => v.type()).reduce(multiplyTypes);
+        if (type === null) {
+          throw new TypeError();
+        }
       }
 
       toSum(...units) {
@@ -159,8 +183,8 @@ export function installCSSOM() {
     },
 
     'CSSMathNegate': class extends CSSMathValue {
-      constructor(values) {
-        super([arguments[0]], 'negate', '-');
+      constructor(value) {
+        super([value], 'negate', '-');
       }
 
       get value() {
@@ -173,8 +197,8 @@ export function installCSSOM() {
     },
 
     'CSSMathInvert': class extends CSSMathValue {
-      constructor(values) {
-        super([1, arguments[0]], 'invert', 'calc', ' / ');
+      constructor(value) {
+        super([1, value], 'invert', 'calc', ' / ');
       }
 
       get value() {
@@ -184,19 +208,20 @@ export function installCSSOM() {
       type() {
         const details = privateDetails.get(this)
         // The type of a CSSUnitValue is the result of creating a type from its unit internal slot.
-        return invertType(details.values[1].type())
+        const type = invertType(details.values[1].type());
+        return rectifyType(type)
       }
     },
 
     'CSSMathMax': class extends CSSMathValue {
-      constructor() {
-        super(arguments, 'max');
+      constructor(values) {
+        super(values, 'max');
       }
     },
 
     'CSSMathMin': class extends CSSMathValue  {
-      constructor() {
-        super(arguments, 'min');
+      constructor(values) {
+        super(values, 'min');
       }
     }
   };
