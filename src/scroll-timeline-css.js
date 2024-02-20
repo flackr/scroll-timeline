@@ -34,7 +34,7 @@ function initMutationObserver() {
     // Don’t touch empty style tags nor tags controlled by aphrodite.
     // Details at https://github.com/Khan/aphrodite/blob/master/src/inject.js,
     // but any modification to the style tag will break the entire page.
-    if (el.innerHTML.trim().length === 0 || 'aphrodite' in item.dataset) {
+    if (el.innerHTML.trim().length === 0 || 'aphrodite' in el.dataset) {
       return;
     }
     // TODO: Do with one pass for better performance
