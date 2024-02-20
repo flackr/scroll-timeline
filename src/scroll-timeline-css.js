@@ -31,7 +31,9 @@ function initMutationObserver() {
    * @param {HtmlStyleElement} el style tag to be parsed
    */
   function handleStyleTag(el) {
-    // Don’t touch empty style tags.
+    // Don’t touch empty style tags nor tags controlled by aphrodite.
+    // Details at https://github.com/Khan/aphrodite/blob/master/src/inject.js,
+    // but any modification to the style tag will break the entire page.
     if (el.innerHTML.trim().length === 0 || 'aphrodite' in item.dataset) {
       return;
     }
