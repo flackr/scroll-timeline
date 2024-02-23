@@ -211,36 +211,55 @@ export function measureSubject(source, subject) {
 
 /**
  * Update measurements of source, and update timelines
- * @param {HTMLElement} source
+ * @param {HTMLElement} source Source element
+ * @param {boolean} resize True if called in a ResizeObserver callback
  */
-function updateMeasurements(source) {
+function updateMeasurements(source, resize) {
+  if (!source) {
+    return;
+  }
+
   let details = sourceDetails.get(source);
+  if (resize) {
+    // Multiple timelines can invoke `updateMeasurements()` for one source during the resize observation broadcast.
+    // Once invoked there is no need to update measurements for this source until after the next animation frame.
+    if (details.resizeMeasured) {
+      return;
+    }
+
+    details.resizeMeasured = true;
+    requestAnimationFrame(() => {
+      details.resizeMeasured = false;
+    });
+  }
+
   details.sourceMeasurements = measureSource(source);
 
   // Update measurements of the subject of connected view timelines
   for (const ref of details.timelineRefs) {
     const timeline = ref.deref();
     if ((timeline instanceof ViewTimeline)) {
-      const timelineDetails = scrollTimelineOptions.get(timeline)
-      timelineDetails.subjectMeasurements = measureSubject(source, timeline.subject)
+      const timelineDetails = scrollTimelineOptions.get(timeline);
+      timelineDetails.subjectMeasurements = measureSubject(source, timeline.subject);
     }
   }
 
-  if (details.updateScheduled)
+  if (details.updateScheduled) {
+    // A task has already been scheduled to update timelines and animations
     return;
+  }
+  details.updateScheduled = true;
 
+  // Schedule a task to update timelines after all measurements are completed
   setTimeout(() => {
-    // Schedule a task to update timelines after all measurements are completed
+    details.updateScheduled = false;
     for (const ref of details.timelineRefs) {
       const timeline = ref.deref();
       if (timeline) {
         updateInternal(timeline);
       }
     }
-
-    details.updateScheduled = false;
   });
-  details.updateScheduled = true;
 }
 
 function updateSource(timeline, source) {
@@ -283,9 +302,7 @@ function updateSource(timeline, source) {
 
       // Use resize observer to detect changes to source size
       const resizeObserver = new ResizeObserver((entries) => {
-        for (const entry of entries) {
-          updateMeasurements(timelineDetails.source)
-        }
+        updateMeasurements(timelineDetails.source, true)
       });
       resizeObserver.observe(source);
       for (const child of source.children) {
@@ -295,7 +312,7 @@ function updateSource(timeline, source) {
       // Use mutation observer to detect updated style attributes on source element
       const mutationObserver = new MutationObserver((records) => {
         for (const record of records) {
-          updateMeasurements(record.target);
+          updateMeasurements(record.target, false);
         }
       });
       mutationObserver.observe(source, {attributes: true, attributeFilter: ['style', 'class']});
@@ -836,12 +853,12 @@ export class ViewTimeline extends ScrollTimeline {
     }
     if (details.subject) {
       const resizeObserver = new ResizeObserver(() => {
-        updateMeasurements(details.source)
+        updateMeasurements(details.source, true)
       })
       resizeObserver.observe(details.subject)
 
       const mutationObserver = new MutationObserver(() => {
-        updateMeasurements(details.source);
+        updateMeasurements(details.source, false);
       });
       mutationObserver.observe(details.subject, {attributes: true, attributeFilter: ['class', 'style']});
     }
