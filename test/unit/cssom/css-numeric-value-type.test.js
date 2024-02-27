@@ -9,54 +9,67 @@ describe('CSSNumericValue.type()', () => {
 
 
   describe('CSSUnitValue.type()', () => {
+    function testUnitIsType(unit, type) {
+      expect(new CSSUnitValue(10, unit).type()).toEqual(type);
+      expect(new CSSUnitValue(10, unit.toUpperCase()).type()).toEqual(type);
+    }
+
     const lengthUnits = ['em', 'rem', 'ex', 'rex', 'cap', 'rcap', 'ch', 'rch', 'ic', 'ric', 'lh', 'rlh', 'vw', 'lvw',
       'svw', 'dvw', 'vh', 'lvh', 'svh', 'dvh', 'vi', 'lvi', 'svi', 'dvi', 'vb', 'lvb', 'svb', 'dvb', 'vmin', 'lvmin',
-      'svmin', 'dvmin', 'vmax', 'lvmax', 'svmax', 'dvmax', 'cm', 'mm', 'Q', 'in', 'pt', 'pc', 'px'];
+      'svmin', 'dvmin', 'vmax', 'lvmax', 'svmax', 'dvmax', 'cm', 'mm', 'q', 'in', 'pt', 'pc', 'px'];
 
     for (const unit of lengthUnits) {
       test(`Type of '${unit}' is length`, () => {
-        expect(new CSSUnitValue(10, unit).type()).toEqual({length: 1});
+        testUnitIsType(unit, {length: 1});
       });
     }
 
     const angleUnits = ['deg', 'grad', 'rad', 'turn'];
     for (const unit of angleUnits) {
       test(`Type of '${unit}' is angle`, () => {
-        expect(new CSSUnitValue(10, unit).type()).toEqual({angle: 1});
+        testUnitIsType(unit, {angle: 1});
       });
     }
 
     const timeUnits = ['s', 'ms'];
     for (const unit of timeUnits) {
       test(`Type of '${unit}' is time`, () => {
-        expect(new CSSUnitValue(10, unit).type()).toEqual({time: 1});
+        testUnitIsType(unit, {time: 1});
       });
     }
 
-    const frequencyUnits = ['Hz', 'kHz'];
+    const frequencyUnits = ['hz', 'khz'];
     for (const unit of frequencyUnits) {
       test(`Type of '${unit}' is frequency`, () => {
-        expect(new CSSUnitValue(10, unit).type()).toEqual({frequency: 1});
+        testUnitIsType(unit, {frequency: 1});
       });
     }
 
     const resolutionUnits = ['dpi', 'dpcm', 'dppx'];
     for (const unit of resolutionUnits) {
       test(`Type of '${unit}' is resolution`, () => {
-        expect(new CSSUnitValue(10, unit).type()).toEqual({resolution: 1});
+        testUnitIsType(unit, {resolution: 1});
       });
     }
 
     test(`Type of 'fr' is flex`, () => {
-      expect(new CSSUnitValue(10, 'fr').type()).toEqual({flex: 1});
+      testUnitIsType('fr', {flex: 1});
     });
 
     test(`Type of 'percent' is percent`, () => {
+      // Percent unit is specced to be lower case.
+      // https://drafts.css-houdini.org/css-typed-om-1/#cssnumericvalue-create-a-type
+
       expect(new CSSUnitValue(10, 'percent').type()).toEqual({percent: 1});
+      expect(() => new CSSUnitValue(10, 'PERCENT').type()).toThrowError(TypeError);
     });
 
     test(`Type of number is number`, () => {
+      // Number unit is specced to be lower case.
+      // https://drafts.css-houdini.org/css-typed-om-1/#cssnumericvalue-create-a-type
+
       expect(new CSSUnitValue(10, 'number').type()).toEqual({});
+      expect(() => new CSSUnitValue(10, 'NUMBER').type()).toThrowError(TypeError);
     });
   });
 

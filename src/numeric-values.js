@@ -158,28 +158,30 @@ export function rectifyType(type) {
  * Implementation of `create a type` from css-typed-om-1:
  * https://www.w3.org/TR/css-typed-om-1/#create-a-type
  *
- * @param {string} input
+ * @param {string} unit
  * @return {CSSNumericType|Failure}
  */
-export function createAType(input) {
-  const unit = input.toLowerCase();
+export function createAType(unit) {
+  const unitLowerCase = unit.toLowerCase();
+  // Number and percent unit is specced to be lower case.
+  // https://drafts.css-houdini.org/css-typed-om-1/#cssnumericvalue-create-a-type
   if (unit === "number") {
     return {};
   } else if (unit === "percent") {
     return {"percent": 1};
-  } else if (unitGroups.absoluteLengths.units.has(unit) ||
-    unitGroups.fontRelativeLengths.units.has(unit) ||
-    unitGroups.viewportRelativeLengths.units.has(unit)) {
+  } else if (unitGroups.absoluteLengths.units.has(unitLowerCase) ||
+    unitGroups.fontRelativeLengths.units.has(unitLowerCase) ||
+    unitGroups.viewportRelativeLengths.units.has(unitLowerCase)) {
     return {"length": 1};
-  } else if (unitGroups.angle.units.has(unit)) {
+  } else if (unitGroups.angle.units.has(unitLowerCase)) {
     return {"angle": 1};
-  } else if (unitGroups.time.units.has(unit)) {
+  } else if (unitGroups.time.units.has(unitLowerCase)) {
     return {"time": 1};
-  } else if (unitGroups.frequency.units.has(unit)) {
+  } else if (unitGroups.frequency.units.has(unitLowerCase)) {
     return {"frequency": 1};
-  } else if (unitGroups.resolution.units.has(unit)) {
+  } else if (unitGroups.resolution.units.has(unitLowerCase)) {
     return {"resolution": 1};
-  } else if (unit === "fr") {
+  } else if (unitLowerCase === "fr") {
     return {"flex": 1};
   } else {
     return failure;

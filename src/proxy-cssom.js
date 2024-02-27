@@ -97,9 +97,13 @@ export function installCSSOM() {
     'CSSUnitValue': class extends CSSNumericValue {
       constructor(value, unit) {
         super();
+        const type = createAType(unit);
+        if (type === null) {
+          throw new TypeError('Type error');
+        }
         privateDetails.set(this, {
           value: value,
-          unit: unit
+          unit: unit.toLowerCase()
         });
       }
 
@@ -150,7 +154,7 @@ export function installCSSOM() {
         super(values, 'sum', 'calc', ' + ');
         const type = values.map(v => v.type()).reduce(addTypes);
         if (type === null) {
-          throw new TypeError();
+          throw new TypeError('Type error');
         }
       }
 
@@ -167,7 +171,7 @@ export function installCSSOM() {
         super(values, 'product', 'calc', ' * ');
         const type = values.map(v => v.type()).reduce(multiplyTypes);
         if (type === null) {
-          throw new TypeError();
+          throw new TypeError('Type error');
         }
       }
 
