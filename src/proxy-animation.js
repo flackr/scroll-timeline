@@ -940,6 +940,12 @@ function getNormalStartRange(timeline) {
   }
 
   if (timeline instanceof ScrollTimeline) {
+    // A CSSNumericValue should be interpreted as a TimelineRangeOffset with a null range name according to the spec,
+    // but we align with Blink which currently uses 'none' as a rangeName.
+
+    // There is an open issue to introduce 'scroll' as a range name for the entire scroll range.
+    // This would allow us to use 'scroll' instead of 'none'.
+    // https://github.com/w3c/csswg-drafts/issues/9367#issuecomment-1905812872
     return { rangeName: 'none', offset: CSS.percent(0) };
   }
 
@@ -952,6 +958,12 @@ function getNormalEndRange(timeline) {
   }
 
   if (timeline instanceof ScrollTimeline) {
+    // A CSSNumericValue should be interpreted as a TimelineRangeOffset with a null range name according to the spec,
+    // but we align with Blink which currently uses 'none' as a rangeName.
+
+    // There is an open issue to introduce 'scroll' as a range name for the entire scroll range.
+    // This would allow us to use 'scroll' instead of 'none'.
+    // https://github.com/w3c/csswg-drafts/issues/9367#issuecomment-1905812872
     return { rangeName: 'none', offset: CSS.percent(100) };
   }
 
@@ -1002,6 +1014,13 @@ function consumeRange(parts, position) {
     // Format: <length-percentage>
     const offset = CSSNumericValue.parse(part);
     validateLengthPercentage(offset);
+
+    // A CSSNumericValue should be interpreted as a TimelineRangeOffset with a null range name according to the spec,
+    // but we align with Blink which currently uses 'none' as a rangeName.
+
+    // There is an open issue to introduce 'scroll' as a range name for the entire scroll range.
+    // This would allow us to use 'scroll' instead of 'none'.
+    // https://github.com/w3c/csswg-drafts/issues/9367#issuecomment-1905812872
     return {rangeName: 'none', offset};
   }
 }
