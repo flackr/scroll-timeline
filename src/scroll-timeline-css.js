@@ -4,9 +4,32 @@ import { ScrollTimeline, ViewTimeline, getScrollParent, calculateRange,
   calculateRelativePosition, measureSubject, measureSource } from "./scroll-timeline-base";
 
 const parser = new StyleParser();
+const ObserverState = {
+  allowedOrigins: '*',
+  initialized: false,
+  shouldFetchLinkedStylesheets: true,
+  sheetObserver: null,
+}
 
-function initMutationObserver() {
-  const sheetObserver = new MutationObserver((entries) => {
+/**
+ * @param {'*' | string | RegExp | Array<string | RegExp>} allowedOrigins
+ */
+function initMutationObserver(configuredAllowedOrigins) {
+  // If called with the same parameters as on startup, we don't need to reinitialize.
+  if (ObserverState.initialized && ObserverState.allowedOrigins === configuredAllowedOrigins) {
+    return;
+  }
+
+  if (configuredAllowedOrigins !== undefined && ObserverState.allowedOrigins !== configuredAllowedOrigins) {
+    ObserverState.shouldFetchLinkedStylesheets = true;
+  }
+
+  if (ObserverState.sheetObserver) {
+    ObserverState.sheetObserver.disconnect();
+  }
+
+  ObserverState.allowedOrigins = configuredAllowedOrigins;
+  ObserverState.sheetObserver = new MutationObserver((entries) => {
     for (const entry of entries) {
       for (const addedNode of entry.addedNodes) {
         if (addedNode instanceof HTMLStyleElement) {
@@ -22,7 +45,7 @@ function initMutationObserver() {
     // We accomplish this by swapping out Element.prototype.style.
   });
 
-  sheetObserver.observe(document.documentElement, {
+  ObserverState.sheetObserver.observe(document.documentElement, {
     childList: true,
     subtree: true,
   });
@@ -43,14 +66,33 @@ function initMutationObserver() {
     el.innerHTML = newSrc;
   }
 
+  function isAllowedOrigin(href) {
+    const allowedOrigins = ObserverState.allowedOrigins;
+    if (allowedOrigins == '*') return true;
+    const url = new URL(href, document.baseURI);
+    // If specified as false or anything not truthy, default to same origin.
+    if (!allowedOrigins) {
+      return url.origin == location.origin;
+    }
+    if (typeof allowedOrigins == 'string') {
+      return allowedOrigins == url.origin;
+    }
+    return allowedOrigins.some((matcher) => {
+      if (matcher instanceof RegExp) {
+        return matcher.test(url.origin);
+      }
+      return matcher == url.origin;
+    });
+  }
+
   function handleLinkedStylesheet(linkElement) {
     // Filter only css links to external stylesheets.
-    if (linkElement.type != 'text/css' && linkElement.rel != 'stylesheet' || !linkElement.href) {
+    if (linkElement.type != 'text/css' && linkElement.rel != 'stylesheet' || !linkElement.href || linkElement.href.startsWith('blob:')) {
       return;
     }
-    const url = new URL(linkElement.href, document.baseURI);
-    if (url.origin != location.origin) {
-      // Most likely we won't be able to fetch resources from other origins.
+    if (!isAllowedOrigin(linkElement.href)) {
+      // Don't attempt to fetch resources from regions not in the allowlist or
+      // ones already parsed into a blob.
       return;
     }
     fetch(linkElement.getAttribute('href')).then(async (response) => {
@@ -66,9 +108,20 @@ function initMutationObserver() {
   }
 
   document.querySelectorAll("style").forEach((tag) => handleStyleTag(tag));
-  document
-    .querySelectorAll("link")
-    .forEach((tag) => handleLinkedStylesheet(tag));
+  if (ObserverState.shouldFetchLinkedStylesheets) {
+    if (!ObserverState.initialized) {
+      ObserverState.initialized = true;
+      Promise.resolve().then(() => {
+        document
+        .querySelectorAll("link")
+        .forEach((tag) => handleLinkedStylesheet(tag));
+      });
+    } else {
+      document
+        .querySelectorAll("link")
+        .forEach((tag) => handleLinkedStylesheet(tag));
+    }
+  }  
 }
 
 function relativePosition(phase, container, target, axis, optionsInset, percent) {
@@ -152,13 +205,13 @@ function updateKeyframesIfNecessary(anim, options) {
   }
 }
 
-export function initCSSPolyfill() {
+export function initCSSPolyfill(allowedOrigins) {
   // Don't load if browser claims support
   if (CSS.supports("animation-timeline: --works")) {
     return true;
   }
 
-  initMutationObserver();
+  initMutationObserver(allowedOrigins);
 
   // Override CSS.supports() to claim support for the CSS properties from now on
   const oldSupports = CSS.supports;
