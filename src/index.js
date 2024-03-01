@@ -74,3 +74,5 @@ export function initPolyfill(allowedOrigins) {
     );
   }
 }
+
+initPolyfill();
