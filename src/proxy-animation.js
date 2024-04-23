@@ -958,7 +958,9 @@ function getNormalEndRange(timeline) {
   unsupportedTimeline(timeline);
 }
 
-function parseAnimationRange(timeline, value) {
+const expressionCalls = ["var", "calc", "min", "max", "clamp", "minmax"];
+
+function parseAnimationRange(target, timeline, value) {
   if (!value)
     return {
       start: 'normal',
@@ -1014,7 +1016,21 @@ function parseAnimationRange(timeline, value) {
   if (timeline instanceof ScrollTimeline) {
     // @TODO: Play nice with only 1 offset being set
     // @TODO: Play nice with expressions such as `calc(50% + 10px) 100%`
-    const parts = value.split(' ');
+    
+    let computedValue = value;
+
+    if (expressionCalls.some((fn) => value.includes(fn))) {
+      // setting a property where each item is resolved to length values
+      const key = `padding`;
+
+      const previousStyleValue = target.style.getPropertyValue(key);
+      target.style.setProperty(key, value);
+      computedValue = window.getComputedStyle(target).getPropertyValue(key);
+      target.style.setProperty(key, previousStyleValue);
+    }
+
+    const parts = splitIntoComponentValues(computedValue);
+
     if (parts.length != 2) {
       throw TypeError("Invalid time range or unsupported time range format.");
     }
@@ -1088,6 +1104,8 @@ export class ProxyAnimation {
     const animation =
         (effect instanceof nativeAnimation) ?
            effect : new nativeAnimation(effect, animationTimeline);
+    const target = animation.effect.target
+
     proxiedAnimations.set(animation, this);
     proxyAnimations.set(this, {
       animation: animation,
@@ -1126,7 +1144,7 @@ export class ProxyAnimation {
       effect: null,
       // The animation attachment range, restricting the animation’s
       // active interval to that range of a timeline
-      animationRange: isScrollAnimation ? parseAnimationRange(timeline, animOptions['animation-range']) : null,
+      animationRange: isScrollAnimation ? parseAnimationRange(target, timeline, animOptions['animation-range']) : null,
       proxy: this
     });
   }
