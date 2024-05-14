@@ -18,6 +18,8 @@ import {
 } from "./scroll-timeline-base";
 import {
   animate,
+  elementGetAnimations,
+  documentGetAnimations,
   ProxyAnimation
 } from "./proxy-animation.js";
 
@@ -27,13 +29,6 @@ function initPolyfill() {
   // initCSSPolyfill returns true iff the host browser supports SDA
   if (initCSSPolyfill()) {
     return;
-  }
-
-  if ([...document.styleSheets].filter((s) => s.href !== null).length) {
-    console.warn(
-      'Non-Inline StyleSheets detected: ScrollTimeline polyfill currently only' +
-        ' supports inline styles within style tags'
-    );
   }
 
   if (
@@ -60,6 +55,16 @@ function initPolyfill() {
   }
   if (!Reflect.defineProperty(window, 'Animation', { value: ProxyAnimation })) {
     throw Error('Error installing Animation constructor.');
+  }
+  if (!Reflect.defineProperty(Element.prototype, "getAnimations", { value: elementGetAnimations })) {
+    throw Error(
+      "Error installing ScrollTimeline polyfill: could not attach WAAPI's getAnimations to DOM Element"
+    );
+  }
+  if (!Reflect.defineProperty(document, "getAnimations", { value: documentGetAnimations })) {
+    throw Error(
+      "Error installing ScrollTimeline polyfill: could not attach WAAPI's getAnimations to document"
+    );
   }
 }
 

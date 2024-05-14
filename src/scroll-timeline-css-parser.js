@@ -1,5 +1,4 @@
-import { ANIMATION_RANGE_NAMES } from './proxy-animation';
-import { getAnonymousSourceElement } from './scroll-timeline-base';
+import { ANIMATION_RANGE_NAMES, getAnonymousSourceElement } from './scroll-timeline-base';
 
 // This is also used in scroll-timeline-css.js
 export const RegexMatcher = {
@@ -35,7 +34,7 @@ const ANIMATION_KEYWORDS = [
 ];
 
 const TIMELINE_AXIS_TYPES = ['block', 'inline', 'x', 'y'];
-const ANONYMOUS_TIMELINE_SOURCE_TYPES = ['nearest', 'root'];
+const ANONYMOUS_TIMELINE_SOURCE_TYPES = ['nearest', 'root', 'self'];
 
 // Parse a styleSheet to extract the relevant elements needed for
 // scroll-driven animations.
@@ -120,7 +119,7 @@ export class StyleParser {
       return {
         anonymousSource: options.source,
         anonymousTarget: target,
-        source: getAnonymousSourceElement(options.source, target),
+        source: getAnonymousSourceElement(options.source ?? 'nearest', target),
         axis: (options.axis ? options.axis : 'block'),
       };
     }

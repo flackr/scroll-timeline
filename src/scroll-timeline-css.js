@@ -1,7 +1,7 @@
 import { StyleParser } from "./scroll-timeline-css-parser";
 import { ProxyAnimation } from "./proxy-animation"
 import { ScrollTimeline, ViewTimeline, getScrollParent, calculateRange,
-  calculateRelativePosition } from "./scroll-timeline-base";
+  calculateRelativePosition, measureSubject, measureSource } from "./scroll-timeline-base";
 
 const parser = new StyleParser();
 
@@ -31,8 +31,10 @@ function initMutationObserver() {
    * @param {HtmlStyleElement} el style tag to be parsed
    */
   function handleStyleTag(el) {
-    // Don’t touch empty style tags.
-    if (el.innerHTML.trim().length === 0) {
+    // Don’t touch empty style tags nor tags controlled by aphrodite.
+    // Details at https://github.com/Khan/aphrodite/blob/master/src/inject.js,
+    // but any modification to the style tag will break the entire page.
+    if (el.innerHTML.trim().length === 0 || 'aphrodite' in el.dataset) {
       return;
     }
     // TODO: Do with one pass for better performance
@@ -41,8 +43,26 @@ function initMutationObserver() {
     el.innerHTML = newSrc;
   }
 
-  function handleLinkedStylesheet(el) {
-    // TODO
+  function handleLinkedStylesheet(linkElement) {
+    // Filter only css links to external stylesheets.
+    if (linkElement.type != 'text/css' && linkElement.rel != 'stylesheet' || !linkElement.href) {
+      return;
+    }
+    const url = new URL(linkElement.href, document.baseURI);
+    if (url.origin != location.origin) {
+      // Most likely we won't be able to fetch resources from other origins.
+      return;
+    }
+    fetch(linkElement.getAttribute('href')).then(async (response) => {
+      const result = await response.text();
+      let newSrc = parser.transpileStyleSheet(result, true);
+      newSrc = parser.transpileStyleSheet(result, false);
+      if (newSrc != result) {
+        const blob = new Blob([newSrc], { type: 'text/css' });
+        const url = URL.createObjectURL(blob);
+        linkElement.setAttribute('href', url);
+      }
+    });
   }
 
   document.querySelectorAll("style").forEach((tag) => handleStyleTag(tag));
@@ -52,9 +72,11 @@ function initMutationObserver() {
 }
 
 function relativePosition(phase, container, target, axis, optionsInset, percent) {
-  const phaseRange = calculateRange(phase, container, target, axis, optionsInset);
-  const coverRange = calculateRange('cover', container, target, axis, optionsInset);
-  return calculateRelativePosition(phaseRange, percent, coverRange);
+  const sourceMeasurements = measureSource(container)
+  const subjectMeasurements = measureSubject(container, target)
+  const phaseRange = calculateRange(phase, sourceMeasurements, subjectMeasurements, axis, optionsInset);
+  const coverRange = calculateRange('cover', sourceMeasurements, subjectMeasurements, axis, optionsInset);
+  return calculateRelativePosition(phaseRange, percent, coverRange, target);
 }
 
 function createScrollTimeline(anim, animationName, target) {
@@ -138,44 +160,30 @@ export function initCSSPolyfill() {
 
   initMutationObserver();
 
-  // Cache all Proxy Animations
-  let proxyAnimations = new WeakMap();
+  // Override CSS.supports() to claim support for the CSS properties from now on
+  const oldSupports = CSS.supports;
+  CSS.supports = (ident) => {
+    ident = ident.replaceAll(/(animation-timeline|scroll-timeline(-(name|axis))?|view-timeline(-(name|axis|inset))?|timeline-scope)\s*:/g, '--supported-property:');
+    return oldSupports(ident);
+  };
 
   // We are not wrapping capturing 'animationstart' by a 'load' event,
   // because we may lose some of the 'animationstart' events by the time 'load' is completed.
   window.addEventListener('animationstart', (evt) => {
     evt.target.getAnimations().filter(anim => anim.animationName === evt.animationName).forEach(anim => {
-      // Create a per-element cache
-      if (!proxyAnimations.has(evt.target)) {
-        proxyAnimations.set(evt.target, new Map());
-      }
-      const elementProxyAnimations = proxyAnimations.get(evt.target);
-
-      // Store Proxy Animation in the cache
-      if (!elementProxyAnimations.has(anim.animationName)) {
-        const result = createScrollTimeline(anim, anim.animationName, evt.target);
-        if (result && result.timeline && anim.timeline != result.timeline) {
-          elementProxyAnimations.set(anim.animationName, new ProxyAnimation(anim, result.timeline, result.animOptions));
+      const result = createScrollTimeline(anim, anim.animationName, evt.target);
+      if (result) {
+        // If the CSS Animation refers to a scroll or view timeline we need to proxy the animation instance.
+        if (result.timeline && !(anim instanceof ProxyAnimation)) {
+          const proxyAnimation = new ProxyAnimation(anim, result.timeline, result.animOptions);
+          anim.pause();
+          proxyAnimation.play();
         } else {
-          elementProxyAnimations.set(anim.animationName, null);
+          // If the timeline was removed or the animation was already an instance of a proxy animation,
+          // invoke the set the timeline procedure on the existing animation.
+          anim.timeline = result.timeline;
         }
-      }
-      
-      // Get Proxy Animation from cache
-      const proxyAnimation = elementProxyAnimations.get(anim.animationName);
-
-      // Swap the original animation with the proxied one
-      if (proxyAnimation !== null) {
-        anim.pause();
-        proxyAnimation.play();
       }
     });
   });
-
-  // Clear cache containing the ProxyAnimation instances when leaving the page.
-  // See https://github.com/flackr/scroll-timeline/issues/146#issuecomment-1698159183
-  // for details.
-  window.addEventListener('pagehide', (e) => {
-    proxyAnimations = new WeakMap();
-  }, false);
 }

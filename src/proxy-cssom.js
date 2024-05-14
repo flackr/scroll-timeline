@@ -11,6 +11,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+import {createAType, invertType, multiplyTypes, parseCSSNumericValue, to, toSum} from './numeric-values';
+import {simplifyCalculation} from './simplify-calculation';
+import './tokenizer'
 
 export function installCSSOM() {
   // Object for storing details associated with an object which are to be kept
@@ -43,8 +46,20 @@ export function installCSSOM() {
     return result;
   }
 
-  class MathOperation {
+  class CSSNumericValue {
+    static parse(value) {
+      if (value instanceof CSSNumericValue) return value;
+
+      return simplifyCalculation(parseCSSNumericValue(value), {});
+    }
+
+    // TODO: Add other methods: add, sub, mul, div, …
+    // Spec: https://drafts.css-houdini.org/css-typed-om/#numeric-value
+  }
+
+  class CSSMathValue extends CSSNumericValue {
     constructor(values, operator, opt_name, opt_delimiter) {
+      super();
       privateDetails.set(this, {
         values: toCssNumericArray(values),
         operator: operator,
@@ -68,8 +83,11 @@ export function installCSSOM() {
   }
 
   const cssOMTypes = {
-    'CSSUnitValue': class {
+    'CSSNumericValue': CSSNumericValue,
+    'CSSMathValue': CSSMathValue,
+    'CSSUnitValue': class extends CSSNumericValue {
       constructor(value, unit) {
+        super();
         privateDetails.set(this, {
           value: value,
           unit: unit
@@ -88,6 +106,20 @@ export function installCSSOM() {
         return  privateDetails.get(this).unit;
       }
 
+      to(unit) {
+        return to(this, unit)
+      }
+
+      toSum(...units) {
+        return toSum(this, ...units)
+      }
+
+      type() {
+        const details = privateDetails.get(this)
+        // The type of a CSSUnitValue is the result of creating a type from its unit internal slot.
+        return createAType(details.unit)
+      }
+
       toString() {
         const details = privateDetails.get(this);
         return `${details.value}${displayUnit(details.unit)}`;
@@ -104,37 +136,65 @@ export function installCSSOM() {
       }
     },
 
-    'CSSMathSum': class extends MathOperation  {
+    'CSSMathSum': class extends CSSMathValue  {
       constructor(values) {
         super(arguments, 'sum', 'calc', ' + ');
       }
     },
 
-    'CSSMathProduct': class extends MathOperation  {
+    'CSSMathProduct': class extends CSSMathValue  {
       constructor(values) {
         super(arguments, 'product', 'calc', ' * ');
       }
+
+      toSum(...units) {
+        return toSum(this, ...units)
+      }
+
+      type() {
+        const values = privateDetails.get(this).values;
+        // The type is the result of multiplying the types of each of the items in its values internal slot.
+        return values.map(v => v.type()).reduce(multiplyTypes)
+      }
     },
 
-    'CSSMathNegate': class extends MathOperation {
+    'CSSMathNegate': class extends CSSMathValue {
       constructor(values) {
         super([arguments[0]], 'negate', '-');
       }
-    },
 
-    'CSSMathNegate': class extends MathOperation {
-      constructor(values) {
-        super([1, arguments[0]], 'invert', 'calc', ' / ');
+      get value() {
+        return  privateDetails.get(this).values[0];
+      }
+
+      type() {
+        return this.value.type();
       }
     },
 
-    'CSSMathMax': class extends MathOperation {
+    'CSSMathInvert': class extends CSSMathValue {
+      constructor(values) {
+        super([1, arguments[0]], 'invert', 'calc', ' / ');
+      }
+
+      get value() {
+        return  privateDetails.get(this).values[1];
+      }
+
+      type() {
+        const details = privateDetails.get(this)
+        // The type of a CSSUnitValue is the result of creating a type from its unit internal slot.
+        return invertType(details.values[1].type())
+      }
+    },
+
+    'CSSMathMax': class extends CSSMathValue {
       constructor() {
         super(arguments, 'max');
       }
     },
 
-    'CSSMathMin': class extends MathOperation  {
+    'CSSMathMin': class extends CSSMathValue  {
       constructor() {
         super(arguments, 'min');
       }
@@ -191,10 +251,10 @@ export function installCSSOM() {
     });
   }
 
-  for (let type in cssOMTypes) {
+  for (let [type, value] of Object.entries(cssOMTypes)) {
     if (type in window)
       continue;
-    if (!Reflect.defineProperty(window, type, { value: cssOMTypes[type] }))
+    if (!Reflect.defineProperty(window, type, { value }))
       throw Error(`Error installing CSSOM support for ${type}`);
   }
 }
