@@ -25,9 +25,16 @@ import {
 
 import { initCSSPolyfill } from "./scroll-timeline-css"
 
-function initPolyfill() {
+/**
+ * Initializes the polyfill and by default will parse all stylesheets on the
+ * page.
+ * @param {'*' | string | RegExp | Array<string | RegExp>} allowedOrigins
+ * Defaults to *, which attempts to parse all linked stylesheets. It also
+ * accepts a string, a RegExp or an array of either.
+ */
+export function initPolyfill(allowedOrigins) {
   // initCSSPolyfill returns true iff the host browser supports SDA
-  if (initCSSPolyfill()) {
+  if (initCSSPolyfill(allowedOrigins)) {
     return;
   }
 
