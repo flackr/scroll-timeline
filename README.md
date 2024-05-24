@@ -39,6 +39,10 @@ Also works with CSS Animations that use a `view-timeline` or `scroll-timeline`
 }
 ```
 
+Please ensure your CSS is hosted on the same domain as your website or included directly on the page within a <style> tag.
+
+If you are loading stylesheets from other origins, the polyfill might not be able to fetch and apply them correctly, due to browser security restrictions.
+
 For more details on and use-cases of scroll-driven animations, please refer to [https://developer.chrome.com/articles/scroll-driven-animations/](https://developer.chrome.com/articles/scroll-driven-animations/) and [https://scroll-driven-animations.style/](https://scroll-driven-animations.style/)
 
 # Contributing
