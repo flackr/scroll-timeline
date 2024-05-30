@@ -13,10 +13,7 @@
     "test:simple": "npm run test-setup && cd test && cd wpt && python wpt serve --inject-script ../../dist/scroll-timeline.js",
     "test:compare": "node test/summarize-json.mjs test/report/data.json > test/report/summary.txt && echo 'Comparing test results. If different and expected, patch the following diff to test/expected.txt:' && diff test/expected.txt test/report/summary.txt"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/flackr/scroll-timeline.git"
-  },
+  "repository": "flackr/scroll-timeline",
   "files": [
     "src",
     "dist"
