@@ -154,7 +154,7 @@ function updateKeyframesIfNecessary(anim, options) {
 
 export function initCSSPolyfill() {
   // Don't load if browser claims support
-  if (CSS.supports("animation-timeline: --works")) {
+  if (CSS.supports("view-timeline")) {
     return true;
   }
 
