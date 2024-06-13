@@ -32,14 +32,14 @@ function initPolyfill() {
   }
 
   if (
-    !Reflect.defineProperty(window, 'ScrollTimeline', { value: ScrollTimeline })
+    !Reflect.defineProperty(window, 'ScrollTimeline', { value: ScrollTimeline, writable: true, configurable: true })
   ) {
     throw Error(
       'Error installing ScrollTimeline polyfill: could not attach ScrollTimeline to window'
     );
   }
   if (
-    !Reflect.defineProperty(window, 'ViewTimeline', { value: ViewTimeline })
+    !Reflect.defineProperty(window, 'ViewTimeline', { value: ViewTimeline, writable: true, configurable: true })
   ) {
     throw Error(
       'Error installing ViewTimeline polyfill: could not attach ViewTimeline to window'

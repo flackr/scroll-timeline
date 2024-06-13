@@ -791,27 +791,27 @@ PASS	/scroll-animations/scroll-timelines/idlharness.window.html	Element includes
 PASS	/scroll-animations/scroll-timelines/idlharness.window.html	Element includes NonDocumentTypeChildNode: member names are unique
 PASS	/scroll-animations/scroll-timelines/idlharness.window.html	Element includes ChildNode: member names are unique
 PASS	/scroll-animations/scroll-timelines/idlharness.window.html	Element includes Slottable: member names are unique
-FAIL	/scroll-animations/scroll-timelines/idlharness.window.html	ScrollTimeline interface: existence and properties of interface object
-FAIL	/scroll-animations/scroll-timelines/idlharness.window.html	ScrollTimeline interface object length
+PASS	/scroll-animations/scroll-timelines/idlharness.window.html	ScrollTimeline interface: existence and properties of interface object
+PASS	/scroll-animations/scroll-timelines/idlharness.window.html	ScrollTimeline interface object length
 PASS	/scroll-animations/scroll-timelines/idlharness.window.html	ScrollTimeline interface object name
-FAIL	/scroll-animations/scroll-timelines/idlharness.window.html	ScrollTimeline interface: existence and properties of interface prototype object
+PASS	/scroll-animations/scroll-timelines/idlharness.window.html	ScrollTimeline interface: existence and properties of interface prototype object
 PASS	/scroll-animations/scroll-timelines/idlharness.window.html	ScrollTimeline interface: existence and properties of interface prototype object's "constructor" property
 PASS	/scroll-animations/scroll-timelines/idlharness.window.html	ScrollTimeline interface: existence and properties of interface prototype object's @@unscopables property
-FAIL	/scroll-animations/scroll-timelines/idlharness.window.html	ScrollTimeline interface: attribute source
-FAIL	/scroll-animations/scroll-timelines/idlharness.window.html	ScrollTimeline interface: attribute axis
+PASS	/scroll-animations/scroll-timelines/idlharness.window.html	ScrollTimeline interface: attribute source
+PASS	/scroll-animations/scroll-timelines/idlharness.window.html	ScrollTimeline interface: attribute axis
 PASS	/scroll-animations/scroll-timelines/idlharness.window.html	ScrollTimeline must be primary interface of new ScrollTimeline()
-FAIL	/scroll-animations/scroll-timelines/idlharness.window.html	Stringification of new ScrollTimeline()
+PASS	/scroll-animations/scroll-timelines/idlharness.window.html	Stringification of new ScrollTimeline()
 PASS	/scroll-animations/scroll-timelines/idlharness.window.html	ScrollTimeline interface: new ScrollTimeline() must inherit property "source" with the proper type
 PASS	/scroll-animations/scroll-timelines/idlharness.window.html	ScrollTimeline interface: new ScrollTimeline() must inherit property "axis" with the proper type
-FAIL	/scroll-animations/scroll-timelines/idlharness.window.html	ViewTimeline interface: existence and properties of interface object
-FAIL	/scroll-animations/scroll-timelines/idlharness.window.html	ViewTimeline interface object length
+PASS	/scroll-animations/scroll-timelines/idlharness.window.html	ViewTimeline interface: existence and properties of interface object
+PASS	/scroll-animations/scroll-timelines/idlharness.window.html	ViewTimeline interface object length
 PASS	/scroll-animations/scroll-timelines/idlharness.window.html	ViewTimeline interface object name
 PASS	/scroll-animations/scroll-timelines/idlharness.window.html	ViewTimeline interface: existence and properties of interface prototype object
 PASS	/scroll-animations/scroll-timelines/idlharness.window.html	ViewTimeline interface: existence and properties of interface prototype object's "constructor" property
 PASS	/scroll-animations/scroll-timelines/idlharness.window.html	ViewTimeline interface: existence and properties of interface prototype object's @@unscopables property
-FAIL	/scroll-animations/scroll-timelines/idlharness.window.html	ViewTimeline interface: attribute subject
-FAIL	/scroll-animations/scroll-timelines/idlharness.window.html	ViewTimeline interface: attribute startOffset
-FAIL	/scroll-animations/scroll-timelines/idlharness.window.html	ViewTimeline interface: attribute endOffset
+PASS	/scroll-animations/scroll-timelines/idlharness.window.html	ViewTimeline interface: attribute subject
+PASS	/scroll-animations/scroll-timelines/idlharness.window.html	ViewTimeline interface: attribute startOffset
+PASS	/scroll-animations/scroll-timelines/idlharness.window.html	ViewTimeline interface: attribute endOffset
 PASS	/scroll-animations/scroll-timelines/intrinsic-iteration-duration.tentative.html	Computed duration in percent even when specified in ms
 FAIL	/scroll-animations/scroll-timelines/intrinsic-iteration-duration.tentative.html	Time-based duration normalized to fill animation range.
 PASS	/scroll-animations/scroll-timelines/intrinsic-iteration-duration.tentative.html	Time-based duration normalized to preserve proportional delays.
