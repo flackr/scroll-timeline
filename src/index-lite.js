@@ -12,18 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {
-  ScrollTimeline,
-  ViewTimeline,
-} from "./scroll-timeline-base";
-import {
-  animate,
-  elementGetAnimations,
-  documentGetAnimations,
-  ProxyAnimation
-} from "./proxy-animation.js";
-
-
 import { initPolyfill } from "./init-polyfill.js"
 
 initPolyfill();

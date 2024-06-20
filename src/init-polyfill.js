@@ -27,7 +27,7 @@ import { initCSSPolyfill } from "./scroll-timeline-css"
 
 export function initPolyfill() {
   // Don't load if browser claims support
-  if (CSS.supports("view-timeline")) {
+  if (window.ViewTimeline !== undefined) {
     return true;
   }
 
