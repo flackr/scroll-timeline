@@ -21,7 +21,6 @@ node_modules
 # demos deployment directory
 build
 dist
-dist-lite
 
 # jest coverage folder
 coverage
