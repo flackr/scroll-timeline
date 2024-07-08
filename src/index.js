@@ -29,7 +29,6 @@ import { initPolyfill } from "./init-polyfill.js"
 
 function initPolyfillIncludingCSS() {
   // initCSSPolyfill returns true iff the host browser supports SDA
-  console.debug("Polyfill initializing.");
   if (initCSSPolyfill()) {
     console.debug("Polyfill skipped because browser supports Scroll Timeline.");
     return;
