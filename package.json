@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
+    "build-lite" : "vite build --config vite.config.lite.js", 
     "dev": "vite",
-    "deploy": "npm run build",
+    "deploy": "npm run build && npm run build-lite",
     "test-setup": "node test/setup/checkout-wpt.mjs",
     "test:wpt": "npm run test-setup && cd test && cd wpt && (python wpt run --headless -y --log-wptreport ../report/data.json --log-wptscreenshot=../report/screenshots.txt --log-html=../report/index.html --inject-script ../../dist/scroll-timeline.js firefox scroll-animations || true)",
     "test:simple": "npm run test-setup && cd test && cd wpt && python wpt serve --inject-script ../../dist/scroll-timeline.js",

@@ -1,4 +1,4 @@
-// Copyright 2019 Google LLC
+// Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,29 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {
-  ScrollTimeline,
-  ViewTimeline,
-} from "./scroll-timeline-base";
-import {
-  animate,
-  elementGetAnimations,
-  documentGetAnimations,
-  ProxyAnimation
-} from "./proxy-animation.js";
-
-import { initCSSPolyfill } from "./scroll-timeline-css"
-
 import { initPolyfill } from "./init-polyfill.js"
 
-function initPolyfillIncludingCSS() {
-  // initCSSPolyfill returns true iff the host browser supports SDA
-  if (initCSSPolyfill()) {
-    console.debug("Polyfill skipped because browser supports Scroll Timeline.");
-    return;
-  }
-
-  initPolyfill();
-}
-
-initPolyfillIncludingCSS();
+initPolyfill();
