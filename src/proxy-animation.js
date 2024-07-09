@@ -803,7 +803,7 @@ function createProxyEffect(details) {
         }
 
         if (typeof duration !== 'undefined' && duration !== 'auto') {
-          details.autoDurationEffect = null
+          details.autoDurationEffect = false
         }
       }
 
@@ -1127,6 +1127,7 @@ export class ProxyAnimation {
       // The animation attachment range, restricting the animation’s
       // active interval to that range of a timeline
       animationRange: isScrollAnimation ? parseAnimationRange(timeline, animOptions['animation-range']) : null,
+      autoDurationEffect: animOptions['auto-duration'] ?? false,
       proxy: this
     });
   }
@@ -1152,7 +1153,7 @@ export class ProxyAnimation {
     details.animation.effect = newEffect;
     // Reset proxy to force re-initialization the next time it is accessed.
     details.effect = null;
-    details.autoDurationEffect = null;
+    details.autoDurationEffect = false;
   }
 
   get timeline() {
