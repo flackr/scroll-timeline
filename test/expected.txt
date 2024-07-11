@@ -208,7 +208,7 @@ FAIL	/scroll-animations/css/progress-based-animation-animation-longhand-properti
 FAIL	/scroll-animations/css/progress-based-animation-animation-longhand-properties.tentative.html	animation-delay with a negative value
 PASS	/scroll-animations/css/progress-based-animation-animation-longhand-properties.tentative.html	animation-fill-mode
 PASS	/scroll-animations/css/progress-based-animation-timeline.html	progress based animation timeline works
-FAIL	/scroll-animations/css/pseudo-on-scroller.html	scroll nearest on pseudo-element attaches to parent scroll container
+PASS	/scroll-animations/css/pseudo-on-scroller.html	scroll nearest on pseudo-element attaches to parent scroll container
 FAIL	/scroll-animations/css/scroll-timeline-axis-computed.html	Property scroll-timeline-axis value 'initial'
 FAIL	/scroll-animations/css/scroll-timeline-axis-computed.html	Property scroll-timeline-axis value 'inherit'
 FAIL	/scroll-animations/css/scroll-timeline-axis-computed.html	Property scroll-timeline-axis value 'unset'
