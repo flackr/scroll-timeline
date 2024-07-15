@@ -53,7 +53,14 @@ function initMutationObserver() {
       // Most likely we won't be able to fetch resources from other origins.
       return;
     }
-    fetch(linkElement.getAttribute('href')).then(async (response) => {
+
+    // Stop loading the stylesheet to ensure that we finished parsing it before it's
+    // loaded by the browser (and that animations are only started after
+    // we collected the required options)
+    const href = linkElement.getAttribute('href')
+    linkElement.removeAttribute('href')
+
+    fetch(href).then(async (response) => {
       const result = await response.text();
       let newSrc = parser.transpileStyleSheet(result, true);
       newSrc = parser.transpileStyleSheet(result, false);
@@ -61,6 +68,8 @@ function initMutationObserver() {
         const blob = new Blob([newSrc], { type: 'text/css' });
         const url = URL.createObjectURL(blob);
         linkElement.setAttribute('href', url);
+      } else {
+        linkElement.setAttribute('href', href);
       }
     });
   }
