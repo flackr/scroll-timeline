@@ -86,7 +86,12 @@ export class StyleParser {
     // If this sheet has no srcURL (like from a <style> tag), we are done.
     // TODO: Otherwise, we have to find `url()` functions and resolve
     // relative and path-absolute URLs to absolute URLs.
-    return p.sheetSrc;
+    // // return p.sheetSrc;
+    // const { origin } = location;
+    // return p.sheetSrc.replace(/url\(("|'?)\//gm, `url($1${origin}/`);
+
+    const { origin } = location;
+    return p.sheetSrc.replace(/url\(("|'?)\.?\//gm, `url($1${origin}/`);
   }
 
   getAnimationTimelineOptions(animationName, target) {
@@ -107,7 +112,7 @@ export class StyleParser {
         }
       } catch {
         // TODO: handle nested at-rules
-      }      
+      }
     }
 
     return null;
@@ -115,7 +120,7 @@ export class StyleParser {
 
   getAnonymousScrollTimelineOptions(timelineName, target) {
     const options = this.anonymousScrollTimelineOptions.get(timelineName);
-    if(options) {
+    if (options) {
       return {
         anonymousSource: options.source,
         anonymousTarget: target,
@@ -129,15 +134,15 @@ export class StyleParser {
 
   getScrollTimelineOptions(timelineName, target) {
     const anonymousTimelineOptions = this.getAnonymousScrollTimelineOptions(timelineName, target);
-    if(anonymousTimelineOptions)
+    if (anonymousTimelineOptions)
       return anonymousTimelineOptions;
 
     for (let i = this.sourceSelectorToScrollTimeline.length - 1; i >= 0; i--) {
       const options = this.sourceSelectorToScrollTimeline[i];
-      if(options.name == timelineName) {
+      if (options.name == timelineName) {
         const source = this.findPreviousSiblingOrAncestorMatchingSelector(target, options.selector);
 
-        if(source) {
+        if (source) {
           return {
             source,
             ...(options.axis ? { axis: options.axis } : {}),
@@ -154,10 +159,10 @@ export class StyleParser {
   findPreviousSiblingOrAncestorMatchingSelector(target, selector) {
     // Target self
     let candidate = target;
-    
+
     // Walk the DOM tree: preceding siblings and ancestors
     while (candidate) {
-      if (candidate.matches(selector)) 
+      if (candidate.matches(selector))
         return candidate;
       candidate = candidate.previousElementSibling || candidate.parentElement;
     }
@@ -168,7 +173,7 @@ export class StyleParser {
 
   getAnonymousViewTimelineOptions(timelineName, target) {
     const options = this.anonymousViewTimelineOptions.get(timelineName);
-    if(options) {
+    if (options) {
       return {
         subject: target,
         axis: (options.axis ? options.axis : 'block'),
@@ -181,14 +186,14 @@ export class StyleParser {
 
   getViewTimelineOptions(timelineName, target) {
     const anonymousTimelineOptions = this.getAnonymousViewTimelineOptions(timelineName, target);
-    if(anonymousTimelineOptions)
+    if (anonymousTimelineOptions)
       return anonymousTimelineOptions;
 
     for (let i = this.subjectSelectorToViewTimeline.length - 1; i >= 0; i--) {
       const options = this.subjectSelectorToViewTimeline[i];
-      if(options.name == timelineName) {
+      if (options.name == timelineName) {
         const subject = this.findPreviousSiblingOrAncestorMatchingSelector(target, options.selector);
-        if(subject) {
+        if (subject) {
           return {
             subject,
             axis: options.axis,
@@ -246,8 +251,8 @@ export class StyleParser {
           // If there is no duration, animationstart will not happen,
           // and polyfill will not work which is based on animationstart.
           // Add 1s as duration to fix this.
-          if(hasAnimationTimeline) {
-            if(!this.hasDuration(shorthand)) {
+          if (hasAnimationTimeline) {
+            if (!this.hasDuration(shorthand)) {
 
               // `auto` also is valid duration. Older browsers can’t always
               // handle it properly, so we remove it from the shorthand.
@@ -270,7 +275,7 @@ export class StyleParser {
         });
     }
 
-    if(shouldReplacePart) {
+    if (shouldReplacePart) {
       this.replacePart(
         rule.block.startIndex,
         rule.block.endIndex,
@@ -287,19 +292,19 @@ export class StyleParser {
     const hasScrollTimelineName = rule.block.contents.includes("scroll-timeline-name:");
     const hasScrollTimelineAxis = rule.block.contents.includes("scroll-timeline-axis:");
 
-    if(!hasScrollTimeline && !hasScrollTimelineName) return;
+    if (!hasScrollTimeline && !hasScrollTimelineName) return;
 
     let timelines = [];
-    if(hasScrollTimeline) {
+    if (hasScrollTimeline) {
       const scrollTimelines = this.extractMatches(rule.block.contents, RegexMatcher.SCROLL_TIMELINE);
-      for(const st of scrollTimelines) {
+      for (const st of scrollTimelines) {
         const parts = this.split(st);
-        let options = {selector: rule.selector, name: ''};
+        let options = { selector: rule.selector, name: '' };
 
-        if(parts.length == 1) {
+        if (parts.length == 1) {
           options.name = parts[0];
-        } else if(parts.length == 2) {
-          if(TIMELINE_AXIS_TYPES.includes(parts[0]))
+        } else if (parts.length == 2) {
+          if (TIMELINE_AXIS_TYPES.includes(parts[0]))
             options.axis = parts[0], options.name = parts[1];
           else
             options.axis = parts[1], options.name = parts[0];
@@ -309,21 +314,21 @@ export class StyleParser {
       }
     }
 
-    if(hasScrollTimelineName) {
+    if (hasScrollTimelineName) {
       const names = this.extractMatches(rule.block.contents, RegexMatcher.SCROLL_TIMELINE_NAME);
-      for(let i = 0; i < names.length; i++) {
-        if(i < timelines.length) {
+      for (let i = 0; i < names.length; i++) {
+        if (i < timelines.length) {
           // longhand overrides shorthand
           timelines[i].name = names[i];
         } else {
-          let options = {selector: rule.selector, name: names[i]};
+          let options = { selector: rule.selector, name: names[i] };
           timelines.push(options);
         }
       }
     }
 
     let axes = [];
-    if(hasScrollTimelineAxis) {
+    if (hasScrollTimelineAxis) {
       const extractedAxes = this.extractMatches(rule.block.contents, RegexMatcher.SCROLL_TIMELINE_AXIS);
       axes = extractedAxes.filter(a => TIMELINE_AXIS_TYPES.includes(a));
       if (axes.length != extractedAxes.length) {
@@ -331,8 +336,8 @@ export class StyleParser {
       }
     }
 
-    for(let i = 0; i < timelines.length; i++) {
-      if(axes.length)
+    for (let i = 0; i < timelines.length; i++) {
+      if (axes.length)
         timelines[i].axis = axes[i % timelines.length];
     }
 
@@ -345,19 +350,19 @@ export class StyleParser {
     const hasViewTimelineAxis = rule.block.contents.includes("view-timeline-axis:");
     const hasViewTimelineInset = rule.block.contents.includes("view-timeline-inset:");
 
-    if(!hasViewTimeline && !hasViewTimelineName) return;
+    if (!hasViewTimeline && !hasViewTimelineName) return;
 
     let timelines = [];
 
-    if(hasViewTimeline) {
+    if (hasViewTimeline) {
       const viewTimelines = this.extractMatches(rule.block.contents, RegexMatcher.VIEW_TIMELINE);
-      for(let tl of viewTimelines) {
+      for (let tl of viewTimelines) {
         const parts = this.split(tl);
-        let options = {selector: rule.selector, name: '', inset: null};
-        if(parts.length == 1) {
+        let options = { selector: rule.selector, name: '', inset: null };
+        if (parts.length == 1) {
           options.name = parts[0];
-        } else if(parts.length == 2) {
-          if(TIMELINE_AXIS_TYPES.includes(parts[0]))
+        } else if (parts.length == 2) {
+          if (TIMELINE_AXIS_TYPES.includes(parts[0]))
             options.axis = parts[0], options.name = parts[1];
           else
             options.axis = parts[1], options.name = parts[0];
@@ -366,14 +371,14 @@ export class StyleParser {
       }
     }
 
-    if(hasViewTimelineName) {
+    if (hasViewTimelineName) {
       const names = this.extractMatches(rule.block.contents, RegexMatcher.VIEW_TIMELINE_NAME);
-      for(let i = 0; i < names.length; i++) {
-        if(i < timelines.length) {
+      for (let i = 0; i < names.length; i++) {
+        if (i < timelines.length) {
           // longhand overrides shorthand
           timelines[i].name = names[i];
         } else {
-          let options = {selector: rule.selector, name: names[i], inset: null};
+          let options = { selector: rule.selector, name: names[i], inset: null };
           timelines.push(options);
         }
       }
@@ -382,10 +387,10 @@ export class StyleParser {
     let insets = [];
     let axes = [];
 
-    if(hasViewTimelineInset)
+    if (hasViewTimelineInset)
       insets = this.extractMatches(rule.block.contents, RegexMatcher.VIEW_TIMELINE_INSET);
 
-    if(hasViewTimelineAxis) {
+    if (hasViewTimelineAxis) {
       const extractedAxes = this.extractMatches(rule.block.contents, RegexMatcher.VIEW_TIMELINE_AXIS);
       axes = extractedAxes.filter(a => TIMELINE_AXIS_TYPES.includes(a));
       if (axes.length != extractedAxes.length) {
@@ -393,11 +398,11 @@ export class StyleParser {
       }
     }
 
-    for(let i = 0; i < timelines.length; i++) {
-      if(insets.length)
+    for (let i = 0; i < timelines.length; i++) {
+      if (insets.length)
         timelines[i].inset = insets[i % timelines.length];
 
-      if(axes.length)
+      if (axes.length)
         timelines[i].axis = axes[i % timelines.length];
     }
 
@@ -427,8 +432,8 @@ export class StyleParser {
       this.cssRulesWithTimelineName.push({
         selector: rule.selector,
         'animation-timeline': timelineNames[i % timelineNames.length],
-        ...(animationNames.length ? {'animation-name': animationNames[i % animationNames.length]}: {}),
-        ...(animationRanges.length ? {'animation-range': animationRanges[i % animationRanges.length]}: {}),
+        ...(animationNames.length ? { 'animation-name': animationNames[i % animationNames.length] } : {}),
+        ...(animationRanges.length ? { 'animation-range': animationRanges[i % animationRanges.length] } : {}),
       });
     }
   }
@@ -438,7 +443,7 @@ export class StyleParser {
     const timelineNames = [];
 
     value.split(",").map(part => part.trim()).forEach(part => {
-      if(isAnonymousTimeline(part)) {
+      if (isAnonymousTimeline(part)) {
         const name = this.saveAnonymousTimelineName(part);
         timelineNames.push(name);
       } else {
@@ -463,15 +468,15 @@ export class StyleParser {
 
   parseAnonymousScrollTimeline(part) {
     const anonymousMatch = RegexMatcher.ANONYMOUS_SCROLL_TIMELINE.exec(part);
-    if(!anonymousMatch)
+    if (!anonymousMatch)
       return null;
 
     const value = anonymousMatch[VALUES_CAPTURE_INDEX];
     const options = {};
     value.split(" ").forEach(token => {
-      if(TIMELINE_AXIS_TYPES.includes(token)) {
+      if (TIMELINE_AXIS_TYPES.includes(token)) {
         options['axis'] = token;
-      } else if(ANONYMOUS_TIMELINE_SOURCE_TYPES.includes(token)) {
+      } else if (ANONYMOUS_TIMELINE_SOURCE_TYPES.includes(token)) {
         options['source'] = token;
       }
     });
@@ -481,7 +486,7 @@ export class StyleParser {
 
   parseAnonymousViewTimeline(part) {
     const anonymousMatch = RegexMatcher.ANONYMOUS_VIEW_TIMELINE.exec(part);
-    if(!anonymousMatch)
+    if (!anonymousMatch)
       return null;
 
     // have the same options.
@@ -491,7 +496,7 @@ export class StyleParser {
     // TODO: This naive check code also accepts `view(40% block 40%)`, which is not
     // spec compliant. If two inset values are set, they should be grouped together.
     value.split(" ").forEach(token => {
-      if(TIMELINE_AXIS_TYPES.includes(token)) {
+      if (TIMELINE_AXIS_TYPES.includes(token)) {
         options['axis'] = token;
       } else {
         options['inset'] = options['inset'] ? `${options['inset']} ${token}` : token;
@@ -568,20 +573,20 @@ export class StyleParser {
       let endIndex = -1;
       const indexes = [];
 
-      for(let i = 0; i < contents.length; i++) {
-        if(contents[i] == '{')
+      for (let i = 0; i < contents.length; i++) {
+        if (contents[i] == '{')
           open++;
-        else if(contents[i] == '}')
+        else if (contents[i] == '}')
           open--;
 
-        if(open == 1 && contents[i] != '{' && contents[i] != '}') {
-          if(startIndex == -1)
+        if (open == 1 && contents[i] != '{' && contents[i] != '}') {
+          if (startIndex == -1)
             startIndex = i;
         }
 
-        if(open == 2 && contents[i] == '{') {
+        if (open == 2 && contents[i] == '{') {
           endIndex = i;
-          indexes.push({start: startIndex, end: endIndex});
+          indexes.push({ start: startIndex, end: endIndex });
           startIndex = endIndex = -1;
         }
       }
@@ -591,14 +596,14 @@ export class StyleParser {
     const contents = rule.block.contents;
     const parts = getFrameSelectorIndexes(contents);
 
-    if(parts.length == 0)
+    if (parts.length == 0)
       return new Map();
 
     const mapping = new Map();
     let foundPhaseLinkedOffset = false;
     const newContents = [];
     newContents.push(contents.substring(0, parts[0].start));
-    for(let i = 0; i < parts.length; i++) {
+    for (let i = 0; i < parts.length; i++) {
       const allFrameSelectors = contents.substring(parts[i].start, parts[i].end);
       let replacedFrameSelectors = [];
 
@@ -612,19 +617,19 @@ export class StyleParser {
         const newFrameSelector = mapping.size;
         mapping.set(newFrameSelector, trimmedFrameSelector);
         replacedFrameSelectors.push(`${newFrameSelector}%`);
-        if(hasPhase(trimmedFrameSelector))
+        if (hasPhase(trimmedFrameSelector))
           foundPhaseLinkedOffset = true;
       });
 
       newContents.push(replacedFrameSelectors.join(","));
 
-      if(i == parts.length-1)
+      if (i == parts.length - 1)
         newContents.push(contents.substring(parts[i].end));
       else
-        newContents.push(contents.substring(parts[i].end, parts[i+1].start));
+        newContents.push(contents.substring(parts[i].end, parts[i + 1].start));
     }
 
-    if(foundPhaseLinkedOffset) {
+    if (foundPhaseLinkedOffset) {
       rule.block.contents = newContents.join("");
       this.replacePart(
         rule.block.startIndex,
@@ -688,7 +693,7 @@ export class StyleParser {
     this.assertString(p, "{");
     let level = 1;
     while (level != 0) {
-      if(this.lookAhead("/*", p)) {
+      if (this.lookAhead("/*", p)) {
         this.eatComment(p);
         continue;
       }
@@ -717,13 +722,13 @@ export class StyleParser {
     return Error(`(${p.name ? p.name : '<anonymous file>'}): ${msg}`);
   }
 
-  eatUntil(s, p, replaceWithSpace=false) {
+  eatUntil(s, p, replaceWithSpace = false) {
     const startIndex = p.index;
     while (!this.lookAhead(s, p)) {
       this.advance(p);
     }
 
-    if(replaceWithSpace) {
+    if (replaceWithSpace) {
       p.sheetSrc = p.sheetSrc.slice(0, startIndex)
         + " ".repeat(p.index - startIndex)
         + p.sheetSrc.slice(p.index);
@@ -758,7 +763,7 @@ export class StyleParser {
     return p.sheetSrc[p.index];
   }
 
-  extractMatches(contents, matcher, separator=',') {
+  extractMatches(contents, matcher, separator = ',') {
     return matcher.exec(contents)[VALUES_CAPTURE_INDEX].trim().split(separator).map(item => item.trim());
   }
 
