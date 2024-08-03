@@ -23,9 +23,9 @@ import {
   ProxyAnimation
 } from "./proxy-animation.js";
 
-import {initCSSPolyfill} from "./scroll-timeline-css"
+import { initCSSPolyfill } from "./scroll-timeline-css"
 
-import {initPolyfill} from "./init-polyfill.js"
+import { initPolyfill } from "./init-polyfill.js"
 
 async function initPolyfillIncludingCSS() {
   // initCSSPolyfill returns true iff the host browser supports SDA
@@ -33,6 +33,7 @@ async function initPolyfillIncludingCSS() {
     console.debug("Polyfill skipped because browser supports Scroll Timeline.");
     return;
   }
+
   initPolyfill();
 }
 
