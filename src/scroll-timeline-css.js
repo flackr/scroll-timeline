@@ -45,11 +45,11 @@ async function initMutationObserver() {
 
   async function waitForLinkLoad(linkElement) {
     return new Promise(r => {
-      linkElement.addEventListener('load', function() {
-        console.log(this);
-        linkElement.removeEventListener('load', this);
+      const listener = () => {
+        linkElement.removeEventListener('load', listener);
         r();
-      });
+      };
+      linkElement.addEventListener('load', listener);
     });
   }
 
