@@ -45,8 +45,9 @@ async function initMutationObserver() {
 
   async function waitForLinkLoad(linkElement) {
     return new Promise(r => {
-      linkElement.addEventListener('load', () => {
-        linkElement.removeEventListener('load');
+      linkElement.addEventListener('load', function() {
+        console.log(this);
+        linkElement.removeEventListener('load', this);
         r();
       });
     });
@@ -70,7 +71,7 @@ async function initMutationObserver() {
       const blob = new Blob([newSrc], {type: 'text/css'});
       const url = URL.createObjectURL(blob);
 
-      const loadPromise = waitForLinkLoad();
+      const loadPromise = waitForLinkLoad(linkElement);
       linkElement.setAttribute('href', url);
       await loadPromise;
     }

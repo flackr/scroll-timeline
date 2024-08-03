@@ -1,5 +1,3 @@
-
-
 // Copyright 2019 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,23 +23,6 @@ import {
     ProxyAnimation
 } from "./proxy-animation.js";
 
-import {initCSSPolyfill} from "./scroll-timeline-css"
+import {initialize} from "./index.js";
 
-import {initPolyfill} from "./init-polyfill.js"
-
-async function initPolyfillIncludingCSS() {
-    // initCSSPolyfill returns true iff the host browser supports SDA
-    if (await initCSSPolyfill()) {
-        console.debug("Polyfill skipped because browser supports Scroll Timeline.");
-        return;
-    }
-
-    initPolyfill();
-}
-
-export async function initialize() {
-    await initPolyfillIncludingCSS();
-}
-
-
-
+initialize();
