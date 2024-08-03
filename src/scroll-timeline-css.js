@@ -5,7 +5,7 @@ import { ScrollTimeline, ViewTimeline, getScrollParent, calculateRange,
 
 const parser = new StyleParser();
 
-function initMutationObserver() {
+async function initMutationObserver() {
   const sheetObserver = new MutationObserver((entries) => {
     for (const entry of entries) {
       for (const addedNode of entry.addedNodes) {
@@ -43,7 +43,16 @@ function initMutationObserver() {
     el.innerHTML = newSrc;
   }
 
-  function handleLinkedStylesheet(linkElement) {
+  async function waitForLinkLoad(linkElement) {
+    return new Promise(r => {
+      linkElement.addEventListener('load', () => {
+        linkElement.removeEventListener('load');
+        r();
+      });
+    });
+  }
+
+  async function handleLinkedStylesheet(linkElement) {
     // Filter only css links to external stylesheets.
     if (linkElement.type != 'text/css' && linkElement.rel != 'stylesheet' || !linkElement.href) {
       return;
@@ -53,23 +62,26 @@ function initMutationObserver() {
       // Most likely we won't be able to fetch resources from other origins.
       return;
     }
-    fetch(linkElement.getAttribute('href')).then(async (response) => {
-      const result = await response.text();
-      let newSrc = parser.transpileStyleSheet(result, true);
-      newSrc = parser.transpileStyleSheet(result, false);
-      if (newSrc != result) {
-        const blob = new Blob([newSrc], { type: 'text/css' });
-        const url = URL.createObjectURL(blob);
-        linkElement.setAttribute('href', url);
-      }
-    });
+    const response = await fetch(linkElement.getAttribute('href'));
+    const result = await response.text();
+    let newSrc = parser.transpileStyleSheet(result, true);
+    newSrc = parser.transpileStyleSheet(result, false);
+    if (newSrc != result) {
+      const blob = new Blob([newSrc], {type: 'text/css'});
+      const url = URL.createObjectURL(blob);
+
+      const loadPromise = waitForLinkLoad();
+      linkElement.setAttribute('href', url);
+      await loadPromise;
+    }
   }
 
-  document.querySelectorAll("style").forEach((tag) => handleStyleTag(tag));
-  document
-    .querySelectorAll("link")
-    .forEach((tag) => handleLinkedStylesheet(tag));
+  document.querySelectorAll("style")
+      .forEach((tag) => handleStyleTag(tag));
+  await Promise.all(Array.from(document.querySelectorAll("link"))
+      .map((tag) => handleLinkedStylesheet(tag)));
 }
+
 
 function relativePosition(phase, container, target, axis, optionsInset, percent) {
   const sourceMeasurements = measureSource(container)
@@ -152,21 +164,16 @@ function updateKeyframesIfNecessary(anim, options) {
   }
 }
 
-export function initCSSPolyfill() {
-  // Don't load if browser claims support
-  if (CSS.supports("animation-timeline: --works")) {
-    return true;
-  }
-
-  initMutationObserver();
-
+function overrideCSSSupports() {
   // Override CSS.supports() to claim support for the CSS properties from now on
   const oldSupports = CSS.supports;
   CSS.supports = (ident) => {
     ident = ident.replaceAll(/(animation-timeline|scroll-timeline(-(name|axis))?|view-timeline(-(name|axis|inset))?|timeline-scope)\s*:/g, '--supported-property:');
     return oldSupports(ident);
   };
+}
 
+function initializeWindowAnimationStartListener() {
   // We are not wrapping capturing 'animationstart' by a 'load' event,
   // because we may lose some of the 'animationstart' events by the time 'load' is completed.
   window.addEventListener('animationstart', (evt) => {
@@ -186,4 +193,16 @@ export function initCSSPolyfill() {
       }
     });
   });
+}
+
+export async function initCSSPolyfill() {
+  // Don't load if browser claims support
+  if (CSS.supports("animation-timeline: --works")) {
+    return true;
+  }
+
+  await initMutationObserver();
+
+  overrideCSSSupports();
+  initializeWindowAnimationStartListener();
 }

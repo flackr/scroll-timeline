@@ -16,7 +16,10 @@
   "repository": "flackr/scroll-timeline",
   "files": [
     "src",
-    "dist"
+    "dist",
+    "vite.config.js",
+    "vite.config.common.js",
+    "index.html"
   ],
   "keywords": [
     "waapi",

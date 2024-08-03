@@ -13,28 +13,34 @@
 // limitations under the License.
 
 import {
-  ScrollTimeline,
-  ViewTimeline,
+    ScrollTimeline,
+    ViewTimeline,
 } from "./scroll-timeline-base";
 import {
-  animate,
-  elementGetAnimations,
-  documentGetAnimations,
-  ProxyAnimation
+    animate,
+    elementGetAnimations,
+    documentGetAnimations,
+    ProxyAnimation
 } from "./proxy-animation.js";
 
-import { initCSSPolyfill } from "./scroll-timeline-css"
+import {initCSSPolyfill} from "./scroll-timeline-css"
 
-import { initPolyfill } from "./init-polyfill.js"
+import {initPolyfill} from "./init-polyfill.js"
 
-function initPolyfillIncludingCSS() {
-  // initCSSPolyfill returns true iff the host browser supports SDA
-  if (initCSSPolyfill()) {
-    console.debug("Polyfill skipped because browser supports Scroll Timeline.");
-    return;
-  }
+async function initPolyfillIncludingCSS() {
+    // initCSSPolyfill returns true iff the host browser supports SDA
+    if (await initCSSPolyfill()) {
+        console.debug("Polyfill skipped because browser supports Scroll Timeline.");
+        return;
+    }
 
-  initPolyfill();
+    initPolyfill();
 }
 
-initPolyfillIncludingCSS();
+async function initialize() {
+    await initPolyfillIncludingCSS();
+}
+
+export {initialize};
+
+
