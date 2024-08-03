@@ -77,11 +77,10 @@ async function handleConfiguredUrl(url, transpile = true) {
 
   if (transpile) {
     const content = transpileContent(await fetchContent(url));
-
-    updateLinkElement(createObjectUrlForContent(content), linkElement);
-  } else {
-    updateLinkElement(url, linkElement);
+    url = createObjectUrlForContent(content);
   }
+  
+  updateLinkElement(url, linkElement);
 
   const promise = waitForLinkLoad(linkElement);
   document.head.appendChild(linkElement);
