@@ -43,7 +43,7 @@ async function initMutationObserver() {
     el.innerHTML = newSrc;
   }
 
-  async function waitForLinkLoad(linkElement) {
+  function waitForLinkLoad(linkElement) {
     return new Promise(r => {
       const listener = () => {
         linkElement.removeEventListener('load', listener);
@@ -63,8 +63,8 @@ async function initMutationObserver() {
       // Most likely we won't be able to fetch resources from other origins.
       return;
     }
-    const response = await fetch(linkElement.getAttribute('href'));
-    const result = await response.text();
+
+    const result = await (await fetch(linkElement.getAttribute('href'))).text();
     let newSrc = parser.transpileStyleSheet(result, true);
     newSrc = parser.transpileStyleSheet(result, false);
     if (newSrc != result) {
@@ -79,7 +79,7 @@ async function initMutationObserver() {
 
   document.querySelectorAll("style")
       .forEach((tag) => handleStyleTag(tag));
-  await Promise.all(Array.from(document.querySelectorAll("link"))
+  return Promise.all(Array.from(document.querySelectorAll("link"))
       .map((tag) => handleLinkedStylesheet(tag)));
 }
 

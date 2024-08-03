@@ -8,9 +8,7 @@ export function buildConfig(source, filename, format = 'iife') {
             entry: source,
             name: 'ScrollTimeline',
             // the proper extensions will be added
-            fileName: (format, entryAlias) => {
-                return `${filename}${format=='iife'?'':'-' + format}.js`
-            },
+            fileName: (format, entryAlias) => `${filename}${format=='iife'?'':'-' + format}.js`,
             formats: [format],
             },
             minify: 'terser',
