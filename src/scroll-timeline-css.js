@@ -46,8 +46,8 @@ async function initMutationObserver() {
   function waitForLinkLoad(linkElement) {
     return new Promise(r => {
       const listener = () => {
-        linkElement.removeEventListener('load', listener);
-        r();
+          linkElement.removeEventListener('load', listener);
+          r();
       };
       linkElement.addEventListener('load', listener);
     });
@@ -80,7 +80,7 @@ async function initMutationObserver() {
   document.querySelectorAll("style")
       .forEach((tag) => handleStyleTag(tag));
   return Promise.all(Array.from(document.querySelectorAll("link"))
-      .map((tag) => handleLinkedStylesheet(tag)));
+      .map(tag => handleLinkedStylesheet(tag)));
 }
 
 
