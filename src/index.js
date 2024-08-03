@@ -13,14 +13,14 @@
 // limitations under the License.
 
 import {
-    ScrollTimeline,
-    ViewTimeline,
+  ScrollTimeline,
+  ViewTimeline,
 } from "./scroll-timeline-base";
 import {
-    animate,
-    elementGetAnimations,
-    documentGetAnimations,
-    ProxyAnimation
+  animate,
+  elementGetAnimations,
+  documentGetAnimations,
+  ProxyAnimation
 } from "./proxy-animation.js";
 
 import {initCSSPolyfill} from "./scroll-timeline-css"
@@ -40,6 +40,3 @@ async function initPolyfillIncludingCSS() {
 export async function initialize() {
     await initPolyfillIncludingCSS();
 }
-
-
-
