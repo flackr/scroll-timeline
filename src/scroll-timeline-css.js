@@ -121,8 +121,8 @@ function initialHandleDocument(initializationOptions) {
 
   return Promise.all(Array.from(document.querySelectorAll("link"))
       .filter(tag => (!initializationOptions?.configuredUrls?.length) ||
-          initializationOptions.configuredUrls.indexOf(tag.href) < 0 &&
-        !tag.href.startsWith('blob:'))
+          (initializationOptions.configuredUrls.indexOf(tag.href) < 0 &&
+          !tag.href.startsWith('blob:')))
       .map(tag => handleLinkedStylesheet(tag)));
 }
 
