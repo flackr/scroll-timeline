@@ -110,12 +110,18 @@ async function initMutationObserver() {
   });
 }
 
-async function initialHandleDocument(configuredUrls = []) {
+/**
+ *
+ * @param {import('index').InitializationOptions} initializationOptions
+ * @returns {Promise<Awaited<void>[]>}
+ */
+async function initialHandleDocument(initializationOptions) {
   document.querySelectorAll("style")
       .forEach((tag) => handleStyleTag(tag));
 
   return Promise.all(Array.from(document.querySelectorAll("link"))
-      .filter(tag => configuredUrls.indexOf(tag.href) < 0 &&
+      .filter(tag => (!initializationOptions?.configuredUrls?.length) ||
+          initializationOptions.configuredUrls.indexOf(tag.href) < 0 &&
         !tag.href.startsWith('blob:'))
       .map(tag => handleLinkedStylesheet(tag)));
 }
@@ -240,9 +246,9 @@ function initializeWindowAnimationStartListener() {
 export async function initCSSPolyfill(initializationOptions) {
   const nativeCssSupport = CSS.supports("animation-timeline: --works");
 
-  (initializationOptions?.configuredUrls?.length ?? 0) > 0 &&
-    (await Promise.all(initializationOptions?.configuredUrls
-      ?.map(url => handleConfiguredUrl(url, !nativeCssSupport)) ?? []));
+  (!!initializationOptions?.configuredUrls?.length) &&
+    (await Promise.all(initializationOptions.configuredUrls
+        .map(url => handleConfiguredUrl(url, !nativeCssSupport)) ?? []));
 
   // Don't load if browser claims support
   if (CSS.supports("animation-timeline: --works")) {
@@ -250,7 +256,7 @@ export async function initCSSPolyfill(initializationOptions) {
   }
 
   await initMutationObserver();
-  await initialHandleDocument(configuredUrls);
+  await initialHandleDocument(initializationOptions);
 
   overrideCSSSupports();
   initializeWindowAnimationStartListener();
