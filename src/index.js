@@ -27,9 +27,14 @@ import { initCSSPolyfill } from "./scroll-timeline-css"
 
 import { initPolyfill } from "./init-polyfill.js"
 
-function initPolyfillIncludingCSS() {
+/**
+ *
+ * @param {import('index').InitializationOptions} initializationOptions
+ * @returns {Promise<void>}
+ */
+async function initPolyfillIncludingCSS(initializationOptions) {
   // initCSSPolyfill returns true iff the host browser supports SDA
-  if (initCSSPolyfill()) {
+  if (await initCSSPolyfill(initializationOptions)) {
     console.debug("Polyfill skipped because browser supports Scroll Timeline.");
     return;
   }
@@ -37,4 +42,11 @@ function initPolyfillIncludingCSS() {
   initPolyfill();
 }
 
-initPolyfillIncludingCSS();
+/**
+ *
+ * @param {import('index').InitializationOptions} initializationOptions
+ * @returns {Promise<void>}
+ */
+export async function initialize(initializationOptions) {
+  await initPolyfillIncludingCSS(initializationOptions);
+}

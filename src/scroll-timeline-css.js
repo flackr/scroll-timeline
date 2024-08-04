@@ -5,7 +5,89 @@ import { ScrollTimeline, ViewTimeline, getScrollParent, calculateRange,
 
 const parser = new StyleParser();
 
-function initMutationObserver() {
+function waitForLinkLoad(linkElement) {
+  return new Promise(r => {
+    const listener = () => { linkElement.removeEventListener('load', listener); r(); };
+    linkElement.addEventListener('load', listener);
+  });
+}
+
+function updateLinkElement(url, linkElement) {
+  linkElement.href = url;
+  linkElement.type = 'text/css';
+  linkElement.rel = 'stylesheet';
+}
+
+function createObjectUrlForContent(content) {
+  const blob = new Blob([content], {type: 'text/css'});
+
+  return URL.createObjectURL(blob);
+}
+
+function transpileContent(content) {
+  // TODO: Do with one pass for better performance
+  let newSrc = parser.transpileStyleSheet(content, true);
+  newSrc = parser.transpileStyleSheet(content, false);
+
+  return newSrc;
+}
+
+async function fetchContent(url) {
+  const response = await fetch(url);
+
+  return await response.text();
+}
+
+/**
+ * @param {HtmlStyleElement} el style tag to be parsed
+ */
+function handleStyleTag(el) {
+  // Don’t touch empty style tags nor tags controlled by aphrodite.
+  // Details at https://github.com/Khan/aphrodite/blob/master/src/inject.js,
+  // but any modification to the style tag will break the entire page.
+  if (el.innerHTML.trim().length === 0 || 'aphrodite' in el.dataset) {
+    return;
+  }
+
+  el.innerHTML = transpileContent(el.innerHTML);
+}
+
+async function handleLinkedStylesheet(linkElement) {
+  // Filter only css links to external stylesheets.
+  if (linkElement.type != 'text/css' && linkElement.rel != 'stylesheet' || !linkElement.href) {
+    return;
+  }
+  const url = new URL(linkElement.href, document.baseURI);
+  if (url.origin != location.origin) {
+    // Most likely we won't be able to fetch resources from other origins.
+    return;
+  }
+
+  const content = await fetchContent(linkElement.getAttribute('href'));
+  const transpiled = transpileContent(content);
+  if (content !== transpiled) {
+    const promise = waitForLinkLoad(linkElement);
+    updateLinkElement(createObjectUrlForContent(transpiled), linkElement);
+    await promise;
+  }
+}
+
+async function handleConfiguredUrl(url, transpile = true) {
+  const linkElement = document.createElement("link");
+
+  if (transpile) {
+    const content = transpileContent(await fetchContent(url));
+    url = createObjectUrlForContent(content);
+  }
+
+  updateLinkElement(url, linkElement);
+
+  const promise = waitForLinkLoad(linkElement);
+  document.head.appendChild(linkElement);
+  await promise;
+}
+
+async function initMutationObserver() {
   const sheetObserver = new MutationObserver((entries) => {
     for (const entry of entries) {
       for (const addedNode of entry.addedNodes) {
@@ -26,49 +108,22 @@ function initMutationObserver() {
     childList: true,
     subtree: true,
   });
+}
 
-  /**
-   * @param {HtmlStyleElement} el style tag to be parsed
-   */
-  function handleStyleTag(el) {
-    // Don’t touch empty style tags nor tags controlled by aphrodite.
-    // Details at https://github.com/Khan/aphrodite/blob/master/src/inject.js,
-    // but any modification to the style tag will break the entire page.
-    if (el.innerHTML.trim().length === 0 || 'aphrodite' in el.dataset) {
-      return;
-    }
-    // TODO: Do with one pass for better performance
-    let newSrc = parser.transpileStyleSheet(el.innerHTML, true);
-    newSrc = parser.transpileStyleSheet(newSrc, false);
-    el.innerHTML = newSrc;
-  }
+/**
+ *
+ * @param {import('index').InitializationOptions} initializationOptions
+ * @returns {Promise<Awaited<void>[]>}
+ */
+function initialHandleDocument(initializationOptions) {
+  document.querySelectorAll("style")
+      .forEach((tag) => handleStyleTag(tag));
 
-  function handleLinkedStylesheet(linkElement) {
-    // Filter only css links to external stylesheets.
-    if (linkElement.type != 'text/css' && linkElement.rel != 'stylesheet' || !linkElement.href) {
-      return;
-    }
-    const url = new URL(linkElement.href, document.baseURI);
-    if (url.origin != location.origin) {
-      // Most likely we won't be able to fetch resources from other origins.
-      return;
-    }
-    fetch(linkElement.getAttribute('href')).then(async (response) => {
-      const result = await response.text();
-      let newSrc = parser.transpileStyleSheet(result, true);
-      newSrc = parser.transpileStyleSheet(result, false);
-      if (newSrc != result) {
-        const blob = new Blob([newSrc], { type: 'text/css' });
-        const url = URL.createObjectURL(blob);
-        linkElement.setAttribute('href', url);
-      }
-    });
-  }
-
-  document.querySelectorAll("style").forEach((tag) => handleStyleTag(tag));
-  document
-    .querySelectorAll("link")
-    .forEach((tag) => handleLinkedStylesheet(tag));
+  return Promise.all(Array.from(document.querySelectorAll("link"))
+      .filter(tag => (!initializationOptions?.configuredUrls?.length) ||
+          (initializationOptions.configuredUrls.indexOf(tag.href) < 0 &&
+          !tag.href.startsWith('blob:')))
+      .map(tag => handleLinkedStylesheet(tag)));
 }
 
 function relativePosition(phase, container, target, axis, optionsInset, percent) {
@@ -152,21 +207,16 @@ function updateKeyframesIfNecessary(anim, options) {
   }
 }
 
-export function initCSSPolyfill() {
-  // Don't load if browser claims support
-  if (CSS.supports("animation-timeline: --works")) {
-    return true;
-  }
-
-  initMutationObserver();
-
+function overrideCSSSupports() {
   // Override CSS.supports() to claim support for the CSS properties from now on
   const oldSupports = CSS.supports;
   CSS.supports = (ident) => {
     ident = ident.replaceAll(/(animation-timeline|scroll-timeline(-(name|axis))?|view-timeline(-(name|axis|inset))?|timeline-scope)\s*:/g, '--supported-property:');
     return oldSupports(ident);
   };
+}
 
+function initializeWindowAnimationStartListener() {
   // We are not wrapping capturing 'animationstart' by a 'load' event,
   // because we may lose some of the 'animationstart' events by the time 'load' is completed.
   window.addEventListener('animationstart', (evt) => {
@@ -186,4 +236,28 @@ export function initCSSPolyfill() {
       }
     });
   });
+}
+
+/**
+ *
+ * @param {import('index').InitializationOptions} initializationOptions
+ * @returns {Promise<Boolean>}
+ */
+export async function initCSSPolyfill(initializationOptions) {
+  const nativeCssSupport = CSS.supports("animation-timeline: --works");
+
+  (!!initializationOptions?.configuredUrls?.length) &&
+    (await Promise.all(initializationOptions.configuredUrls
+        .map(url => handleConfiguredUrl(url, !nativeCssSupport)) ?? []));
+
+  // Don't load if browser claims support
+  if (CSS.supports("animation-timeline: --works")) {
+    return true;
+  }
+
+  await initMutationObserver();
+  await initialHandleDocument(initializationOptions);
+
+  overrideCSSSupports();
+  initializeWindowAnimationStartListener();
 }

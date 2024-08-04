@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
+    "build-es": "vite build --config vite.config.es.js",
     "build-lite" : "vite build --config vite.config.lite.js", 
     "dev": "vite",
     "deploy": "npm run build && npm run build-lite",

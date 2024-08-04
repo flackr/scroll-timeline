@@ -1,4 +1,4 @@
-export function buildConfig(source, filename) {
+export function buildConfig(source, filename, format = 'iife') {
     return {
         build: {
             sourcemap: true,
@@ -9,7 +9,7 @@ export function buildConfig(source, filename) {
             name: 'ScrollTimeline',
             // the proper extensions will be added
             fileName: (format, entryAlias) => `${filename}${format=='iife'?'':'-' + format}.js`,
-            formats: ['iife'],
+            formats: [format],
             },
             minify: 'terser',
             terserOptions: {

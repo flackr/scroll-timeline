@@ -47,6 +47,8 @@ jobs:
         run: "[[ -f package-lock.json || -f npm-shrinkwrap.json ]] && npm ci || true"
       - name: Build
         run: "npm run build"
+      - name: Build ES
+        run: "npm run build-es"
       - name: Checkout WPT
         run: "npm run test-setup"
       - name: WPT hosts
