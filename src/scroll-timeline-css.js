@@ -79,7 +79,7 @@ async function handleConfiguredUrl(url, transpile = true) {
     const content = transpileContent(await fetchContent(url));
     url = createObjectUrlForContent(content);
   }
-  
+
   updateLinkElement(url, linkElement);
 
   const promise = waitForLinkLoad(linkElement);
@@ -232,9 +232,17 @@ function initializeWindowAnimationStartListener() {
   });
 }
 
-export async function initCSSPolyfill(configuredUrls = []) {
+/**
+ *
+ * @param {import('index').InitializationOptions} initializationOptions
+ * @returns {Promise<Boolean>}
+ */
+export async function initCSSPolyfill(initializationOptions) {
   const nativeCssSupport = CSS.supports("animation-timeline: --works");
-  await Promise.all(configuredUrls.map(url => handleConfiguredUrl(url, !nativeCssSupport)));
+
+  (initializationOptions?.configuredUrls?.length ?? 0) > 0 &&
+    (await Promise.all(initializationOptions?.configuredUrls
+      ?.map(url => handleConfiguredUrl(url, !nativeCssSupport)) ?? []));
 
   // Don't load if browser claims support
   if (CSS.supports("animation-timeline: --works")) {
