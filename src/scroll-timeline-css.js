@@ -115,7 +115,7 @@ async function initMutationObserver() {
  * @param {import('index').InitializationOptions} initializationOptions
  * @returns {Promise<Awaited<void>[]>}
  */
-async function initialHandleDocument(initializationOptions) {
+function initialHandleDocument(initializationOptions) {
   document.querySelectorAll("style")
       .forEach((tag) => handleStyleTag(tag));
 
