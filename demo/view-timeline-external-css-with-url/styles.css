@@ -1,0 +1,48 @@
+#container {
+  overflow-y: scroll;
+  height:  300px;
+  width: 300px;
+  border:  1px solid black;
+  timeline-scope: --foo;
+}
+.big-spacer {
+  height:  800px;
+}
+#subject {
+  background: url(asset/green.png), blue;
+  height:  100px;
+  width:  100px;
+  view-timeline-name: --foo;
+}
+#box {
+  position: fixed;
+  top: 0;
+  background: url("../view-timeline-external-css-with-url/asset/red.png"), yellow;
+  width: 50px;
+  height: 50px;
+  /* Please don't delete the following comments */
+  /* This comment has been added to make sure css parser ignores it */
+  /* animation-range: entry 0% 100%; */
+  animation: linear anim forwards;
+  animation-timeline: --foo;
+}
+
+/* Please don't delete the following comments */
+/* This comment has been added to make sure css parser ignores it */
+/*
+#box {
+  position: fixed;
+  top: 0;
+  background-color: red;
+  width: 50px;
+  height: 50px;
+  animation-timeline: foo;
+  animation-range: entry 0% 100%;
+  animation: linear anim;
+}
+*/
+
+@keyframes anim {
+  from { top: 0px; left: 0px; }
+  to { top: 100px; left: 200px; }
+}

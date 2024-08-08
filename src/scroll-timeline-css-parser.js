@@ -84,9 +84,17 @@ export class StyleParser {
     }
 
     // If this sheet has no srcURL (like from a <style> tag), we are done.
-    // TODO: Otherwise, we have to find `url()` functions and resolve
-    // relative and path-absolute URLs to absolute URLs.
-    return p.sheetSrc;
+    // Otherwise, we have to find `url()` functions and resolve
+    // relative URLs to absolute URLs.
+    if (!srcUrl) {
+      return p.sheetSrc;
+    }
+
+    const srcUrlDir = srcUrl.lastIndexOf('/') > location.origin.length
+        ? srcUrl.substring(0, srcUrl.lastIndexOf('/'))
+        : location.origin;
+
+    return p.sheetSrc.replace(/url\((["'])?(?:\.?\/|(?!https?:\/\/|(?:data|blob):))/gm, `url($1${srcUrlDir}/`);
   }
 
   getAnimationTimelineOptions(animationName, target) {
@@ -107,7 +115,7 @@ export class StyleParser {
         }
       } catch {
         // TODO: handle nested at-rules
-      }      
+      }
     }
 
     return null;
@@ -154,10 +162,10 @@ export class StyleParser {
   findPreviousSiblingOrAncestorMatchingSelector(target, selector) {
     // Target self
     let candidate = target;
-    
+
     // Walk the DOM tree: preceding siblings and ancestors
     while (candidate) {
-      if (candidate.matches(selector)) 
+      if (candidate.matches(selector))
         return candidate;
       candidate = candidate.previousElementSibling || candidate.parentElement;
     }
