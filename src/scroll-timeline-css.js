@@ -56,7 +56,7 @@ function initMutationObserver() {
     fetch(linkElement.getAttribute('href')).then(async (response) => {
       const result = await response.text();
       let newSrc = parser.transpileStyleSheet(result, true);
-      newSrc = parser.transpileStyleSheet(result, false);
+      newSrc = parser.transpileStyleSheet(result, false, response.url);
       if (newSrc != result) {
         const blob = new Blob([newSrc], { type: 'text/css' });
         const url = URL.createObjectURL(blob);
