@@ -39,7 +39,7 @@ Also works with CSS Animations that use a `view-timeline` or `scroll-timeline`
 }
 ```
 
-Please ensure your CSS is hosted on the same domain as your website or included directly on the page within a <style> tag.
+Please ensure your CSS is hosted on the same domain as your website or included directly on the page within a &lt;style&gt; tag.
 
 If you are loading stylesheets from other origins, the polyfill might not be able to fetch and apply them correctly, due to browser security restrictions.
 
@@ -52,8 +52,7 @@ For more details on and use-cases of scroll-driven animations, please refer to [
 Running a dev environment
 
 ```shell script
-npm i
-npm run dev 
+npm start
 ```
 
 Then open the browser `http://localhost:3000`, choose one of the demos (test) to see how your changes. 
