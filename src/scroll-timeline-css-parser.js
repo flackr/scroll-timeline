@@ -83,10 +83,30 @@ export class StyleParser {
         this.handleScrollTimelineProps(rule, p);
     }
 
-    // If this sheet has no srcURL (like from a <style> tag), we are done.
-    // TODO: Otherwise, we have to find `url()` functions and resolve
-    // relative and path-absolute URLs to absolute URLs.
-    return p.sheetSrc;
+    return this.replaceUrlFunctions(p.sheetSrc, srcUrl);
+  }
+
+
+  // If this sheet has no srcURL (like from a <style> tag), we are done.
+  // Otherwise, we have to find `url()` functions and resolve
+  // relative and path-absolute URLs to absolute URLs.
+  replaceUrlFunctions(sheetSrc, srcUrl) {
+    if (!srcUrl) {
+      return sheetSrc;
+    }
+
+    const srcUrlOrigin = new URL(srcUrl).origin
+    const srcUrlDir = srcUrl.lastIndexOf('/') > srcUrlOrigin.length
+        ? srcUrl.substring(0, srcUrl.lastIndexOf('/'))
+        : srcUrlOrigin;
+
+    // replace relative paths
+    sheetSrc = sheetSrc.replace(/url\((?:(['"])(?!https?:\/\/|data:|blob:|\/)|(?!['"]?(?:https?:\/\/|data:|blob:|\/)))(?:\.\/)?/gm, `url($1${srcUrlDir}/`)
+
+    // replace path-absolute paths
+    sheetSrc = sheetSrc.replace(/url\((['"])?\//gm, `url($1${srcUrlOrigin}/`)
+
+    return sheetSrc;
   }
 
   getAnimationTimelineOptions(animationName, target) {
@@ -107,7 +127,7 @@ export class StyleParser {
         }
       } catch {
         // TODO: handle nested at-rules
-      }      
+      }
     }
 
     return null;
@@ -154,10 +174,10 @@ export class StyleParser {
   findPreviousSiblingOrAncestorMatchingSelector(target, selector) {
     // Target self
     let candidate = target;
-    
+
     // Walk the DOM tree: preceding siblings and ancestors
     while (candidate) {
-      if (candidate.matches(selector)) 
+      if (candidate.matches(selector))
         return candidate;
       candidate = candidate.previousElementSibling || candidate.parentElement;
     }
