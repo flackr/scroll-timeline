@@ -4,12 +4,27 @@ A polyfill of ScrollTimeline and ViewTimeline as defined by the [spec](https://d
 
 View a [cool demo showing its usage](https://flackr.github.io/scroll-timeline/demo/parallax/)!
 
+# News
+
+Recent updates:
+ * npm is now supported: use npm install scroll-timeline-polyfill
+ * scroll-timeline-lite.js provides a lighter-weight version of the polyfill,
+ supporting only the javascript portions of the API.  Use this if you want to 
+ reduce overhead (bytes transmitted and runtime)
+
 # Usage
 
-To use this polyfill, import the module into your site and you can start creating animations that use a `ScrollTimeline` or `ViewTimeline`.
+To use this polyfill directly, simply import the module into your site's js, or
+include it from your html. In either case you can use the lite version, 
+`scroll-timeline-lite`, if you only need the javascript portion of the API 
+(`ScrollTimeline` and/or `ViewTimeline` objects), or you can include the full version, `scroll-timeline`
+
+Note that this example is using the lite version which only supports the javascript
+porion of the API.  Then you can reference the API (using `ScrollTimeline` or
+`ViewTimeline`).  
 
 ```js
-import 'https://flackr.github.io/scroll-timeline/dist/scroll-timeline.js';
+import 'https://flackr.github.io/scroll-timeline/dist/scroll-timeline-lite.js';
 
 document.getElementById('parallax').animate(
     { transform: ['translateY(0)', 'translateY(100px)']},
@@ -22,7 +37,8 @@ document.getElementById('parallax').animate(
     });
 ```
 
-Also works with CSS Animations that use a `view-timeline` or `scroll-timeline`
+The full polyfill adds support for CSS Animations that use a `view-timeline`
+or `scroll-timeline` in CSS.
 
 ```html
 <script src="https://flackr.github.io/scroll-timeline/dist/scroll-timeline.js"></script>
@@ -39,9 +55,37 @@ Also works with CSS Animations that use a `view-timeline` or `scroll-timeline`
 }
 ```
 
-Please ensure your CSS is hosted on the same domain as your website or included directly on the page within a <style> tag.
+Please ensure your CSS is hosted on the same domain as your website or included directly on the page within a \<style\> tag.
 
 If you are loading stylesheets from other origins, the polyfill might not be able to fetch and apply them correctly, due to browser security restrictions.
+
+See [issue #248](https://github.com/flackr/scroll-timeline/issues/248)
+
+# npm usage
+
+You can also include this package using npm:
+
+```shell script
+npm install scroll-timeline-polyfill
+```
+
+Then you can import directly into your javascript
+
+```js
+import 'scroll-timeline-polyfill/dist/scroll-timeline-lite.js';
+```
+OR
+```js
+import 'scroll-timeline-polyfill/dist/scroll-timeline.js';
+```
+
+OR include it in your html
+
+```html
+<script src="../../dist/scroll-timeline.js"></script>
+```
+
+# Use Cases
 
 For more details on and use-cases of scroll-driven animations, please refer to [https://developer.chrome.com/articles/scroll-driven-animations/](https://developer.chrome.com/articles/scroll-driven-animations/) and [https://scroll-driven-animations.style/](https://scroll-driven-animations.style/)
 
