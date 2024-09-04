@@ -56,6 +56,8 @@ function directionAwareScrollOffset(source, axis) {
   if (!source)
     return null;
   const sourceMeasurements = sourceDetails.get(source).sourceMeasurements;
+  if (!sourceMeasurements)
+    return null;
   const style = getComputedStyle(source);
   // All writing modes are vertical except for horizontal-tb.
   // TODO: sideways-lr should flow bottom to top, but is currently unsupported
@@ -161,6 +163,9 @@ function isValidAxis(axis) {
  * @return {{clientWidth: *, scrollHeight: *, scrollLeft, clientHeight: *, scrollTop, scrollWidth: *}}
  */
 export function measureSource (source) {
+  if (!source) {
+    return undefined;
+  }
   const style = getComputedStyle(source);
   return {
     scrollLeft: source.scrollLeft,
@@ -372,6 +377,57 @@ export function _getStlOptions(scrollTimeline) {
   return scrollTimelineOptions.get(scrollTimeline);
 }
 
+function initializeTimeline(timeline, options) {
+  const details = scrollTimelineOptions.get(timeline);
+
+  if (timeline instanceof ViewTimeline) {
+    // As specced, ViewTimeline has a subject and a source, but
+    // ViewTimelineOptions only has source. Furthermore, there is a strict
+    // relationship between subject and source (source is nearest scrollable
+    // ancestor of subject).
+
+    // Proceeding under the assumption that subject will be added to
+    // ViewTimelineOptions. Inferring the source from the subject if not
+    // explicitly set.
+
+    if (options && options.inset) {
+      details.inset = parseInset(options.inset);
+    }
+    details.subject = options && options.subject ? options.subject : undefined;
+
+    // Validate and updates source based on the subject
+    validateSource(timeline);
+    details.subjectMeasurements = measureSubject(details.source, details.subject);
+
+    // Dynamically update measurements and tick timeline when subject resizes, or class or style attributes changes
+    if (details.subject) {
+      const resizeObserver = new ResizeObserver(() => {
+        updateMeasurements(details.source);
+      })
+      resizeObserver.observe(details.subject);
+
+      const mutationObserver = new MutationObserver(() => {
+        updateMeasurements(details.source);
+      });
+      mutationObserver.observe(details.subject, {attributes: true, attributeFilter: ['class', 'style']});
+    }
+
+  } else if (timeline instanceof ScrollTimeline) {
+    const source =
+      options && options.source !== undefined ? options.source
+                                              : document.scrollingElement;
+    updateSource(timeline, source);
+    validateSource(timeline);
+  }
+
+  if ((options && options.axis !== undefined) && (options.axis != DEFAULT_TIMELINE_AXIS)) {
+    if (!isValidAxis(options.axis)) {
+      throw TypeError('Invalid axis');
+    }
+    details.axis = options.axis;
+  }
+}
+
 export class ScrollTimeline {
   constructor(options) {
     scrollTimelineOptions.set(this, {
@@ -388,21 +444,7 @@ export class ScrollTimeline {
       animations: [],
       subjectMeasurements: null
     });
-    const source =
-      options && options.source !== undefined ? options.source
-                                              : document.scrollingElement;
-    updateSource(this, source);
-
-    if ((options && options.axis !== undefined) &&
-        (options.axis != DEFAULT_TIMELINE_AXIS)) {
-      if (!isValidAxis(options.axis)) {
-        throw TypeError("Invalid axis");
-      }
-
-      scrollTimelineOptions.get(this).axis = options.axis;
-    }
-
-    updateInternal(this);
+    initializeTimeline(this, options);
   }
 
   set source(element) {
@@ -818,36 +860,8 @@ export function calculateRelativePosition(phaseRange, offset, coverRange, subjec
 
 // https://drafts.csswg.org/scroll-animations-1/#view-progress-timelines
 export class ViewTimeline extends ScrollTimeline {
-  // As specced, ViewTimeline has a subject and a source, but
-  // ViewTimelineOptions only has source. Furthermore, there is a strict
-  // relationship between subject and source (source is nearest scrollable
-  // ancestor of subject).
-
-  // Proceeding under the assumption that subject will be added to
-  // ViewTimelineOptions. Inferring the source from the subject if not
-  // explicitly set.
   constructor(options) {
     super(options);
-    const details = scrollTimelineOptions.get(this);
-    details.subject = options && options.subject ? options.subject : undefined;
-    // TODO: Handle insets.
-    if (options && options.inset) {
-      details.inset = parseInset(options.inset);
-    }
-    if (details.subject) {
-      const resizeObserver = new ResizeObserver(() => {
-        updateMeasurements(details.source)
-      })
-      resizeObserver.observe(details.subject)
-
-      const mutationObserver = new MutationObserver(() => {
-        updateMeasurements(details.source);
-      });
-      mutationObserver.observe(details.subject, {attributes: true, attributeFilter: ['class', 'style']});
-    }
-    validateSource(this);
-    details.subjectMeasurements = measureSubject(details.source, details.subject);
-    updateInternal(this);
   }
 
   get source() {
