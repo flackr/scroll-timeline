@@ -1817,6 +1817,10 @@ export class ProxyAnimation {
     proxyAnimations.get(this).animation.persist();
   }
 
+  commitStyles() {
+    proxyAnimations.get(this).animation.commitStyles();
+  }
+
   get id() {
     return proxyAnimations.get(this).animation.id;
   }
