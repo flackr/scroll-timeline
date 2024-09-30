@@ -829,14 +829,14 @@ FAIL	/scroll-animations/scroll-timelines/play-animation.html	Playing an animatio
 PASS	/scroll-animations/scroll-timelines/play-animation.html	Playing an animations with a negative playback rate aligns the start time with the end of the active range
 PASS	/scroll-animations/scroll-timelines/play-animation.html	Start time set while play pending is preserved.
 PASS	/scroll-animations/scroll-timelines/play-animation.html	Current time set while play pending is preserved.
-FAIL	/scroll-animations/scroll-timelines/play-animation.html	Playing a running animation resets a sticky start time
+PASS	/scroll-animations/scroll-timelines/play-animation.html	Playing a running animation resets a sticky start time
 PASS	/scroll-animations/scroll-timelines/play-animation.html	Playing a finished animation restarts the animation aligned at the start
 PASS	/scroll-animations/scroll-timelines/play-animation.html	Playing a finished and reversed animation restarts the animation aligned at the end
 PASS	/scroll-animations/scroll-timelines/play-animation.html	Playing a pause-pending but previously finished animation realigns with the scroll position
 PASS	/scroll-animations/scroll-timelines/play-animation.html	Playing a finished animation clears the start time
 PASS	/scroll-animations/scroll-timelines/play-animation.html	The ready promise should be replaced if the animation is not already pending
 PASS	/scroll-animations/scroll-timelines/play-animation.html	A pending ready promise should be resolved and not replaced when the animation enters the running state
-FAIL	/scroll-animations/scroll-timelines/play-animation.html	Resuming an animation from paused realigns with scroll position.
+PASS	/scroll-animations/scroll-timelines/play-animation.html	Resuming an animation from paused realigns with scroll position.
 PASS	/scroll-animations/scroll-timelines/play-animation.html	If a pause operation is interrupted, the ready promise is reused
 FAIL	/scroll-animations/scroll-timelines/play-animation.html	A pending playback rate is used when determining timeline range alignment
 PASS	/scroll-animations/scroll-timelines/play-animation.html	Playing a canceled animation sets the start time
