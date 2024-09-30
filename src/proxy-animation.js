@@ -572,10 +572,13 @@ function playInternal(details, autoRewind) {
   }
 
   // Not by spec, but required by tests in play-animation.html:
+  // – Playing a running animation resets a sticky start time
   // - Playing a finished animation restarts the animation aligned at the start
   // - Playing a pause-pending but previously finished animation realigns with the scroll position
   // - Playing a finished animation clears the start time
-  if (details.proxy.playState === 'finished' || abortedPause) {
+  // - Resuming an animation from paused realigns with scroll position.
+  // These tests suggest that the start time should always be auto aligned when auto-rewind and finite timeline is true
+  if (autoRewind) {
     details.holdTime = null
     details.startTime = null
     details.autoAlignStartTime = true;
@@ -918,7 +921,9 @@ function autoAlignStartTime(details) {
   // TODO: Clarify how range duration should be resolved
   details.rangeDuration = endOffset.value - startOffset.value;
   // 7. Set start time to start offset if effective playback rate ≥ 0, and end offset otherwise.
-  const playbackRate = effectivePlaybackRate(details);
+  // Not by spec: Applying the pending playback rate. If not, the start time will be re-aligned in `commitPendingPlay()`
+  applyPendingPlaybackRate(details);
+  const playbackRate = details.animation.playbackRate;
   details.startTime = fromCssNumberish(details,playbackRate >= 0 ? startOffset : endOffset);
 
   // 8. Clear hold time.
