@@ -373,7 +373,7 @@ export function _getStlOptions(scrollTimeline) {
 }
 
 export class ScrollTimeline {
-  constructor(options) {
+  constructor(options = {}) {
     scrollTimelineOptions.set(this, {
       source: null,
       axis: DEFAULT_TIMELINE_AXIS,
@@ -405,22 +405,8 @@ export class ScrollTimeline {
     updateInternal(this);
   }
 
-  set source(element) {
-    updateSource(this, element);
-    updateInternal(this);
-  }
-
   get source() {
     return scrollTimelineOptions.get(this).source;
-  }
-
-  set axis(axis) {
-    if (!isValidAxis(axis)) {
-      throw TypeError("Invalid axis");
-    }
-
-    scrollTimelineOptions.get(this).axis = axis;
-    updateInternal(this);
   }
 
   get axis() {
@@ -480,6 +466,16 @@ export class ScrollTimeline {
     return true;
   }
 }
+// Extend AnimationTimeline
+Object.setPrototypeOf(ScrollTimeline, AnimationTimeline);
+Object.setPrototypeOf(ScrollTimeline.prototype, AnimationTimeline.prototype);
+// Set toStringTag
+Object.defineProperty(ScrollTimeline.prototype, Symbol.toStringTag, {value: "ScrollTimeline" });
+
+// Make properties enumerable
+Object.defineProperty(ScrollTimeline.prototype, 'source', {enumerable: true, set: undefined});
+Object.defineProperty(ScrollTimeline.prototype, 'axis', {enumerable: true, set: undefined});
+
 
 // Methods for calculation of the containing block.
 // See https://developer.mozilla.org/en-US/docs/Web/CSS/Containing_block.
@@ -826,7 +822,7 @@ export class ViewTimeline extends ScrollTimeline {
   // Proceeding under the assumption that subject will be added to
   // ViewTimelineOptions. Inferring the source from the subject if not
   // explicitly set.
-  constructor(options) {
+  constructor(options = {}) {
     super(options);
     const details = scrollTimelineOptions.get(this);
     details.subject = options && options.subject ? options.subject : undefined;
@@ -853,10 +849,6 @@ export class ViewTimeline extends ScrollTimeline {
   get source() {
     validateSource(this);
     return scrollTimelineOptions.get(this).source;
-  }
-
-  set source(source) {
-    throw new Error("Cannot set the source of a view timeline");
   }
 
   get subject() {
@@ -893,3 +885,9 @@ export class ViewTimeline extends ScrollTimeline {
   }
 
 }
+
+// Make properties enumerable
+Object.defineProperty(ViewTimeline.prototype, 'subject', {enumerable: true, set: undefined});
+Object.defineProperty(ViewTimeline.prototype, 'startOffset', {enumerable: true, set: undefined});
+Object.defineProperty(ViewTimeline.prototype, 'endOffset', {enumerable: true, set: undefined});
+
