@@ -214,6 +214,9 @@ export function measureSubject(source, subject) {
  * @param {HTMLElement} source
  */
 function updateMeasurements(source) {
+  if (!source) {
+    return;
+  }
   let details = sourceDetails.get(source);
   details.sourceMeasurements = measureSource(source);
 

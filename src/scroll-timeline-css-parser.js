@@ -1,4 +1,5 @@
 import { ANIMATION_RANGE_NAMES, getAnonymousSourceElement } from './scroll-timeline-base';
+import { findLast } from './utils';
 
 // This is also used in scroll-timeline-css.js
 export const RegexMatcher = {
@@ -6,6 +7,7 @@ export const RegexMatcher = {
   WHITE_SPACE: /\s*/g,
   NUMBER: /^[0-9]+/,
   TIME: /^[0-9]+(s|ms)/,
+  TIMELINE_SCOPE: /timeline-scope\s*:([^;}]+)/,
   SCROLL_TIMELINE: /scroll-timeline\s*:([^;}]+)/,
   SCROLL_TIMELINE_NAME: /scroll-timeline-name\s*:([^;}]+)/,
   SCROLL_TIMELINE_AXIS: /scroll-timeline-axis\s*:([^;}]+)/,
@@ -46,6 +48,7 @@ export class StyleParser {
     this.anonymousScrollTimelineOptions = new Map(); // save anonymous options by name
     this.anonymousViewTimelineOptions = new Map(); // save anonymous options by name
     this.sourceSelectorToScrollTimeline = [];
+    this.scopeSelectorToScopeName = []
     this.subjectSelectorToViewTimeline = [];
     this.keyframeNamesSelectors = new Map();
   }
@@ -56,12 +59,13 @@ export class StyleParser {
   // This function is called twice, in the first pass we are interested in saving
   // the @keyframe names, in the second pass we will parse other rules to extract
   // scroll-animations related properties and values.
-  transpileStyleSheet(sheetSrc, firstPass, srcUrl) {
+  transpileStyleSheet(sheetSrc, firstPass, srcUrl, styleId) {
     // AdhocParser
     const p = {
       sheetSrc: sheetSrc,
       index: 0,
       name: srcUrl,
+      styleId
     };
 
     while (p.index < p.sheetSrc.length) {
@@ -121,7 +125,8 @@ export class StyleParser {
           if (!current['animation-name'] || current['animation-name'] == animationName) {
             return {
               'animation-timeline': current['animation-timeline'],
-              'animation-range': current['animation-range']
+              'animation-range': current['animation-range'],
+              'auto-duration': current['auto-duration']
             }
           }
         }
@@ -147,42 +152,82 @@ export class StyleParser {
     return null;
   }
 
-  getScrollTimelineOptions(timelineName, target) {
-    const anonymousTimelineOptions = this.getAnonymousScrollTimelineOptions(timelineName, target);
+  getTimelineOptions(timelineName, target) {
+    const anonymousTimelineOptions =
+      this.getAnonymousScrollTimelineOptions(timelineName, target) ||
+      this.getAnonymousViewTimelineOptions(timelineName, target);
     if(anonymousTimelineOptions)
       return anonymousTimelineOptions;
 
-    for (let i = this.sourceSelectorToScrollTimeline.length - 1; i >= 0; i--) {
-      const options = this.sourceSelectorToScrollTimeline[i];
-      if(options.name == timelineName) {
-        const source = this.findPreviousSiblingOrAncestorMatchingSelector(target, options.selector);
+    // This method returns options for the closest timeline or timeline scope that has a matching selector.
+    // It does not take scope, layers, specificity and source order into account.
+    // TODO: support cascading order
 
-        if(source) {
-          return {
-            source,
-            ...(options.axis ? { axis: options.axis } : {}),
-          };
-        }
+    const sourceSelector = this.sourceSelectorToScrollTimeline
+      .filter(o => o.name === timelineName)
+      .map(o => o.selector)
+      .join(',');
+
+    const subjectSelector = this.subjectSelectorToViewTimeline
+      .filter(o => o.name === timelineName)
+      .map(o => o.selector)
+      .join(',');
+
+    const scopeSelector = this.scopeSelectorToScopeName
+      .filter(o => o.name === timelineName || o.name === 'all')
+      .map(o => o.selector)
+      .join(',');
+
+    const source = sourceSelector ? target.closest(sourceSelector) : undefined;
+    if (source) {
+      const options = findLast(this.sourceSelectorToScrollTimeline,
+        o => o.name === timelineName && source.matches(o.selector));
+
+      return {
+        source,
+        ...(options.axis ? { axis: options.axis } : {}),
+      };
+    }
+
+    const subject = subjectSelector ? target.closest(subjectSelector) : undefined;
+    if (subject) {
+      const options = findLast(this.subjectSelectorToViewTimeline,
+        o => o.name === timelineName && subject.matches(o.selector));
+
+      return {
+        subject,
+        axis: options.axis,
+        inset: options.inset
+      };
+    }
+
+    const scopeRoot = scopeSelector ? target.closest(scopeSelector) : undefined;
+    if (scopeRoot) {
+      const sourceCandidates = sourceSelector ? scopeRoot.querySelectorAll(sourceSelector) : [];
+      if (sourceCandidates.length === 1) {
+        const source = sourceCandidates[0];
+        const options = findLast(this.sourceSelectorToScrollTimeline,
+          o => o.name === timelineName && source.matches(o.selector));
+
+        return {
+          source,
+          ...(options.axis ? {axis: options.axis} : {}),
+        };
+      }
+
+      const subjectCandidates = subjectSelector ? scopeRoot.querySelectorAll(subjectSelector) : [];
+      if (subjectCandidates.length === 1) {
+        const subject = subjectCandidates[0];
+        const options = findLast(this.subjectSelectorToViewTimeline,
+          o => o.name === timelineName && subject.matches(o.selector));
+
+        return {
+          subject,
+          axis: options.axis,
+          inset: options.inset
+        };
       }
     }
-
-    return null;
-  }
-
-  // TODO: Remove this old lookup mechanism and replace it by one that
-  // respects timeline-scope (https://github.com/flackr/scroll-timeline/issues/123)
-  findPreviousSiblingOrAncestorMatchingSelector(target, selector) {
-    // Target self
-    let candidate = target;
-
-    // Walk the DOM tree: preceding siblings and ancestors
-    while (candidate) {
-      if (candidate.matches(selector))
-        return candidate;
-      candidate = candidate.previousElementSibling || candidate.parentElement;
-    }
-
-    // No match
     return null;
   }
 
@@ -199,28 +244,6 @@ export class StyleParser {
     return null;
   }
 
-  getViewTimelineOptions(timelineName, target) {
-    const anonymousTimelineOptions = this.getAnonymousViewTimelineOptions(timelineName, target);
-    if(anonymousTimelineOptions)
-      return anonymousTimelineOptions;
-
-    for (let i = this.subjectSelectorToViewTimeline.length - 1; i >= 0; i--) {
-      const options = this.subjectSelectorToViewTimeline[i];
-      if(options.name == timelineName) {
-        const subject = this.findPreviousSiblingOrAncestorMatchingSelector(target, options.selector);
-        if(subject) {
-          return {
-            subject,
-            axis: options.axis,
-            inset: options.inset
-          }
-        }
-      }
-    }
-
-    return null;
-  }
-
   handleScrollTimelineProps(rule, p) {
     // The animation-timeline property may not be used in keyframes
     if (rule.selector.includes("@keyframes")) {
@@ -232,8 +255,9 @@ export class StyleParser {
     const hasAnimationTimeline = rule.block.contents.includes("animation-timeline:");
     const hasAnimation = rule.block.contents.includes("animation:");
 
-    this.saveSourceSelectorToScrollTimeline(rule);
-    this.saveSubjectSelectorToViewTimeline(rule);
+    this.saveSourceSelectorToScrollTimeline(rule, p.styleId);
+    this.saveScopeSelectorToScopeName(rule, p.styleId);
+    this.saveSubjectSelectorToViewTimeline(rule, p.styleId);
 
     if (!hasAnimationTimeline && !hasAnimationName && !hasAnimation) {
       return;
@@ -241,7 +265,7 @@ export class StyleParser {
 
     let timelineNames = [];
     let animationNames = [];
-    let shouldReplacePart = false;
+    let replaceAutoDuration = false;
 
     if (hasAnimationTimeline)
       timelineNames = this.extractScrollTimelineNames(rule.block.contents);
@@ -268,29 +292,22 @@ export class StyleParser {
           // Add 1s as duration to fix this.
           if(hasAnimationTimeline) {
             if(!this.hasDuration(shorthand)) {
-
+              let replacedShorthand = shorthand
               // `auto` also is valid duration. Older browsers can’t always
               // handle it properly, so we remove it from the shorthand.
               if (this.hasAutoDuration(shorthand)) {
-                rule.block.contents = rule.block.contents.replace(
-                  'auto',
-                  '    '
-                );
+                replacedShorthand = replacedShorthand.replace('auto', '    ')
               }
 
-              // TODO: Should keep track of whether duration is artificial or not,
-              // so that we can later track that we need to update timing to
-              // properly see duration as 'auto' for the polyfill.
-              rule.block.contents = rule.block.contents.replace(
-                shorthand, " 1s " + shorthand
-              );
-              shouldReplacePart = true;
+              replacedShorthand = " 1s " + replacedShorthand
+              rule.block.contents = rule.block.contents.replace(shorthand, replacedShorthand);
+              replaceAutoDuration = true;
             }
           }
         });
     }
 
-    if(shouldReplacePart) {
+    if(replaceAutoDuration) {
       this.replacePart(
         rule.block.startIndex,
         rule.block.endIndex,
@@ -299,10 +316,10 @@ export class StyleParser {
       );
     }
 
-    this.saveRelationInList(rule, timelineNames, animationNames);
+    this.saveRelationInList(rule, timelineNames, animationNames, replaceAutoDuration);
   }
 
-  saveSourceSelectorToScrollTimeline(rule) {
+  saveSourceSelectorToScrollTimeline(rule, styleId) {
     const hasScrollTimeline = rule.block.contents.includes("scroll-timeline:");
     const hasScrollTimelineName = rule.block.contents.includes("scroll-timeline-name:");
     const hasScrollTimelineAxis = rule.block.contents.includes("scroll-timeline-axis:");
@@ -314,7 +331,7 @@ export class StyleParser {
       const scrollTimelines = this.extractMatches(rule.block.contents, RegexMatcher.SCROLL_TIMELINE);
       for(const st of scrollTimelines) {
         const parts = this.split(st);
-        let options = {selector: rule.selector, name: ''};
+        let options = {selector: rule.selector, name: '', styleId};
 
         if(parts.length == 1) {
           options.name = parts[0];
@@ -336,7 +353,7 @@ export class StyleParser {
           // longhand overrides shorthand
           timelines[i].name = names[i];
         } else {
-          let options = {selector: rule.selector, name: names[i]};
+          let options = {selector: rule.selector, name: names[i], styleId};
           timelines.push(options);
         }
       }
@@ -359,7 +376,20 @@ export class StyleParser {
     this.sourceSelectorToScrollTimeline.push(...timelines);
   }
 
-  saveSubjectSelectorToViewTimeline(rule) {
+  saveScopeSelectorToScopeName(rule, styleId) {
+    const hasTimelineScope = rule.block.contents.includes("timeline-scope:");
+    if (hasTimelineScope) {
+      const timelineScopes = this.extractMatches(rule.block.contents, RegexMatcher.TIMELINE_SCOPE);
+      for(const ts of timelineScopes) {
+        const parts = this.split(ts);
+        for (const part of parts) {
+          this.scopeSelectorToScopeName.push({selector: rule.selector, name: part, styleId})
+        }
+      }
+    }
+  }
+
+  saveSubjectSelectorToViewTimeline(rule, styleId) {
     const hasViewTimeline = rule.block.contents.includes("view-timeline:");
     const hasViewTimelineName = rule.block.contents.includes("view-timeline-name:");
     const hasViewTimelineAxis = rule.block.contents.includes("view-timeline-axis:");
@@ -373,7 +403,7 @@ export class StyleParser {
       const viewTimelines = this.extractMatches(rule.block.contents, RegexMatcher.VIEW_TIMELINE);
       for(let tl of viewTimelines) {
         const parts = this.split(tl);
-        let options = {selector: rule.selector, name: '', inset: null};
+        let options = {selector: rule.selector, name: '', inset: null, styleId};
         if(parts.length == 1) {
           options.name = parts[0];
         } else if(parts.length == 2) {
@@ -393,7 +423,7 @@ export class StyleParser {
           // longhand overrides shorthand
           timelines[i].name = names[i];
         } else {
-          let options = {selector: rule.selector, name: names[i], inset: null};
+          let options = {selector: rule.selector, name: names[i], inset: null, styleId};
           timelines.push(options);
         }
       }
@@ -424,6 +454,13 @@ export class StyleParser {
     this.subjectSelectorToViewTimeline.push(...timelines);
   }
 
+
+  deleteMappingForStyle(styleId) {
+    this.sourceSelectorToScrollTimeline = this.sourceSelectorToScrollTimeline.filter(options => options.styleId !== styleId);
+    this.scopeSelectorToScopeName = this.scopeSelectorToScopeName.filter(options => options.styleId !== styleId);
+    this.subjectSelectorToViewTimeline = this.subjectSelectorToViewTimeline.filter(options => options.styleId !== styleId);
+  }
+
   hasDuration(shorthand) {
     return shorthand.split(" ").filter(part => isTime(part)).length >= 1;
   }
@@ -433,7 +470,7 @@ export class StyleParser {
     return shorthand.split(" ").filter(part => part === 'auto').length >= 1;
   }
 
-  saveRelationInList(rule, timelineNames, animationNames) {
+  saveRelationInList(rule, timelineNames, animationNames, autoDuration = false) {
     const hasAnimationRange = rule.block.contents.includes("animation-range:");
     let animationRanges = [];
 
@@ -449,6 +486,7 @@ export class StyleParser {
         'animation-timeline': timelineNames[i % timelineNames.length],
         ...(animationNames.length ? {'animation-name': animationNames[i % animationNames.length]}: {}),
         ...(animationRanges.length ? {'animation-range': animationRanges[i % animationRanges.length]}: {}),
+        'auto-duration': autoDuration
       });
     }
   }

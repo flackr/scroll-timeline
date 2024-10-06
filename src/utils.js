@@ -78,3 +78,12 @@ export function splitIntoComponentValues(input) {
   }
   return res;
 }
+
+export function findLast(array, callbackFn) {
+  for (let i = array.length - 1; i >= 0; i--) {
+    const entry = array[i];
+    if (callbackFn(entry)) {
+      return entry
+    }
+  }
+}
