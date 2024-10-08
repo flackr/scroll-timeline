@@ -1078,6 +1078,20 @@ function parseTimelineRangePart(timeline, value, position) {
   unsupportedTimeline(timeline);
 }
 
+function isGreaterOrEqual(a, b) {
+  if (Math.abs(a - b) <= 100000 * Number.EPSILON) {
+    return true;
+  }
+  return a > b;
+}
+
+function isLessOrEqual(a, b) {
+  if (Math.abs(a - b) <= 100000 * Number.EPSILON) {
+    return true;
+  }
+  return a < b;
+}
+
 // Create an alternate Animation class which proxies API requests.
 // TODO: Create a full-fledged proxy so missing methods are automatically
 // fetched from Animation.
@@ -1495,10 +1509,9 @@ export class ProxyAnimation {
     //     * animation’s effective playback rate < 0 and current time <= 0,
     //    then finished.
     if (currentTime != null) {
-      if (details.animation.playbackRate > 0 &&
-          currentTime >= effectEnd(details))
+      if (details.animation.playbackRate > 0 && isGreaterOrEqual(currentTime, effectEnd(details)))
         return 'finished';
-      if (details.animation.playbackRate < 0 && currentTime <= 0)
+      if (details.animation.playbackRate < 0 && isLessOrEqual(currentTime , 0))
         return 'finished';
     }
 
