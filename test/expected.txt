@@ -695,7 +695,10 @@ PASS	/scroll-animations/scroll-timelines/current-time-nan.html	currentTime shoul
 PASS	/scroll-animations/scroll-timelines/current-time-root-scroller.html	currentTime calculates the correct time for a document.scrollingElement source
 PASS	/scroll-animations/scroll-timelines/current-time-writing-modes.html	currentTime handles direction: rtl correctly
 PASS	/scroll-animations/scroll-timelines/current-time-writing-modes.html	currentTime handles writing-mode: vertical-rl correctly
+PASS	/scroll-animations/scroll-timelines/current-time-writing-modes.html	currentTime handles writing-mode: sideways-rl correctly
 PASS	/scroll-animations/scroll-timelines/current-time-writing-modes.html	currentTime handles writing-mode: vertical-lr correctly
+FAIL	/scroll-animations/scroll-timelines/current-time-writing-modes.html	currentTime handles writing-mode: sideways-lr correctly
+PASS	/scroll-animations/scroll-timelines/duration.html	The duration of a scroll timeline is 100%
 PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the delay to a positive number
 PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the delay to a negative number
 PASS	/scroll-animations/scroll-timelines/effect-updateTiming.html	Allows setting the delay of an animation in progress: positive delay that causes the animation to be no longer in-effect
@@ -1026,6 +1029,7 @@ PASS	/scroll-animations/view-timelines/block-view-timeline-current-time.tentativ
 FAIL	/scroll-animations/view-timelines/block-view-timeline-nested-subject.tentative.html	View timeline with subject that is not a direct descendant of the scroll container
 FAIL	/scroll-animations/view-timelines/change-animation-range-updates-play-state.html	Changing the animation range updates the play state
 FAIL	/scroll-animations/view-timelines/contain-alignment.html	Stability of animated elements aligned to the bounds of a contain region
+PASS	/scroll-animations/view-timelines/duration.html	The duration of a view timeline is 100%
 PASS	/scroll-animations/view-timelines/fieldset-source.html	Fieldset is a valid source for a view timeline
 FAIL	/scroll-animations/view-timelines/get-keyframes-with-timeline-offset.html	Report specified timeline offsets
 FAIL	/scroll-animations/view-timelines/get-keyframes-with-timeline-offset.html	Computed offsets can be outside [0,1] for keyframes with timeline offsets

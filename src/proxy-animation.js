@@ -940,7 +940,13 @@ function getNormalStartRange(timeline) {
   }
 
   if (timeline instanceof ScrollTimeline) {
-    return CSS.percent(0);
+    // A CSSNumericValue should be interpreted as a TimelineRangeOffset with a null range name according to the spec,
+    // but we align with Blink which currently uses 'none' as a rangeName.
+
+    // There is an open issue to introduce 'scroll' as a range name for the entire scroll range.
+    // This would allow us to use 'scroll' instead of 'none'.
+    // https://github.com/w3c/csswg-drafts/issues/9367#issuecomment-1905812872
+    return { rangeName: 'none', offset: CSS.percent(0) };
   }
 
   unsupportedTimeline(timeline);
@@ -952,130 +958,151 @@ function getNormalEndRange(timeline) {
   }
 
   if (timeline instanceof ScrollTimeline) {
-    return CSS.percent(100);
+    // A CSSNumericValue should be interpreted as a TimelineRangeOffset with a null range name according to the spec,
+    // but we align with Blink which currently uses 'none' as a rangeName.
+
+    // There is an open issue to introduce 'scroll' as a range name for the entire scroll range.
+    // This would allow us to use 'scroll' instead of 'none'.
+    // https://github.com/w3c/csswg-drafts/issues/9367#issuecomment-1905812872
+    return { rangeName: 'none', offset: CSS.percent(100) };
   }
 
   unsupportedTimeline(timeline);
 }
 
-function parseAnimationRange(timeline, value) {
+/**
+ * Validate <length-percentage> offset
+ * @param {CSSNumericValue} offset
+ */
+function validateLengthPercentage(offset) {
+  const type = offset.type();
+  const entries = Object.entries(type).filter(([key]) => key !== 'percentHint');
+
+  if (entries.length !== 1) {
+    throw new TypeError(`Not a valid <length-percentage> '${offset?.toString()}'`);
+  }
+
+  const [key, value] = entries[0];
+  if (!['length', 'percent'].includes(key) || value !== 1) {
+    throw new TypeError(`Not a valid <length-percentage> '${offset?.toString()}'`);
+  }
+}
+
+/**
+ * Consume <'animation-range-start'> or <'animation-range-end'> from array of component value strings.
+ * [ normal | <length-percentage> | <timeline-range-name> <length-percentage>? ]
+ * @param {string[]} parts
+ * @param {'start' | 'end'} position
+ * @return {{rangeName: string, offset: CSSNumericValue}|'normal'}
+ */
+function consumeRange(parts, position) {
+  const part = parts.shift();
+  if (part === 'normal') {
+    // Format: normal
+    return 'normal';
+  } else if (ANIMATION_RANGE_NAMES.includes(part)) {
+    // Format: <timeline-range-name> <length-percentage>?
+    const rangeName = part;
+    let offset = position === 'start' ? CSS.percent(0) : CSS.percent(100);
+    if (parts[0] !== undefined) {
+      const nextPart = parts.shift();
+      offset = CSSNumericValue.parse(nextPart);
+      validateLengthPercentage(offset);
+    }
+    return {rangeName, offset};
+  } else {
+    // Format: <length-percentage>
+    const offset = CSSNumericValue.parse(part);
+    validateLengthPercentage(offset);
+
+    // A CSSNumericValue should be interpreted as a TimelineRangeOffset with a null range name according to the spec,
+    // but we align with Blink which currently uses 'none' as a rangeName.
+
+    // There is an open issue to introduce 'scroll' as a range name for the entire scroll range.
+    // This would allow us to use 'scroll' instead of 'none'.
+    // https://github.com/w3c/csswg-drafts/issues/9367#issuecomment-1905812872
+    return {rangeName: 'none', offset};
+  }
+}
+
+/**
+ * Parse `animation-range` declarations according to the syntax
+ * `[ <'animation-range-start'> <'animation-range-end'>? ]#`
+ *
+ * https://drafts.csswg.org/scroll-animations-1/#animation-range
+ *
+ * Declarations such as `animation-range: contain 10%` are ambiguous in the current syntax,
+ * see https://github.com/w3c/csswg-drafts/issues/9264
+ *
+ * Assuming that `contain 10%` is consumed as part of `animation-range-start`, so that `animation-range-end`
+ * is expanded to `contain 100%`
+ *
+ * TODO: update once animation-range ambiguity is resolved
+ *
+ * @param value
+ * @return {{start: string, end: string}}
+ */
+export function parseAnimationRange(value) {
   if (!value)
     return {
       start: 'normal',
       end: 'normal',
     };
 
-  const animationRange = {
-    start: getNormalStartRange(timeline),
-    end: getNormalEndRange(timeline),
-  };
-
-  if (timeline instanceof ViewTimeline) {
-    // Format:
-    // <start-name> <start-offset> <end-name> <end-offset>
-    // <name> --> <name> 0% <name> 100%
-    // <name> <start-offset> <end-offset> --> <name> <start-offset>
-    //                                        <name> <end-offset>
-    // <start-offset> <end-offset> --> cover <start-offset> cover <end-offset>
-    // TODO: Support all formatting options once ratified in the spec.
+  try {
+    const animationRange = {};
     const parts = splitIntoComponentValues(value);
-    const rangeNames = [];
-    const offsets = [];
 
-    parts.forEach(part => {
-      if (ANIMATION_RANGE_NAMES.includes(part)) {
-        rangeNames.push(part);
-      } else {
-        try {
-          offsets.push(CSSNumericValue.parse(part));
-        } catch (e) {
-          throw TypeError(`Could not parse range "${value}"`);
-        }
-      }
-    });
-
-    if (rangeNames.length > 2 || offsets.length > 2 || offsets.length == 1) {
-      throw TypeError("Invalid time range or unsupported time range format.");
+    animationRange.start = consumeRange(parts, 'start');
+    if (parts.length > 0) {
+      animationRange.end = consumeRange(parts, 'end');
+    } else {
+      // If <'animation-range-end'> is omitted and <'animation-range-start'> includes a <timeline-range-name> component,
+      // then animation-range-end is set to that same <timeline-range-name> and 100%. Otherwise, any omitted longhand is
+      // set to its initial value.
+      const startRangeName = animationRange.start?.rangeName;
+      animationRange.end = startRangeName && startRangeName !== 'none' ? {
+        rangeName: animationRange.start.rangeName,
+        offset: CSS.percent(100)
+      } : 'normal';
     }
 
-    if (rangeNames.length) {
-      animationRange.start.rangeName = rangeNames[0];
-      animationRange.end.rangeName = rangeNames.length > 1 ? rangeNames[1] : rangeNames[0];
+    // Assert that we consumed the whole value
+    if (parts.length === 0) {
+      return animationRange;
     }
-
-    if (offsets.length > 1) {
-      animationRange.start.offset = offsets[0];
-      animationRange.end.offset = offsets[1];
-    }
-
-    return animationRange;
+    console.warn(`Could not parse range "${value}"`);
+  } catch (e) {
+    console.warn(`Could not parse range "${value}"`);
   }
-
-  if (timeline instanceof ScrollTimeline) {
-    // @TODO: Play nice with only 1 offset being set
-    // @TODO: Play nice with expressions such as `calc(50% + 10px) 100%`
-    const parts = value.split(' ');
-    if (parts.length != 2) {
-      throw TypeError("Invalid time range or unsupported time range format.");
-    }
-
-    animationRange.start = CSSNumericValue.parse(parts[0]);
-    animationRange.end = CSSNumericValue.parse(parts[1]);
-
-    return animationRange;
-  }
-
-  unsupportedTimeline(timeline);
+  // Default to initial values
+  return {
+    start: 'normal',
+    end: 'normal',
+  };
 }
 
-function parseTimelineRangePart(timeline, value, position) {
-  if (!value || value === 'normal') return 'normal';
+function parseTimelineRangePart(value, position) {
+  if (!value) return 'normal';
 
-  if (timeline instanceof ViewTimeline) {
-    // Extract parts from the passed in value.
-    let rangeName = 'cover'
-    let offset = position === 'start' ? CSS.percent(0) : CSS.percent(100)
-
-    // Author passed in something like `{ rangeName: 'cover', offset: CSS.percent(100) }`
-    if (value instanceof Object) {
-      if (value.rangeName !== undefined) {
-        rangeName = value.rangeName;
-      }
-
-      if (value.offset !== undefined) {
-        offset = value.offset;
-      }
+  // Author passed in something like `{ rangeName: 'cover', offset: CSS.percent(100) }`
+  if (value instanceof Object) {
+    return {
+      rangeName: value.rangeName,
+      offset: value.offset
     }
-    // Author passed in something like `"cover 100%"`
-    else {
-      const parts = splitIntoComponentValues(value);
-
-      if (parts.length === 1) {
-        if (ANIMATION_RANGE_NAMES.includes(parts[0])) {
-          rangeName = parts[0];
-        } else {
-          offset = simplifyCalculation(CSSNumericValue.parse(parts[0]), {});
-        }
-      } else if (parts.length === 2) {
-        rangeName = parts[0];
-        offset = simplifyCalculation(CSSNumericValue.parse(parts[1]), {});
-      }
-    }
-
-    // Validate rangeName
-    if (!ANIMATION_RANGE_NAMES.includes(rangeName)) {
-      throw TypeError("Invalid range name");
-    }
-
-    return { rangeName, offset };
   }
 
-  if (timeline instanceof ScrollTimeline) {
-    // The value is a standalone offset, so simply parse it.
-    return CSSNumericValue.parse(value);
+  // Author passed in something like `"cover 100%"`
+  else {
+    const parts = splitIntoComponentValues(value);
+    const range = consumeRange(parts, position);
+    if (parts.length === 0) {
+      return range;
+    } else {
+      throw new TypeError('Invalid range');
+    }
   }
-
-  unsupportedTimeline(timeline);
 }
 
 // Create an alternate Animation class which proxies API requests.
@@ -1126,7 +1153,7 @@ export class ProxyAnimation {
       effect: null,
       // The animation attachment range, restricting the animation’s
       // active interval to that range of a timeline
-      animationRange: isScrollAnimation ? parseAnimationRange(timeline, animOptions['animation-range']) : null,
+      animationRange: isScrollAnimation ? parseAnimationRange(animOptions['animation-range']) : null,
       proxy: this
     });
   }
@@ -1518,7 +1545,7 @@ export class ProxyAnimation {
 
     if (details.timeline instanceof ScrollTimeline) {
       const animationRange = details.animationRange;
-      animationRange.start = parseTimelineRangePart(details.timeline, value, 'start');
+      animationRange.start = parseTimelineRangePart(value, 'start');
 
       // Additional polyfill step to ensure that the native animation has the
       // correct value for current time.
@@ -1539,7 +1566,7 @@ export class ProxyAnimation {
 
     if (details.timeline instanceof ScrollTimeline) {
       const animationRange = details.animationRange;
-      animationRange.end = parseTimelineRangePart(details.timeline, value, 'end');
+      animationRange.end = parseTimelineRangePart(value, 'end');
 
       // Additional polyfill step to ensure that the native animation has the
       // correct value for current time.
@@ -1940,8 +1967,8 @@ export function animate(keyframes, options) {
 
     const details = proxyAnimations.get(proxyAnimation);
     details.animationRange = {
-      start: parseTimelineRangePart(timeline, options.rangeStart, 'start'),
-      end: parseTimelineRangePart(timeline, options.rangeEnd, 'end'),
+      start: parseTimelineRangePart(options.rangeStart, 'start'),
+      end: parseTimelineRangePart(options.rangeEnd, 'end'),
     };
 
     proxyAnimation.play();

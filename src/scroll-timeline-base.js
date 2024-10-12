@@ -673,7 +673,8 @@ export function calculateRange(phase, sourceMeasurements, subjectMeasurements, a
   const adjustedScrollportSize = sizes.containerSize - inset.start - inset.end;
   const subjectIsLargerThanScrollport = viewSize > adjustedScrollportSize;
 
-  switch(phase) {
+  const resolvedPhase = ANIMATION_RANGE_NAMES.includes(phase) ? phase : 'cover'
+  switch(resolvedPhase) {
     case 'cover':
       startOffset = coverStartOffset;
       endOffset = coverEndOffset;
@@ -793,7 +794,7 @@ export function fractionalOffset(timeline, value) {
     }
 
     // TODO: pass relative measurements (viewport, font-size, root font-size, etc. ) to resolvePx() to resolve relative units
-    const position = resolvePx(value, {percentageReference: CSS.px(sourceScrollDistance)});
+    const position = resolvePx(value.offset, {percentageReference: CSS.px(sourceScrollDistance)});
     const fractionalOffset = position / sourceScrollDistance;
 
     return fractionalOffset;

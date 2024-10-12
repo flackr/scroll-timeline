@@ -20,7 +20,7 @@ import {simplifyCalculation} from './simplify-calculation';
  * @typedef {[number, UnitMap]} SumValueItem
  * @typedef {SumValueItem[]} SumValue
  * @typedef {null} Failure
- * @typedef {{[string]: integer} & {percentHint: string | undefined}} Type
+ * @typedef {{[string]: integer} & {percentHint: string | undefined}} CSSNumericType
  * @typedef {{type: 'ADDITION'}|{type: 'MULTIPLICATION'}|{type: 'NEGATE'}|{type: 'INVERT'}} ASTNode
  */
 
@@ -40,11 +40,11 @@ const unitGroups = {
   },
   // https://www.w3.org/TR/css-values-4/#absolute-lengths
   absoluteLengths: {
-    units: new Set(["cm", "mm", "Q", "in", "pt", "pc", "px"]),
+    units: new Set(["cm", "mm", "q", "in", "pt", "pc", "px"]),
     compatible: true,
     canonicalUnit: "px",
     ratios: {
-      "cm": 96 / 2.54, "mm": (96 / 2.54) / 10, "Q": (96 / 2.54) / 40, "in": 96, "pc": 96 / 6, "pt": 96 / 72, "px": 1
+      "cm": 96 / 2.54, "mm": (96 / 2.54) / 10, "q": (96 / 2.54) / 40, "in": 96, "pc": 96 / 6, "pt": 96 / 72, "px": 1
     }
   },
   // https://www.w3.org/TR/css-values-4/#angles
@@ -125,29 +125,63 @@ function productOfTwoUnitMaps(units1, units2) {
 }
 
 /**
+ * Perform the steps necessary for converting a type
+ * to a result that can be returned from `type()`
+ * https://www.w3.org/TR/css-typed-om-1/#dom-cssnumericvalue-type
+ *
+ * @param {CSSNumericType} type
+ * return {CSSNumericType}
+ */
+export function rectifyType(type) {
+  // 1. Let result be a new CSSNumericType.
+  const result = {};
+
+  // 2. For each baseType → power in the type of this,
+  for (const baseType of baseTypes) {
+    // 2. 1. If power is not 0, set result[baseType] to power.
+    if (type[baseType]) {
+      result[baseType] = type[baseType];
+    }
+  }
+
+  // 3. If the percent hint of this is not null,
+  if (type.percentHint) {
+    // 3. 1. Set percentHint to the percent hint of this.
+    result.percentHint = type.percentHint;
+  }
+
+  // 4. Return result.
+  return result;
+}
+
+/**
  * Implementation of `create a type` from css-typed-om-1:
  * https://www.w3.org/TR/css-typed-om-1/#create-a-type
  *
  * @param {string} unit
- * @return {Type|Failure}
+ * @return {CSSNumericType|Failure}
  */
 export function createAType(unit) {
+  const unitLowerCase = unit.toLowerCase();
+  // Number and percent unit is specced to be lower case.
+  // https://drafts.css-houdini.org/css-typed-om-1/#cssnumericvalue-create-a-type
   if (unit === "number") {
     return {};
   } else if (unit === "percent") {
     return {"percent": 1};
-  } else if (unitGroups.absoluteLengths.units.has(unit) || unitGroups.fontRelativeLengths.units.has(unit) ||
-    unitGroups.viewportRelativeLengths.units.has(unit)) {
+  } else if (unitGroups.absoluteLengths.units.has(unitLowerCase) ||
+    unitGroups.fontRelativeLengths.units.has(unitLowerCase) ||
+    unitGroups.viewportRelativeLengths.units.has(unitLowerCase)) {
     return {"length": 1};
-  } else if (unitGroups.angle.units.has(unit)) {
+  } else if (unitGroups.angle.units.has(unitLowerCase)) {
     return {"angle": 1};
-  } else if (unitGroups.time.units.has(unit)) {
+  } else if (unitGroups.time.units.has(unitLowerCase)) {
     return {"time": 1};
-  } else if (unitGroups.frequency.units.has(unit)) {
+  } else if (unitGroups.frequency.units.has(unitLowerCase)) {
     return {"frequency": 1};
-  } else if (unitGroups.resolution.units.has(unit)) {
+  } else if (unitGroups.resolution.units.has(unitLowerCase)) {
     return {"resolution": 1};
-  } else if (unit === "fr") {
+  } else if (unitLowerCase === "fr") {
     return {"flex": 1};
   } else {
     return failure;
@@ -384,8 +418,8 @@ export function toSum(cssNumericValue, ...units) {
  * Implementation of `invert a type` from css-typed-om-1 Editors Draft:
  * https://drafts.css-houdini.org/css-typed-om/
  *
- * @param {Type} type
- * @return {Type}
+ * @param {CSSNumericType} type
+ * @return {CSSNumericType}
  */
 export function invertType(type) {
   // To invert a type type, perform the following steps:
@@ -400,12 +434,115 @@ export function invertType(type) {
 }
 
 /**
+ * Implementation of `apply the percent hint` from css-typed-om-1 Editor's Draft:
+ * https://drafts.css-houdini.org/css-typed-om/#apply-the-percent-hint
+ * @param {CSSNumericType} type
+ * @param {string} hint
+ */
+function applyPercentHint(type, hint) {
+  // 1. If type doesn’t contain hint, set type[hint] to 0.
+  type[hint] ??= 0;
+
+  // 2. If type contains "percent", add type["percent"] to type[hint], then set type["percent"] to 0.
+  if (type.percent) {
+    type[hint] += type.percent;
+    type.percent = 0;
+  }
+
+  // 3. Set type’s percent hint to hint.
+  type.percentHint = hint;
+}
+
+/**
+ * Implementation of `add two types` from css-typed-om-1 Editor's Draft:
+ * https://drafts.css-houdini.org/css-typed-om/#cssnumericvalue-add-two-types
+ *
+ * @param {CSSNumericType} input1
+ * @param {CSSNumericType} input2
+ * @return {CSSNumericType|Failure}
+ */
+export function addTypes(input1, input2) {
+  // 1  Replace type1 with a fresh copy of type1, and type2 with a fresh copy of type2. Let finalType be a new
+  //    type with an initially empty ordered map and an initially null percent hint.
+  const type1 = {...input1};
+  const type2 = {...input2};
+
+  // 2a If both type1 and type2 have non-null percent hints with different values
+  //    The types can’t be added. Return failure.
+  if (type1.percentHint && type2.percentHint && type1.percentHint !== type2.percentHint) {
+    return failure;
+  }
+
+  // 2b If type1 has a non-null percent hint hint and type2 doesn’t
+  //      Apply the percent hint hint to type2.
+  //
+  //      Vice versa if type2 has a non-null percent hint and type1 doesn’t.
+  if (type1.percentHint && !type2.percentHint) {
+    applyPercentHint(type2, type1.percentHint);
+  }
+  if (type2.percentHint && !type1.percentHint) {
+    applyPercentHint(type1, type2.percentHint);
+  }
+
+  // 2c Otherwise
+  //      Continue to the next step.
+
+  // 3a If all the entries of type1 with non-zero values are contained in type2 with the same value, and vice-versa
+  //      Copy all of type1’s entries to finalType, and then copy all of type2’s entries to finalType that
+  //      finalType doesn’t already contain. Set finalType’s percent hint to type1’s percent hint. Return finalType.
+  if (baseTypes
+    .filter(baseType=> type1[baseType] || type2[baseType])
+    .every(baseType => type1[baseType] === type2[baseType])) {
+    return {
+      ...type2,
+      ...type1,
+      percentHint: type1.percentHint
+    };
+  }
+
+  // 3b If type1 and/or type2 contain "percent" with a non-zero value, and type1 and/or type2 contain a key
+  //    other than "percent" with a non-zero value
+  const hasNonPercentValue = baseTypes
+    .filter(baseType => baseType !== 'percent')
+    .some(baseType => type1[baseType] || type2[baseType]);
+
+  if ((type1.percent || type2.percent) && hasNonPercentValue) {
+    // For each base type other than "percent" hint:
+    for (const hint of baseTypes.filter(baseType => baseType !== 'percent')) {
+      const tempType1 = {...type1};
+      const tempType2 = {...type2};
+
+      // Provisionally apply the percent hint hint to both type1 and type2.
+      applyPercentHint(tempType1, hint);
+      applyPercentHint(tempType2, hint);
+
+      // If, afterwards, all the entries of type1 with non-zero values are contained in type2 with the same value,
+      // and vice versa, then copy all of type1’s entries to finalType, and then copy all of type2’s entries to
+      // finalType that finalType doesn’t already contain. Set finalType’s percent hint to hint. Return finalType.
+      if (baseTypes
+        .filter(baseType => tempType1[baseType] || tempType2[baseType])
+        .every(baseType => tempType1[baseType] === tempType2[baseType])) {
+        return {
+          ...tempType2,
+          ...tempType1,
+          percentHint: hint
+        };
+      }
+      // Otherwise, revert type1 and type2 to their state at the start of this loop.
+    }
+  }
+  // 3c Otherwise
+  //      The types can’t be added. Return failure.
+  return failure;
+}
+
+/**
  * Implementation of `multiply two types` from css-typed-om-1 Editor's Draft:
  * https://drafts.css-houdini.org/css-typed-om/#cssnumericvalue-multiply-two-types
  *
- * @param {Type} type1 a map of base types to integers and an associated percent hint
- * @param {Type} type2 a map of base types to integers and an associated percent hint
- * @return {Type|Failure}
+ * @param {CSSNumericType} type1 a map of base types to integers and an associated percent hint
+ * @param {CSSNumericType} type2 a map of base types to integers and an associated percent hint
+ * @return {CSSNumericType|Failure}
  */
 export function multiplyTypes(type1, type2) {
   if (type1.percentHint && type2.percentHint && type1.percentHint !== type2.percentHint) {
