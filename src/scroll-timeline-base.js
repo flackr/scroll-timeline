@@ -473,7 +473,7 @@ export class ScrollTimeline {
     const maxScrollPos = calculateMaxScrollOffset(container, axis);
 
     return maxScrollPos > 0 ? CSS.percent(100 * scrollPos / maxScrollPos)
-                            : CSS.percent(100);
+                            : unresolved;
   }
 
   get __polyfill() {
@@ -878,6 +878,10 @@ export class ViewTimeline extends ScrollTimeline {
     const offsets = range(this, 'cover');
     if (!offsets)
       return unresolved;
+    
+    if (offsets.end === offsets.start)
+      return unresolved;
+      
     const progress =
         (scrollPos - offsets.start) / (offsets.end - offsets.start);
 
