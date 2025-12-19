@@ -1,4 +1,4 @@
-import {isCanonical} from "./utils";
+import {isCanonical, isViewportUnit, resolveViewportUnit} from "./utils";
 
 /**
  * @typedef {{percentageReference: CSSUnitValue, fontSize?: CSSUnitValue}} Info
@@ -70,6 +70,16 @@ export function simplifyCalculation(root, info = {}) {
       const resolvedValue = (root.value / 100) * info.percentageReference.value;
       const resolvedUnit = info.percentageReference.unit;
       return new CSSUnitValue(resolvedValue, resolvedUnit);
+    }
+
+    // 2. If root is a viewport-relative unit that is not expressed in its canonical unit, and there is enough information available
+    //    to convert it to the canonical unit, do so, and return the value.
+    if (isViewportUnit(root.unit)) {
+      const resolvedViewport = resolveViewportUnit(root, info);
+
+      if (resolvedViewport) {
+        return resolvedViewport;
+      }
     }
 
     // 2. If root is a dimension that is not expressed in its canonical unit, and there is enough information available

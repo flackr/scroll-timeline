@@ -763,7 +763,9 @@ function calculateInset(value, sizes) {
 
     return resolvePx(part, {
       percentageReference: CSS.px(sizes.containerSize),
-      fontSize: CSS.px(parseFloat(sizes.fontSize))
+      fontSize: CSS.px(Number.parseFloat(sizes.fontSize)),
+      viewportWidth: CSS.px(window.innerWidth),
+      viewportHeight: CSS.px(window.innerHeight),
     })
   });
 
@@ -793,7 +795,11 @@ export function fractionalOffset(timeline, value) {
     }
 
     // TODO: pass relative measurements (viewport, font-size, root font-size, etc. ) to resolvePx() to resolve relative units
-    const position = resolvePx(value, {percentageReference: CSS.px(sourceScrollDistance)});
+    const position = resolvePx(value, {
+      percentageReference: CSS.px(sourceScrollDistance),
+      viewportWidth: CSS.px(window.innerWidth),
+      viewportHeight: CSS.px(window.innerHeight),
+    });
     const fractionalOffset = position / sourceScrollDistance;
 
     return fractionalOffset;
@@ -809,7 +815,9 @@ export function calculateRelativePosition(phaseRange, offset, coverRange, subjec
   let style = getComputedStyle(subject)
   const info = {
     percentageReference: CSS.px(phaseRange.end - phaseRange.start),
-    fontSize: CSS.px(parseFloat(style.fontSize))
+    fontSize: CSS.px(Number.parseFloat(style.fontSize)),
+    viewportWidth: CSS.px(window.innerWidth),
+    viewportHeight: CSS.px(window.innerHeight),
   };
 
   const offsetPX = resolvePx(offset, info) + phaseRange.start;
